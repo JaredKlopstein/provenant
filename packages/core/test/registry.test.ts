@@ -15,11 +15,13 @@ describe('action registry invariants', () => {
   it('registers the expected action set', () => {
     expect(actionNames()).toEqual([
       'agent.list',
+      'agent.register',
       'anchor.list',
       'anchor.now',
       'chain.head',
       'chain.verify',
       'init',
+      'keygen',
       'receipts.query',
       'record',
     ]);
@@ -61,6 +63,16 @@ describe('action registry invariants', () => {
 
     it('has a stable dotted or bare name', () => {
       expect(action.name).toMatch(/^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)?$/);
+    });
+
+    it('declares aliases that resolve to real input fields', () => {
+      // An alias pointing at a nonexistent field would be silently dropped,
+      // reintroducing the class of bug that made --dry-run fail open.
+      const def = (action.input as unknown as { def?: { shape?: Record<string, unknown> } }).def;
+      const fields = new Set(Object.keys(def?.shape ?? {}));
+      for (const [alias, canonical] of Object.entries(action.aliases ?? {})) {
+        expect(fields.has(canonical), `${action.name}: alias --${alias} -> '${canonical}' is not an input field`).toBe(true);
+      }
     });
   });
 });

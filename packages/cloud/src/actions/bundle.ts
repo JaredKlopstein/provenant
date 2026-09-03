@@ -34,6 +34,9 @@ export const bundleExportAction = defineAction({
     title: z.string().optional().describe('Title for the PDF report.'),
     organization: z.string().optional().describe('Organisation name for the PDF report.'),
   }),
+  // The brief specifies `--from`/`--to`; unknown flags are rejected, so make
+  // the documented spelling real rather than an error.
+  aliases: { from: 'from_seq', to: 'to_seq' },
   output: z.object({
     range: z.object({ from_seq: z.number(), to_seq: z.number() }),
     receipt_count: z.number(),

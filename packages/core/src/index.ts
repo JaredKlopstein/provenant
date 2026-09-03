@@ -23,6 +23,9 @@ export * as dbSchema from './db/schema.js';
 export {
   registerAgent, getAgent, requireAgent, listAgents, keyDirectory, type RegisteredAgent,
 } from './agents/store.js';
+export {
+  agentReliability, receiptCounts, type AgentReliability, type DerivedRate,
+} from './agents/reliability.js';
 export { ProvenantError, toProvenantError, ERROR_CODES, type ErrorCode } from './errors.js';
 export {
   registerAnchorBackend, getAnchorBackend, anchorBackendNames,

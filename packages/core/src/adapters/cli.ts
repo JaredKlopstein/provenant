@@ -86,13 +86,15 @@ function parseArgv(argv: string[]): ParsedArgs {
 function coerceToSchema(
   flags: Record<string, string | boolean | string[]>,
   schema: z.ZodType,
+  aliases: Record<string, string> = {},
 ): { input: Record<string, unknown>; unknown: string[] } {
   const shape = getObjectShape(schema);
   const out: Record<string, unknown> = {};
   const unknown: string[] = [];
 
-  for (const [key, raw] of Object.entries(flags)) {
-    if (RESERVED_FLAGS.has(key)) continue;
+  for (const [rawKey, raw] of Object.entries(flags)) {
+    if (RESERVED_FLAGS.has(rawKey)) continue;
+    const key = aliases[rawKey] ?? rawKey;
     const field = shape?.[key];
     if (!field) {
       // Collected, never silently dropped. See rejectUnknownFlags below for why
@@ -122,8 +124,16 @@ function editDistance(a: string, b: string): number {
   return dp[b.length]!;
 }
 
-function suggestFlag(unknownFlag: string, schema: z.ZodType): string | null {
-  const candidates = [...Object.keys(getObjectShape(schema) ?? {}), ...RESERVED_FLAGS];
+function suggestFlag(
+  unknownFlag: string,
+  schema: z.ZodType,
+  aliases: Record<string, string> = {},
+): string | null {
+  const candidates = [
+    ...Object.keys(getObjectShape(schema) ?? {}),
+    ...Object.keys(aliases),
+    ...RESERVED_FLAGS,
+  ];
 
   // A truncated flag is the most common real typo (`--side-effect` for
   // `--side-effect-class`), and edit distance scores those poorly because the
@@ -217,6 +227,18 @@ function renderActionHelp(action: ActionDef<never, never>): string {
     lines.push(`  --${name.replace(/_/g, '-')}${optional ? '' : '  (required)'}`);
     if (desc) lines.push(`      ${wrap(desc, 6)}`);
   }
+  const aliasesByCanonical = new Map<string, string[]>();
+  for (const [alias, canonical] of Object.entries(action.aliases ?? {})) {
+    aliasesByCanonical.set(canonical, [...(aliasesByCanonical.get(canonical) ?? []), alias]);
+  }
+  if (aliasesByCanonical.size) {
+    lines.push('');
+    lines.push('ALSO ACCEPTED');
+    for (const [canonical, list] of aliasesByCanonical) {
+      lines.push(`  ${list.map((a) => '--' + a.replace(/_/g, '-')).join(', ')}  ->  --${canonical.replace(/_/g, '-')}`);
+    }
+  }
+  lines.push('');
   lines.push('  --json          Emit machine-readable JSON (recommended for agents)');
   if (action.dryRun) lines.push('  --dry-run       Show the exact effect, apply nothing');
   lines.push('  --store <dir>   Override the store location');
@@ -390,6 +412,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
     const { input: rawInput, unknown: unknownFlags } = coerceToSchema(
       flags,
       matched.input as z.ZodType,
+      matched.aliases ?? {},
     );
 
     /**
@@ -407,7 +430,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
      */
     if (unknownFlags.length > 0) {
       const details = unknownFlags.map((f) => {
-        const suggestion = suggestFlag(f, matched!.input as z.ZodType);
+        const suggestion = suggestFlag(f, matched!.input as z.ZodType, matched!.aliases ?? {});
         return suggestion
           ? `--${f.replace(/_/g, '-')} (did you mean --${suggestion.replace(/_/g, '-')}?)`
           : `--${f.replace(/_/g, '-')}`;

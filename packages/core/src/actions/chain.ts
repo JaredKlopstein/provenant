@@ -22,6 +22,8 @@ export const chainVerifyAction = defineAction({
     from_seq: z.number().int().nonnegative().optional().describe('Verify from this chain position onward.'),
     to_seq: z.number().int().nonnegative().optional().describe('Verify up to and including this position.'),
   }),
+  // The description tells callers to use --from/--to; those must therefore work.
+  aliases: { from: 'from_seq', to: 'to_seq' },
   output: z.object({
     ok: z.boolean(),
     receipts_checked: z.number(),
@@ -130,6 +132,7 @@ export const receiptsQueryAction = defineAction({
     since: z.string().optional().describe('RFC 3339 lower bound on the agent-reported timestamp.'),
     until: z.string().optional().describe('RFC 3339 upper bound.'),
     from_seq: z.number().int().nonnegative().optional(),
+    to_seq: z.number().int().nonnegative().optional().describe('Upper bound on chain position.'),
     limit: z.number().int().positive().max(MAX_LIMIT).default(DEFAULT_LIMIT),
     cursor: z.string().optional().describe('Opaque; pass back verbatim from next_cursor.'),
     fields: z.array(z.string()).optional()
@@ -138,6 +141,15 @@ export const receiptsQueryAction = defineAction({
       .describe('summary returns indexed columns only; full also returns the complete signed receipt (much larger).'),
     order: z.enum(['asc', 'desc']).default('desc'),
   }),
+  // The brief's spelling (`--agent`, `--since`, `--from`) must work, not error.
+  // Unknown flags are rejected now, so the shorthands have to be real.
+  aliases: {
+    agent: 'agent_id',
+    from: 'from_seq',
+    to: 'to_seq',
+    until: 'until',
+    limit: 'limit',
+  },
   output: z.object({
     items: z.array(z.record(z.string(), z.unknown())),
     truncated: z.boolean(),
@@ -153,6 +165,7 @@ export const receiptsQueryAction = defineAction({
     if (input.since) filters.push(gte(receipts.timestamp, input.since));
     if (input.until) filters.push(lte(receipts.timestamp, input.until));
     if (input.from_seq !== undefined) filters.push(gte(receipts.seq, input.from_seq));
+    if (input.to_seq !== undefined) filters.push(lte(receipts.seq, input.to_seq));
     if (input.cursor) {
       const seq = decodeCursor(input.cursor);
       filters.push(input.order === 'desc' ? lte(receipts.seq, seq) : gte(receipts.seq, seq));

@@ -70,6 +70,16 @@ export interface ActionDef<I = unknown, O = unknown> {
   dryRun?(input: I, ctx: ActionContext): O | Promise<O>;
   /** Ready-to-execute follow-ups, computed from the actual result. */
   nextActions?(input: I, output: O, ctx: ActionContext): NextAction[];
+  /**
+   * Accepted alternative names for input fields, alias -> canonical.
+   *
+   * These exist because unknown flags are now REJECTED (a silently-ignored
+   * `--agent` once widened a query to every receipt). Rejection is right, but it
+   * makes the exact spelling load-bearing, so the obvious shorthands have to be
+   * real rather than a guess that errors. Aliases are advertised in --help and
+   * in the discovery manifest so an agent never has to guess either.
+   */
+  aliases?: Record<string, string>;
   /** Literal examples used in --help and the discovery manifest. */
   examples?: Array<{ description: string; arguments: Record<string, unknown> }>;
 }

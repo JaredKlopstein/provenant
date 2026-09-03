@@ -20,6 +20,8 @@ export const ERROR_CODES = {
   AGENT_KEY_MISMATCH: 'AGENT_KEY_MISMATCH',
   /** That agent id is already registered. */
   AGENT_EXISTS: 'AGENT_EXISTS',
+  /** A keypair already exists and would be replaced. Nothing was written. */
+  KEY_EXISTS: 'KEY_EXISTS',
   /** No keypair in the store. Never executed. */
   NO_KEYPAIR: 'NO_KEYPAIR',
   /** Store is not initialized. Never executed. */

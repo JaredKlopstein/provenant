@@ -88,6 +88,9 @@ export function buildManifest(): Record<string, unknown> {
       summary: a.summary,
       side_effect_class: a.sideEffect,
       supports_dry_run: Boolean(a.dryRun),
+      /** alias -> canonical field name. Unknown options are rejected, so these
+       *  are the only alternative spellings that will be accepted. */
+      aliases: a.aliases ?? {},
       description: a.description,
       input_schema: jsonSchema(a.input as z.ZodType),
       output_schema: jsonSchema(a.output as z.ZodType),

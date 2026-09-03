@@ -25,8 +25,18 @@ provenant chain verify --json
 - Receipt recording with RFC 8785 canonicalization, SHA-256 chaining, Ed25519 signatures
 - Self-registration with trust-on-first-use identity; RFC 9421 HTTP Message Signatures
 - Local chain verification that names the exact broken receipt and proves the rest intact
-- Idempotency replay, dry-run on every mutation, cursor pagination, field projection
+- Derived agent reliability, with unmeasurable rates reported as `null` and a stated
+  reason — never as a flattering `0`
+- Idempotency replay (argument-checked), dry-run on every mutation, cursor
+  pagination, field projection
 - A CLI with `--json` on every command, and a self-describing manifest
+
+Commands: `init`, `keygen`, `agent register`, `agent list`, `record`,
+`chain verify`, `chain head`, `receipts query`, `anchor now`, `anchor list`,
+`discover`. Unknown options are **rejected**, not ignored — a mistyped flag
+could otherwise change what gets recorded — so the documented shorthands
+(`--agent`, `--from`, `--to`) are real aliases and every alias is listed in
+`discover`.
 
 **Free — `provenant-verify` (MIT):** standalone offline bundle verification,
 including full RFC 3161 timestamp checking. Verifying is never paywalled.
@@ -102,6 +112,24 @@ a determined operator. Do not oversell them.
   eliminate it. The verifier reports `anchored_through_seq` and warns about
   un-anchored receipts rather than letting "anchored: true" imply more than it
   should.
+
+## Agent reliability is a signal, not a guarantee
+
+`agent list` derives per-agent contract-violation, lease-expiry and
+approval-escalation rates. Two design choices worth knowing:
+
+**Unmeasurable is `null`, never `0`.** Contracts are Phase 3 and leases are
+Phase 4, so those rates cannot be computed yet. Reporting `0.0` would render a
+flawless compliance record for an agent nobody has ever checked — precisely the
+flattering false signal this product exists to prevent. A `null` carries a
+plain-language reason instead.
+
+**The numbers describe self-reported conduct.** They are derived from receipts
+the agent chose to write. An agent that silently declines to record its failures
+will look perfect. Receipts make recorded behaviour tamper-evident; they cannot
+make unrecorded behaviour visible. Useful for spotting a degrading agent, useless
+against a deliberately deceptive one — and that caveat ships inside the response,
+not just here.
 
 ## What an anchor does and does not prove
 
