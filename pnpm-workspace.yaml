@@ -1,0 +1,7 @@
+packages:
+  - 'packages/*'
+
+# better-sqlite3 ships prebuilt binaries; esbuild is a drizzle-kit transitive dep.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true

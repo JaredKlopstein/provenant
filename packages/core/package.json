@@ -1,0 +1,33 @@
+{
+  "name": "@provenant/core",
+  "version": "0.1.0",
+  "description": "Tamper-evident receipts for autonomous agents. Hash-chained, signed, locally verifiable. MIT.",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=22.5.0" },
+  "bin": { "provenant": "./bin/provenant.mjs" },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./canonical": { "types": "./dist/canonical/jcs.d.ts", "default": "./dist/canonical/jcs.js" },
+    "./registry": { "types": "./dist/registry/index.d.ts", "default": "./dist/registry/index.js" }
+  },
+  "files": ["dist", "bin", "LICENSE", "README.md"],
+  "scripts": {
+    "build": "tsc -b",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^3.2.0",
+    "@noble/hashes": "^2.4.0",
+    "better-sqlite3": "^12.0.0",
+    "drizzle-orm": "^0.45.2",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "drizzle-kit": "^0.31.0"
+  },
+  "keywords": ["ai-agents", "audit-log", "hash-chain", "tamper-evident", "provenance", "ed25519", "rfc8785"]
+}

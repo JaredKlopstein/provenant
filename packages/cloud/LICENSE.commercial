@@ -1,0 +1,9 @@
+Copyright (c) 2026 Provenant. All rights reserved.
+
+This package is NOT covered by the MIT license that applies to packages/core and
+packages/verifier. It is source-available for inspection only. No license is
+granted to use, copy, modify, or distribute it without a written agreement.
+
+The open-source packages (packages/core, packages/verifier) do not depend on
+this package and never will. In particular, verifying a Provenant evidence
+bundle requires no code from this package and no network access.
