@@ -4,19 +4,39 @@
   "description": "Tamper-evident receipts for autonomous agents. Hash-chained, signed, locally verifiable. MIT.",
   "license": "MIT",
   "type": "module",
-  "engines": { "node": ">=22.5.0" },
-  "bin": { "provenant": "./bin/provenant.mjs" },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "bin": {
+    "provenant": "./bin/provenant.mjs"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./canonical": { "types": "./dist/canonical/jcs.d.ts", "default": "./dist/canonical/jcs.js" },
-    "./registry": { "types": "./dist/registry/index.d.ts", "default": "./dist/registry/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./canonical": {
+      "types": "./dist/canonical/jcs.d.ts",
+      "default": "./dist/canonical/jcs.js"
+    },
+    "./registry": {
+      "types": "./dist/registry/index.d.ts",
+      "default": "./dist/registry/index.js"
+    }
   },
-  "files": ["dist", "bin", "LICENSE", "README.md"],
+  "files": [
+    "dist",
+    "bin",
+    "migrations",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -b",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "prepublishOnly": "tsc -b"
   },
   "dependencies": {
     "@noble/ed25519": "^3.2.0",
@@ -29,5 +49,27 @@
     "@types/better-sqlite3": "^7.6.12",
     "drizzle-kit": "^0.31.0"
   },
-  "keywords": ["ai-agents", "audit-log", "hash-chain", "tamper-evident", "provenance", "ed25519", "rfc8785"]
+  "keywords": [
+    "ai-agents",
+    "audit-log",
+    "hash-chain",
+    "tamper-evident",
+    "provenance",
+    "ed25519",
+    "rfc8785"
+  ],
+  "author": "Jared Klopstein",
+  "homepage": "https://jaredklopstein.github.io/provenant",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JaredKlopstein/provenant.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/JaredKlopstein/provenant/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false
 }

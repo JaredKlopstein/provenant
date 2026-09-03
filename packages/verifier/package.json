@@ -25,7 +25,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "prepublishOnly": "tsc -b"
   },
   "dependencies": {
     "@noble/ed25519": "^3.2.0",
@@ -40,5 +41,19 @@
   ],
   "devDependencies": {
     "@provenant/core": "workspace:*"
-  }
+  },
+  "author": "Jared Klopstein",
+  "homepage": "https://jaredklopstein.github.io/provenant",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JaredKlopstein/provenant.git",
+    "directory": "packages/verifier"
+  },
+  "bugs": {
+    "url": "https://github.com/JaredKlopstein/provenant/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false
 }

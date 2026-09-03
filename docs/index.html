@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Provenant — prove what your agents did</title>
+<meta name="description" content="Signed, hash-chained receipts of what your AI agents actually did. Anyone can verify them offline, without trusting you.">
+<meta property="og:title" content="Provenant — prove what your agents did">
+<meta property="og:description" content="An agent's log is only as honest as whoever holds the disk. Provenant makes it evidence.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#141a22; --ink-2:#2c3542; --dim:#6c6b64;
+    --paper:#e8e8e4; --card:#f6f6f3; --rule:#ccccc4;
+    --seal-red:#a3201b; --seal-green:#2c6449;
+    --plate:#171d26; --plate-ink:#d8dbe0;
+    --serif:'IBM Plex Serif',Georgia,serif;
+    --sans:'IBM Plex Sans',system-ui,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font:16px/1.62 var(--sans);
+    background-image:radial-gradient(circle at 1px 1px,rgba(20,26,34,.055) 1px,transparent 0);
+    background-size:22px 22px;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px}
+  a{color:inherit}
+  ::selection{background:var(--ink);color:var(--paper)}
+
+  /* ---- eyebrows / labels: the page's structural vocabulary ---- */
+  .eyebrow{
+    font:500 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+    color:var(--dim);display:block;margin-bottom:14px;
+  }
+
+  /* ---- masthead ---- */
+  header{border-bottom:1px solid var(--rule)}
+  .masthead{display:flex;align-items:baseline;justify-content:space-between;padding:18px 0;gap:16px}
+  .logo{font:600 17px/1 var(--serif);letter-spacing:-.01em}
+  .logo span{color:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.12em;margin-left:10px;font-weight:500}
+  .masthead nav{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;display:flex;gap:20px}
+  .masthead nav a{text-decoration:none;color:var(--dim);border-bottom:1px solid transparent;padding-bottom:3px}
+  .masthead nav a:hover,.masthead nav a:focus-visible{color:var(--ink);border-color:var(--ink)}
+
+  /* ---- hero ---- */
+  .hero{padding:76px 0 30px;max-width:760px}
+  h1{
+    font:600 clamp(38px,6.4vw,62px)/1.04 var(--serif);
+    letter-spacing:-.022em;margin:0 0 22px;
+  }
+  h1 em{font-style:normal;display:block;color:var(--seal-red)}
+  .lede{font-size:19px;line-height:1.58;max-width:60ch;margin:0 0 8px;color:var(--ink-2)}
+
+  /* ---- the exhibit: signature element ---- */
+  .exhibit{
+    background:var(--card);border:1px solid var(--rule);border-radius:10px;
+    margin:44px 0 8px;box-shadow:0 1px 0 rgba(20,26,34,.05),0 14px 34px -26px rgba(20,26,34,.5);
+    overflow:hidden;
+  }
+  .exhibit-head{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:13px 18px;border-bottom:1px solid var(--rule);background:rgba(20,26,34,.028);
+  }
+  .exhibit-head h2{font:500 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;margin:0;color:var(--dim)}
+  .live{font:500 11px/1 var(--mono);letter-spacing:.1em;color:var(--seal-green);text-transform:uppercase}
+  .live::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--seal-green);margin-right:7px;vertical-align:1px}
+
+  .chain{padding:6px 18px 18px}
+  .rcpt{padding:15px 0;border-bottom:1px dashed var(--rule)}
+  .rcpt:last-of-type{border-bottom:0}
+  .rcpt-top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .seq{font:600 11px/1 var(--mono);letter-spacing:.08em;color:var(--dim);white-space:nowrap}
+  .act{font:500 14px/1.3 var(--mono)}
+  .amt{margin-left:auto;font:500 14px/1.3 var(--mono);transition:color .25s}
+  .amt.changed{color:var(--seal-red)}
+  .link{
+    display:flex;align-items:center;gap:9px;margin-top:9px;
+    font:400 11.5px/1.5 var(--mono);color:var(--dim);word-break:break-all;
+  }
+  .pill{
+    flex:none;font:600 9.5px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;
+    padding:4px 7px;border-radius:3px;border:1px solid currentColor;
+  }
+  .pill.ok{color:var(--seal-green)}
+  .pill.bad{color:var(--seal-red)}
+  .hashline{transition:color .25s}
+  .hashline.bad{color:var(--seal-red)}
+
+  .verdict{
+    margin:2px 18px 18px;padding:15px 17px;border-radius:7px;border:1px solid;
+    font:400 14px/1.55 var(--sans);transition:background .3s,border-color .3s,color .3s;
+  }
+  .verdict strong{display:block;font:600 12px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;margin-bottom:8px}
+  .verdict.ok{background:rgba(44,100,73,.085);border-color:rgba(44,100,73,.35);color:#1d4c37}
+  .verdict.bad{background:rgba(163,32,27,.075);border-color:rgba(163,32,27,.32);color:#8a1a15}
+
+  .controls{display:flex;gap:10px;flex-wrap:wrap;padding:0 18px 18px}
+  button{
+    font:500 13px/1 var(--sans);padding:11px 15px;border-radius:6px;cursor:pointer;
+    border:1px solid var(--ink);background:var(--ink);color:var(--paper);
+    transition:transform .12s,opacity .2s;
+  }
+  button.ghost{background:transparent;color:var(--ink)}
+  button:hover:not(:disabled){transform:translateY(-1px)}
+  button:disabled{opacity:.32;cursor:not-allowed}
+  button:focus-visible,a:focus-visible{outline:2px solid var(--seal-red);outline-offset:3px}
+  .step-note{padding:0 18px 18px;font-size:13.5px;color:var(--dim);max-width:64ch}
+
+  /* ---- sections ---- */
+  section{padding:64px 0;border-top:1px solid var(--rule)}
+  h3{font:600 clamp(24px,3.4vw,32px)/1.2 var(--serif);letter-spacing:-.015em;margin:0 0 16px}
+  .prose{max-width:64ch;color:var(--ink-2)}
+  .prose p{margin:0 0 15px}
+  .prose strong{color:var(--ink)}
+
+  /* ---- terminal plates: quotations from the real tool ---- */
+  .plates{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:30px}
+  @media(max-width:760px){.plates{grid-template-columns:1fr}}
+  .plate{background:var(--plate);border-radius:9px;overflow:hidden;border:1px solid #0d1219}
+  .plate-cap{
+    padding:11px 15px;border-bottom:1px solid rgba(255,255,255,.09);
+    font:500 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#8d94a0;
+    display:flex;justify-content:space-between;gap:10px;
+  }
+  .plate pre{
+    margin:0;padding:15px;color:var(--plate-ink);font:400 12px/1.62 var(--mono);
+    white-space:pre-wrap;word-break:break-word;
+  }
+  .g{color:#79c39b}.r{color:#e2827c}.d{color:#7d8593}
+
+  /* ---- tiers ---- */
+  .tiers{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:26px}
+  @media(max-width:760px){.tiers{grid-template-columns:1fr}}
+  .tier{background:var(--card);border:1px solid var(--rule);border-radius:9px;padding:22px}
+  .tier.paid{border-color:var(--ink);box-shadow:0 12px 30px -24px rgba(20,26,34,.65)}
+  .tier h4{margin:0 0 4px;font:600 19px/1.25 var(--serif)}
+  .price{font:500 12px/1 var(--mono);letter-spacing:.08em;color:var(--dim);text-transform:uppercase;margin-bottom:15px}
+  .tier ul{margin:0;padding-left:17px;font-size:14.5px;color:var(--ink-2)}
+  .tier li{margin:7px 0}
+
+  pre.cmd{
+    background:var(--plate);color:var(--plate-ink);border-radius:8px;padding:16px 18px;
+    font:400 13px/1.75 var(--mono);overflow-x:auto;margin:18px 0;
+  }
+  pre.cmd .c{color:#7d8593}
+
+  .limits li{margin:11px 0}
+  .limits{max-width:64ch;padding-left:18px;color:var(--ink-2);font-size:15px}
+
+  footer{border-top:1px solid var(--rule);padding:34px 0 60px;font-size:13.5px;color:var(--dim)}
+  footer a{text-decoration:underline;text-underline-offset:3px}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap masthead">
+    <div class="logo">Provenant <span>TAMPER-EVIDENT RECEIPTS</span></div>
+    <nav>
+      <a href="#gap">The gap</a>
+      <a href="#start">Start</a>
+      <a href="https://github.com/JaredKlopstein/provenant">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <span class="eyebrow">For teams running AI agents that touch money, mail, or customer data</span>
+    <h1>Your agent says it refunded&nbsp;$42.50.<em>Prove it.</em></h1>
+    <p class="lede">
+      Provenant writes signed, hash-chained receipts of what your agents actually did.
+      Anyone can verify them offline — with no access to your systems and no reason to trust you.
+    </p>
+  </div>
+
+  <!-- SIGNATURE ELEMENT: a real hash chain, recomputed live in your browser -->
+  <div class="exhibit">
+    <div class="exhibit-head">
+      <h2>Exhibit A — live chain</h2>
+      <span class="live">SHA-256 computed in your browser</span>
+    </div>
+
+    <div class="chain" id="chain"></div>
+
+    <div class="verdict ok" id="verdict">
+      <strong id="verdict-title">Intact</strong>
+      <span id="verdict-body">Every receipt hashes to the value the next one points at. Nothing has been altered.</span>
+    </div>
+
+    <div class="controls">
+      <button id="btn-tamper">Alter the refund to $99,999</button>
+      <button id="btn-resign" class="ghost" disabled>Now re-sign the chain, like the operator would</button>
+      <button id="btn-reset" class="ghost">Reset</button>
+    </div>
+    <p class="step-note" id="step-note">
+      These are three real receipts, with the hashes recomputed from their bytes as you change them.
+      The last one was timestamped by DigiCert on 3&nbsp;September&nbsp;2026.
+    </p>
+  </div>
+
+  <section id="gap">
+    <span class="eyebrow">Why a local log is not enough</span>
+    <h3>The operator holds the keys</h3>
+    <div class="prose">
+      <p>
+        An agent's log is only as honest as whoever holds the disk. Someone with database access and
+        the agent's signing key can rewrite a receipt, relink every hash after it, and re-sign the lot.
+        The result is a chain that is internally flawless.
+      </p>
+      <p>
+        Below is that exact attack, run against a real store. On the left, Provenant's own local
+        verification. On the right, the same forged chain checked against its external timestamp.
+        <strong>Both outputs are copied verbatim from the tool.</strong>
+      </p>
+    </div>
+
+    <div class="plates">
+      <div class="plate">
+        <div class="plate-cap"><span>Local verification</span><span>free</span></div>
+<pre>$ provenant chain verify
+
+<span class="g">ok: true</span>
+failures: <span class="g">0</span>
+receipts_checked: 3
+
+<span class="d"># the forged chain passes,
+# completely.</span></pre>
+      </div>
+      <div class="plate">
+        <div class="plate-cap"><span>Anchored bundle</span><span>paid</span></div>
+<pre>$ provenant-verify evidence.json
+
+<span class="r">FORGERY DETECTED.</span> The receipts in
+this bundle do not produce the head
+that was externally timestamped at
+seq 2. Someone altered the history
+after it was anchored, and could not
+forge a replacement timestamp.
+
+<span class="d">exit 1</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">What you get</span>
+    <h3>Recording is free. Proving it to a stranger is the paid part.</h3>
+    <div class="prose">
+      <p>
+        That split is technical, not artificial. A chain kept on your own disk attests to itself —
+        it cannot rule out that you rewrote it. An external timestamp from an authority you don't
+        control can. That is the only thing we charge for.
+      </p>
+    </div>
+
+    <div class="tiers">
+      <div class="tier">
+        <h4>Provenant Core</h4>
+        <div class="price">MIT · free forever</div>
+        <ul>
+          <li>Unlimited receipts and agents, self-hosted</li>
+          <li>Hash chain, Ed25519 signatures, local verification</li>
+          <li><code>provenant-verify</code> — offline bundle verification, never paywalled</li>
+          <li>CLI with <code>--json</code> on every command</li>
+          <li>No time limit, no agent cap</li>
+        </ul>
+      </div>
+      <div class="tier paid">
+        <h4>Evidence bundle</h4>
+        <div class="price">$99 per bundle</div>
+        <ul>
+          <li>Your chain head timestamped by a public RFC&nbsp;3161 authority</li>
+          <li>A self-contained archive an auditor verifies offline</li>
+          <li>Human-readable report for the people who won't read JSON</li>
+          <li>We hold a copy, so the evidence exists when you need it</li>
+          <li>You cannot anchor retroactively — that's the whole point</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="start">
+    <span class="eyebrow">Start</span>
+    <h3>Sixty seconds to a verified receipt</h3>
+<pre class="cmd"><span class="c"># record what your agent just did</span>
+npx @provenant/core init
+npx @provenant/core record --action refund.issue \
+  --action-detail '{"customer_id":"c_8812","amount_usd":42.50}' \
+  --side-effect-class irreversible
+
+<span class="c"># prove the local chain is intact</span>
+npx @provenant/core chain verify
+
+<span class="c"># check a bundle someone hands you — offline, no account</span>
+npx @provenant/verifier evidence.json</pre>
+    <div class="prose">
+      <p>
+        There is a real DigiCert-anchored sample bundle in the repository. Verify it before you
+        trust anything on this page.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">Before you rely on this</span>
+    <h3>What Provenant does not do</h3>
+    <ul class="limits">
+      <li>
+        <strong>It does not make you compliant with anything.</strong> It produces tamper-evident
+        records that support logging obligations. We are not lawyers and this is not legal advice.
+      </li>
+      <li>
+        <strong>An anchor does not prove completeness.</strong> Receipts written since the last
+        anchor can still be dropped. Anchoring often narrows that window; it never closes it, and
+        the verifier tells you exactly how far the proof reaches.
+      </li>
+      <li>
+        <strong>It cannot see what an agent declines to record.</strong> Receipts make recorded
+        behaviour tamper-evident. They cannot make unrecorded behaviour appear.
+      </li>
+      <li>
+        <strong>A timestamp inside a bundle is not a vote of confidence.</strong> Anyone can mint a
+        certificate. Trust comes from a fingerprint you pin yourself, and the verifier reports
+        soundness and trust as two separate answers.
+      </li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    Provenant — MIT licensed core and verifier ·
+    <a href="https://github.com/JaredKlopstein/provenant">Source on GitHub</a><br>
+    The chain above is real. Break it, then check the arithmetic yourself.
+  </div>
+</footer>
+
+<script>
+const DATA = {"anchor":{"seq":2,"head":"c0a8511d1106d3c12e8fdf3dc715acbc0e4e06a89487f5c10ac1de5f5bc82476","time":"2026-09-03T19:09:57.000Z","authority":"DigiCert SHA256 RSA4096 Timestamp Responder 2026 1"},"receipts":[{"seq":0,"canonical":"{\"action_detail\":{\"amount_usd\":42.5,\"customer_id\":\"c_8812\"},\"action_type\":\"tool_call\",\"agent_id\":\"urn:provenant:agent:_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"agent_version\":\"0.0.0\",\"outcome\":\"success\",\"parent_record_id\":null,\"prev_hash\":null,\"provenant\":{\"action\":\"refund.issue\",\"idempotency_key\":\"refund-8812\",\"key_id\":\"_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"seq\":0,\"side_effect_class\":\"irreversible\",\"signature_alg\":\"ed25519\",\"v\":\"1\"},\"record_id\":\"e6a5a93e-4389-451a-8f73-d12ce06f31ad\",\"session_id\":\"97e87eea-856d-4fbc-95a0-c19d9ea68429\",\"signature\":\"raRdEO8HaKzxJP0yZVH_15bk4rrQFLbDy-Tec3DKfSbdkPAgDEKMM3L6j1rW4QG0Fvfhi9pUOML-VTc7ZqUiCA\",\"timestamp\":\"2026-09-03T19:09:56.557Z\",\"trust_level\":\"L1\"}","self_hash":"906cb6f7ce1082f73139822c8fad8eb36019dbd44d98883876d47068fb5e5951"},{"seq":1,"canonical":"{\"action_detail\":{\"template\":\"refund_confirmation\",\"to\":\"c_8812\"},\"action_type\":\"tool_call\",\"agent_id\":\"urn:provenant:agent:_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"agent_version\":\"0.0.0\",\"outcome\":\"success\",\"parent_record_id\":null,\"prev_hash\":\"906cb6f7ce1082f73139822c8fad8eb36019dbd44d98883876d47068fb5e5951\",\"provenant\":{\"action\":\"email.send\",\"key_id\":\"_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"seq\":1,\"side_effect_class\":\"write\",\"signature_alg\":\"ed25519\",\"v\":\"1\"},\"record_id\":\"61a9657e-d7b9-4377-85d3-114521891729\",\"session_id\":\"c726a1cb-cd90-41bc-a6b6-f399ac1cdd8e\",\"signature\":\"QZbYI_n7A6e-7LgGY6w2x8wnYDygqRFJ3IY2b8MONVMKZsoHQcVceHrNFzeRMG1vc7JnDLq8T0BYzBdBNQWXDQ\",\"timestamp\":\"2026-09-03T19:09:56.816Z\",\"trust_level\":\"L1\"}","self_hash":"37a49e270eaa365a144ddb215bb738377a06ffb97ffe384303053bef6c89ab72"},{"seq":2,"canonical":"{\"action_detail\":{\"amount_usd\":180,\"customer_id\":\"c_9001\"},\"action_type\":\"tool_call\",\"agent_id\":\"urn:provenant:agent:_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"agent_version\":\"0.0.0\",\"outcome\":\"success\",\"parent_record_id\":null,\"prev_hash\":\"37a49e270eaa365a144ddb215bb738377a06ffb97ffe384303053bef6c89ab72\",\"provenant\":{\"action\":\"refund.issue\",\"key_id\":\"_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"seq\":2,\"side_effect_class\":\"irreversible\",\"signature_alg\":\"ed25519\",\"v\":\"1\"},\"record_id\":\"baa362af-681a-4254-9d39-ad1576d15307\",\"session_id\":\"c3ebfdd6-8ca4-4a2c-b3a3-fa605fa334c4\",\"signature\":\"-TIB0zmTzv0RiNEBNnrByPQTUNTnGRn1pI-RZlGxRfVetVAXddz0qTzYT-yV6L98FqvtAIBVF5h1g-AtJMFgCA\",\"timestamp\":\"2026-09-03T19:09:57.072Z\",\"trust_level\":\"L1\"}","self_hash":"c0a8511d1106d3c12e8fdf3dc715acbc0e4e06a89487f5c10ac1de5f5bc82476"}]};
+
+/* RFC 8785 JSON Canonicalization — the same rule the CLI and the verifier use.
+   Keys sorted by UTF-16 code unit, no whitespace, ECMAScript number forms. */
+function jcs(v){
+  if(v===null) return 'null';
+  const t=typeof v;
+  if(t==='boolean'||t==='number'||t==='string') return JSON.stringify(v);
+  if(Array.isArray(v)) return '['+v.map(jcs).join(',')+']';
+  const keys=Object.keys(v).sort((a,b)=>a<b?-1:a>b?1:0);
+  return '{'+keys.map(k=>JSON.stringify(k)+':'+jcs(v[k])).join(',')+'}';
+}
+async function sha256hex(s){
+  const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+const short=h=>h?h.slice(0,20)+'…':'null';
+
+let state='intact';
+const base=DATA.receipts.map(r=>JSON.parse(r.canonical));
+
+/* Recompute the chain exactly as the verifier does: hash each stored record,
+   and check that the next record's prev_hash equals it. */
+async function computeChain(){
+  const recs=base.map(r=>JSON.parse(JSON.stringify(r)));
+  if(state!=='intact') recs[0].action_detail.amount_usd=99999;
+  // The operator, who holds the signing key, would relink every hash downstream.
+  if(state==='resigned'){
+    let prev=null;
+    for(const r of recs){ r.prev_hash=prev; prev=await sha256hex(jcs(r)); }
+  }
+  const out=[];
+  let prevHash=null;
+  for(let i=0;i<recs.length;i++){
+    const self=await sha256hex(jcs(recs[i]));
+    out.push({
+      seq:i,
+      action:recs[i].provenant.action,
+      amount:recs[i].action_detail.amount_usd,
+      prev:recs[i].prev_hash,
+      self,
+      linkOk:i===0?recs[i].prev_hash===null:recs[i].prev_hash===prevHash
+    });
+    prevHash=self;
+  }
+  return out;
+}
+
+function render(rows){
+  const headOk=rows[rows.length-1].self===DATA.anchor.head;
+  const linksOk=rows.every(r=>r.linkOk);
+
+  document.getElementById('chain').innerHTML=rows.map(r=>`
+    <div class="rcpt">
+      <div class="rcpt-top">
+        <span class="seq">SEQ ${r.seq}</span>
+        <span class="act">${r.action}</span>
+        <span class="amt${r.amount===99999?' changed':''}">${
+          r.amount===undefined?'—':'$'+Number(r.amount).toLocaleString('en-US',{minimumFractionDigits:2})
+        }</span>
+      </div>
+      <div class="link">
+        <span class="pill ${r.linkOk?'ok':'bad'}">${r.linkOk?'linked':'broken'}</span>
+        <span class="hashline${r.linkOk?'':' bad'}">prev ${short(r.prev)} → self ${short(r.self)}</span>
+      </div>
+    </div>`).join('')+`
+    <div class="rcpt">
+      <div class="rcpt-top">
+        <span class="seq">ANCHOR</span>
+        <span class="act">DigiCert RFC 3161 · ${DATA.anchor.time.slice(0,10)}</span>
+      </div>
+      <div class="link">
+        <span class="pill ${headOk?'ok':'bad'}">${headOk?'matches':'mismatch'}</span>
+        <span class="hashline${headOk?'':' bad'}">committed head ${short(DATA.anchor.head)}</span>
+      </div>
+    </div>`;
+
+  const v=document.getElementById('verdict');
+  const t=document.getElementById('verdict-title');
+  const b=document.getElementById('verdict-body');
+  const note=document.getElementById('step-note');
+
+  if(state==='intact'){
+    v.className='verdict ok'; t.textContent='Intact';
+    b.textContent='Every receipt hashes to the value the next one points at, and the head matches the timestamp DigiCert signed. Nothing has been altered.';
+    note.textContent='These are three real receipts, with the hashes recomputed from their bytes as you change them. The last one was timestamped by DigiCert on 3 September 2026.';
+  } else if(state==='tampered'){
+    v.className='verdict bad'; t.textContent='Broken at seq 1';
+    b.textContent='Changing the refund changed its hash, so the next receipt now points at a value that no longer exists. This is the crude attack, and a local check catches it.';
+    note.textContent='But an operator would not stop here. They hold the signing key, so they can relink and re-sign every receipt after the one they changed.';
+  } else {
+    v.className='verdict bad'; t.textContent='Chain repaired · anchor still refuses';
+    b.textContent='Every link is consistent again. Local verification now passes completely. The timestamp is the only thing left that disagrees — and it cannot be forged, because DigiCert signed it and the operator does not have their key.';
+    note.textContent='This is the entire product. Everything above the anchor line is free. The anchor line is what people pay for.';
+  }
+}
+
+async function refresh(){ render(await computeChain()); }
+
+document.getElementById('btn-tamper').onclick=()=>{
+  state='tampered';
+  document.getElementById('btn-resign').disabled=false;
+  document.getElementById('btn-tamper').disabled=true;
+  refresh();
+};
+document.getElementById('btn-resign').onclick=()=>{
+  state='resigned';
+  document.getElementById('btn-resign').disabled=true;
+  refresh();
+};
+document.getElementById('btn-reset').onclick=()=>{
+  state='intact';
+  document.getElementById('btn-tamper').disabled=false;
+  document.getElementById('btn-resign').disabled=true;
+  refresh();
+};
+refresh();
+</script>
+</body>
+</html>

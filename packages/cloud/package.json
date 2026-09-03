@@ -25,5 +25,8 @@
   },
   "bin": {
     "provenant-cloud": "./bin/provenant-cloud.mjs"
+  },
+  "publishConfig": {
+    "access": "restricted"
   }
 }

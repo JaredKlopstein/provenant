@@ -14,7 +14,9 @@
     "typecheck": "tsc -b --pretty",
     "lint:boundaries": "node scripts/check-boundaries.mjs",
     "ci": "pnpm run lint:boundaries && pnpm run typecheck && pnpm run test && pnpm run test:offline",
-    "test:offline": "vitest run packages/verifier"
+    "test:offline": "vitest run packages/verifier",
+    "release:dry": "pnpm -r --filter '@provenant/core' --filter '@provenant/verifier' publish --dry-run --no-git-checks",
+    "release": "pnpm -r --filter '@provenant/core' --filter '@provenant/verifier' publish --access public --no-git-checks"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
