@@ -35,8 +35,14 @@ For the harder attack — rebuilding the whole chain with valid signatures, whic
 defeats local verification entirely — see
 `packages/cloud/test/forgery.test.ts`. The anchor is what catches that one.
 
-## evidence.pdf
+## evidence.pdf and evidence.html
 
-The human-readable summary. It says on its own face that it is **not** the
-evidence: a PDF carries no cryptography and anyone can edit it. It exists so an
-auditor can understand what the bundle says and how to check it themselves.
+The human-readable summaries. Both say on their own face that they are **not**
+the evidence: neither carries cryptography and anyone can edit them. They exist
+so an auditor can understand what the bundle says and how to check it themselves.
+
+`evidence.html` is the primitive behind the hosted verifier page. It is fully
+self-contained — no scripts, no CDN, no external fonts or images — because an
+evidence report that phones out to a third party cannot be opened in the
+air-gapped room where audits actually happen, and would leak the reader's
+identity if it could.

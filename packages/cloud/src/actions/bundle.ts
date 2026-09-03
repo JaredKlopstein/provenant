@@ -4,6 +4,7 @@ import { defineAction, type NextAction } from '@provenant/core';
 import { verifyBundle } from '@provenant/verifier';
 import { exportBundle, bundleToJson } from '../bundle/export.js';
 import { bundleToPdf } from '../bundle/pdf.js';
+import { bundleToHtml } from '../bundle/html.js';
 
 /**
  * Registered into core's action registry by importing this module, so the paid
@@ -24,8 +25,8 @@ export const bundleExportAction = defineAction({
   input: z.object({
     from_seq: z.number().int().nonnegative().optional().describe('First chain position to include. Defaults to the start of the chain.'),
     to_seq: z.number().int().nonnegative().optional().describe('Last chain position to include. Defaults to the head.'),
-    format: z.enum(['json', 'pdf', 'both']).default('json')
-      .describe('json is the evidence. pdf is a human-readable summary with NO cryptographic value; use both when sending to an auditor.'),
+    format: z.enum(['json', 'pdf', 'html', 'both', 'all']).default('json')
+      .describe('json is the evidence. pdf and html are human-readable summaries with NO cryptographic value. Use "all" when sending to an auditor; html is also what the hosted verifier page serves.'),
     out: z.string().optional().describe('Write to this path instead of returning the bundle inline. Strongly recommended: a bundle is large.'),
     title: z.string().optional().describe('Title for the PDF report.'),
     organization: z.string().optional().describe('Organisation name for the PDF report.'),
@@ -52,17 +53,29 @@ export const bundleExportAction = defineAction({
     const written: string[] = [];
 
     if (input.out) {
-      if (input.format === 'json' || input.format === 'both') {
+      const wantJson = input.format === 'json' || input.format === 'both' || input.format === 'all';
+      const wantPdf = input.format === 'pdf' || input.format === 'both' || input.format === 'all';
+      const wantHtml = input.format === 'html' || input.format === 'all';
+
+      if (wantJson) {
         writeFileSync(input.out, bundleToJson(bundle));
         written.push(input.out);
       }
-      if (input.format === 'pdf' || input.format === 'both') {
+      if (wantPdf) {
         const pdfPath = input.out.replace(/\.json$/, '') + '.pdf';
         writeFileSync(pdfPath, await bundleToPdf(bundle, {
           ...(input.title ? { title: input.title } : {}),
           ...(input.organization ? { organization: input.organization } : {}),
         }));
         written.push(pdfPath);
+      }
+      if (wantHtml) {
+        const htmlPath = input.out.replace(/\.json$/, '') + '.html';
+        writeFileSync(htmlPath, bundleToHtml(bundle, {
+          ...(input.title ? { title: input.title } : {}),
+          ...(input.organization ? { organization: input.organization } : {}),
+        }));
+        written.push(htmlPath);
       }
     }
 
@@ -100,7 +113,7 @@ export const bundleExportAction = defineAction({
   examples: [
     {
       description: 'Full evidence pack for an auditor',
-      arguments: { format: 'both', out: 'evidence.json', organization: 'Acme Corp' },
+      arguments: { format: 'all', out: 'evidence.json', organization: 'Acme Corp' },
     },
     {
       description: 'Just the incident window',

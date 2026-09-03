@@ -138,3 +138,5 @@ describe('self-serve checkout', () => {
     expect((calls[0]!.metadata as { provenant_plan: string }).provenant_plan).toBe('team');
   });
 });
+
+// (html report tests live in report.test.ts)

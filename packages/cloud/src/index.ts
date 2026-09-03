@@ -18,6 +18,7 @@ export { mintTimeStampToken } from './anchor/cms.js';
 export { buildTimeStampReq } from './anchor/der.js';
 export { exportBundle, bundleToJson, type ExportOptions } from './bundle/export.js';
 export { bundleToPdf, type PdfOptions } from './bundle/pdf.js';
+export { bundleToHtml, type HtmlOptions } from './bundle/html.js';
 export { createCollector, type CollectorOptions } from './collector/server.js';
 export {
   computeInvoice, createCheckoutSession, createPortalSession, stripeCatalog,
