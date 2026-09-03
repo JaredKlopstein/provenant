@@ -1,57 +1,31 @@
 /**
- * @provenant/verifier -- the standalone, offline evidence verifier. MIT.
+ * @provenant/verifier -- standalone, offline evidence verifier. MIT.
  *
- * STATUS: Phase 2. This package is scaffolded, licensed and boundary-enforced
- * in Phase 1, but deliberately not implemented yet: it verifies *bundles*, and
- * bundles are produced by the anchoring work in Phase 2. Shipping a half-built
- * verifier would be worse than shipping none, because this package is the single
- * thing a skeptical third party is asked to trust.
+ * This package is the credibility anchor of the whole product. Constraints,
+ * enforced by scripts/check-boundaries.mjs in CI:
  *
- * Local chain verification is available today, free, via `provenant chain verify`.
- *
- * THE CONSTRAINTS THIS PACKAGE MUST HONOUR (CI-enforced, see
- * scripts/check-boundaries.mjs):
- *
- *   1. It must not import @provenant/cloud. Obvious: the paid package cannot be
- *      required to check the paid package's output.
- *
- *   2. It must not import @provenant/core either. This is STRICTER than the
- *      original requirement, deliberately. A verifier that shares its hashing and
- *      canonicalization code with the system it audits is not independent -- a bug
- *      or a backdoor in that shared code would be invisible to both. So the JCS
- *      canonicalizer, the chain walk and the signature check are reimplemented
- *      here from the specifications (RFC 8785, RFC 8032, SHA-256), and
- *      test/cross-impl.test.ts asserts the two implementations agree byte-for-byte
- *      on a shared corpus. That test is what stops the two from drifting.
- *
- *   3. It must not import any network module. No http, https, net, tls, dgram,
- *      no fetch libraries. A verifier that phones home is a verifier whose result
- *      you cannot trust in an air-gapped security review -- and "can I run this
- *      offline" is the first question an auditor asks.
- *
- *   4. Its only permitted dependencies are @noble/ed25519 and @noble/hashes.
- *
- * Planned surface:
- *   verifyBundle(bundle: unknown): BundleVerdict
- *   CLI: provenant-verify <bundle.json> [--json]
+ *   1. No import of @provenant/cloud. The paid package cannot be required to
+ *      check the paid package's output.
+ *   2. No import of @provenant/core either. A verifier sharing its hashing and
+ *      canonicalization with the system it audits is not independent -- a bug
+ *      there would be invisible to both. JCS, the chain walk and signature
+ *      checking are reimplemented here from RFC 8785, RFC 8032 and the AAT
+ *      draft; test/cross-impl.test.ts asserts the two agree byte-for-byte.
+ *   3. No network module. "Can I run this on an air-gapped machine" is the
+ *      first question a security reviewer asks, and the answer must never
+ *      quietly become no. node:crypto is a platform builtin, not a dependency,
+ *      and is used for RSA/ECDSA and X.509 in RFC 3161 tokens.
+ *   4. Only @noble/ed25519 and @noble/hashes as dependencies.
  */
+export { verifyBundle, BUNDLE_FORMAT } from './bundle.js';
+export type {
+  Bundle, BundleVerdict, BundleReceipt, BundleAnchor, AnchorVerdict,
+  Failure, FailureKind, VerifyOptions,
+} from './bundle.js';
+export { verifyTimestampToken } from './rfc3161.js';
+export type { TimestampVerdict, ChainStatus, CertRef } from './rfc3161.js';
+export { canonicalize, canonicalBytes, CanonicalizationError } from './jcs.js';
+export { receiptHash, verifyReceiptSignature, jwkToPublicKey, stripUndefined } from './receipt.js';
+export { parseDer, DerError } from './der.js';
 
 export const VERIFIER_VERSION = '0.1.0';
-
-/** Phase 2. Present so the intended contract is legible from Phase 1. */
-export interface BundleVerdict {
-  ok: boolean;
-  /** Whether an external anchor was present AND validated. Without this, the
-   *  bundle proves internal consistency only. */
-  anchored: boolean;
-  receipts_checked: number;
-  failures: Array<{ seq: number; kind: string; message: string }>;
-  intact_ranges: Array<{ from_seq: number; to_seq: number }>;
-}
-
-export function verifyBundle(_bundle: unknown): BundleVerdict {
-  throw new Error(
-    'provenant-verify is not implemented yet (Phase 2). ' +
-      'For local chain integrity today, run: provenant chain verify --json',
-  );
-}

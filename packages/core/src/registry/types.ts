@@ -59,13 +59,15 @@ export interface ActionDef<I = unknown, O = unknown> {
   sideEffect: SideEffectClass;
   input: z.ZodType<I>;
   output: z.ZodType<O>;
-  handler(input: I, ctx: ActionContext): O;
+  /** May be sync or async. The hot path (`record`) is deliberately synchronous;
+   *  only network-bound actions such as anchoring return a promise. */
+  handler(input: I, ctx: ActionContext): O | Promise<O>;
   /**
    * Design law 7: dry-run on every mutation. Returns the exact effect --
    * including the receipt that WOULD be written -- while applying nothing.
    * Required for every non-read action; the registry test enforces it.
    */
-  dryRun?(input: I, ctx: ActionContext): O;
+  dryRun?(input: I, ctx: ActionContext): O | Promise<O>;
   /** Ready-to-execute follow-ups, computed from the actual result. */
   nextActions?(input: I, output: O, ctx: ActionContext): NextAction[];
   /** Literal examples used in --help and the discovery manifest. */

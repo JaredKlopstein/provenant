@@ -18,19 +18,37 @@ provenant record --action refund.issue \
 provenant chain verify --json
 ```
 
-## Status: Phase 1
+## Status: Phase 2 complete
 
-Core write path is complete and tested. What works today:
+**Free — Provenant Core (MIT):**
 
 - Receipt recording with RFC 8785 canonicalization, SHA-256 chaining, Ed25519 signatures
-- Self-registration with trust-on-first-use identity
+- Self-registration with trust-on-first-use identity; RFC 9421 HTTP Message Signatures
 - Local chain verification that names the exact broken receipt and proves the rest intact
 - Idempotency replay, dry-run on every mutation, cursor pagination, field projection
 - A CLI with `--json` on every command, and a self-describing manifest
 
-Not built yet: anchoring, export bundles, the standalone verifier (Phase 2);
-contracts and approvals (Phase 3); leases and fencing tokens (Phase 4); MCP
-adapter (Phase 5).
+**Free — `provenant-verify` (MIT):** standalone offline bundle verification,
+including full RFC 3161 timestamp checking. Verifying is never paywalled.
+
+**Paid — Provenant Cloud:** RFC 3161 anchoring against a real timestamp
+authority, evidence bundle export (JSON + PDF), the hosted collector, and billing.
+
+Not built yet: contracts and approvals (Phase 3); leases and fencing tokens
+(Phase 4); MCP adapter (Phase 5).
+
+```bash
+# free: record and verify locally
+provenant record --action refund.issue --action-detail '{"amount_usd":42}' --json
+provenant chain verify --json
+
+# paid: anchor to an authority you don't control, then export evidence
+provenant-cloud anchor now --backend tsa --json
+provenant-cloud bundle export --format both --out evidence.json --json
+
+# anyone, offline, with no Provenant server and no commercial code
+npx @provenant/verifier evidence.json --trust digicert-root.pem
+```
 
 ## What this is honestly worth
 
@@ -39,10 +57,18 @@ adapter (Phase 5).
 could rewrite everything, including the verification output that says everything
 is fine. `chain verify` says so in its own response, every time.
 
-That gap is the product boundary. External anchoring (Phase 2, paid) commits the
-chain head to something the operator cannot forge or backdate, which is what
-turns a log into evidence. We are not withholding a feature; we are selling the
-one property a local system physically cannot provide about itself.
+That gap is the product boundary. External anchoring (paid) commits the chain
+head to an RFC 3161 timestamp authority the operator does not control, which is
+what turns a log into evidence. We are not withholding a feature; we are selling
+the one property a local system physically cannot provide about itself.
+
+How seriously we take this: `packages/cloud/test/forgery.test.ts` models an
+adversary with full database access, the append-only triggers dropped, **and the
+agents' signing keys**. It rebuilds the entire chain — every hash relinked, every
+receipt re-signed — and confirms local verification is completely fooled. Then it
+confirms the anchored bundle still fails, because the one thing the adversary
+cannot forge is the authority's signature. See
+[ADR 0003](docs/adr/0003-anchoring.md).
 
 The local append-only database triggers stop application bugs and accidents, not
 a determined operator. Do not oversell them.
@@ -65,6 +91,19 @@ a determined operator. Do not oversell them.
   conformance**.
 - **Web Bot Auth / RFC 9421 agent identity drafts are individual submissions**
   with no working group adoption. The wire format may shift.
+
+## What an anchor does and does not prove
+
+| | Local chain | Anchored chain |
+|---|---|---|
+| Detects casual tampering | yes | yes |
+| Detects a full rebuild by the operator | **no** | yes |
+| Detects backdating after the anchor | no | yes |
+| Detects truncation of the un-anchored tail | no | **no** |
+
+That last row is why anchor cadence is a pricing tier rather than a checkbox:
+daily anchoring bounds the forgeable window to a day, monthly to a month. The
+CLI says so in `anchor list` output rather than leaving you to work it out.
 
 ## Architecture
 

@@ -24,7 +24,23 @@ export {
   registerAgent, getAgent, requireAgent, listAgents, keyDirectory, type RegisteredAgent,
 } from './agents/store.js';
 export { ProvenantError, toProvenantError, ERROR_CODES, type ErrorCode } from './errors.js';
+export {
+  registerAnchorBackend, getAnchorBackend, anchorBackendNames,
+  type AnchorBackend, type AnchorProof, type AnchorStatement, type AnchorRecord, type AnchorProofType,
+} from './anchor/types.js';
+export { noopBackend } from './anchor/noop.js';
+export {
+  createAnchor, listAnchors, anchorCovering, buildStatement, anchorImprint,
+  imprintHex, chainId, toAnchorRecord,
+} from './anchor/store.js';
 export { resolveStoreDir, dbPath, keyPath } from './config.js';
+export {
+  signRequest, verifyRequest, signatureBase, serializeParams, contentDigest,
+  NonceCache, keyDirectoryDocument, REQUIRED_COMPONENTS,
+  MAX_REPLAY_WINDOW_SECONDS, MAX_EXPIRY_SECONDS,
+  type RequestLike, type SignatureParams, type SignedHeaders,
+  type VerifyResult as SignatureVerifyResult, type VerifyRequestOptions,
+} from './http/signatures.js';
 export { defineAction, allActions, getAction, actionNames } from './registry/registry.js';
 export { buildManifest } from './registry/discover.js';
 export type { ActionDef, ActionContext, ActionDescription, NextAction } from './registry/types.js';
@@ -35,3 +51,4 @@ export { loadKeypair, saveKeypair } from './actions/identity.js';
 import './actions/identity.js';
 import './actions/record.js';
 import './actions/chain.js';
+import './actions/anchor.js';

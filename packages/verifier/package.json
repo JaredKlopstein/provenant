@@ -4,16 +4,41 @@
   "description": "Standalone offline verifier for Provenant evidence bundles. Zero network, zero Provenant runtime dependency. MIT.",
   "license": "MIT",
   "type": "module",
-  "engines": { "node": ">=22.5.0" },
-  "bin": { "provenant-verify": "./bin/provenant-verify.mjs" },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "bin": {
+    "provenant-verify": "./bin/provenant-verify.mjs"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist", "bin", "LICENSE", "README.md"],
-  "scripts": { "build": "tsc -b" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
   "dependencies": {
     "@noble/ed25519": "^3.2.0",
     "@noble/hashes": "^2.4.0"
   },
-  "keywords": ["verification", "hash-chain", "audit", "offline", "tamper-evident"]
+  "keywords": [
+    "verification",
+    "hash-chain",
+    "audit",
+    "offline",
+    "tamper-evident"
+  ],
+  "devDependencies": {
+    "@provenant/core": "workspace:*"
+  }
 }

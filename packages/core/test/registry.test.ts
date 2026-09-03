@@ -15,6 +15,8 @@ describe('action registry invariants', () => {
   it('registers the expected action set', () => {
     expect(actionNames()).toEqual([
       'agent.list',
+      'anchor.list',
+      'anchor.now',
       'chain.head',
       'chain.verify',
       'init',

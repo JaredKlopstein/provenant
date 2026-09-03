@@ -36,10 +36,17 @@ const OFFLINE_FORBIDDEN = [
 
 const IMPORT_RE = /(?:^|[^.\w])(?:import|export)\s[^;]*?from\s*['"]([^'"]+)['"]|(?:^|[^.\w])(?:import|require)\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
+/**
+ * Only `src/` is scanned. The verifier's TEST suite is deliberately allowed to
+ * import core -- packages/verifier/test/cross-impl.test.ts exists precisely to
+ * assert the two independent implementations agree byte-for-byte. Runtime code
+ * under src/ may never import it, which is what actually matters: a shipped
+ * verifier that shares code with the system it audits is not independent.
+ */
 function walk(dir, out = []) {
   if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir)) {
-    if (entry === 'node_modules' || entry === 'dist' || entry.startsWith('.')) continue;
+    if (entry === 'node_modules' || entry === 'dist' || entry === 'test' || entry.startsWith('.')) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) walk(full, out);
     else if (/\.(ts|mts|js|mjs)$/.test(full)) out.push(full);
@@ -50,7 +57,7 @@ function walk(dir, out = []) {
 const violations = [];
 
 for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
-  const pkgDir = join(ROOT, 'packages', pkg);
+  const pkgDir = join(ROOT, 'packages', pkg, 'src');
   for (const file of walk(pkgDir)) {
     const src = readFileSync(file, 'utf8');
     const rel = relative(ROOT, file);
@@ -80,7 +87,8 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
 // The verifier's declared dependencies must also stay minimal and offline.
 const verifierPkgPath = join(ROOT, 'packages/verifier/package.json');
 if (existsSync(verifierPkgPath)) {
-  const deps = Object.keys(JSON.parse(readFileSync(verifierPkgPath, 'utf8')).dependencies ?? {});
+  const parsed = JSON.parse(readFileSync(verifierPkgPath, 'utf8'));
+  const deps = Object.keys(parsed.dependencies ?? {});
   const ALLOWED_VERIFIER_DEPS = ['@noble/ed25519', '@noble/hashes'];
   for (const d of deps) {
     if (!ALLOWED_VERIFIER_DEPS.includes(d)) {
@@ -96,4 +104,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('  Open-core boundaries intact (core !-> cloud, verifier !-> core|cloud, verifier offline).');
+console.log('  Open-core boundaries intact: core !-> cloud, verifier/src !-> core|cloud, verifier offline.');

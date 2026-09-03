@@ -25,6 +25,9 @@ export const ERROR_CODES = {
   CHAIN_CONFLICT: 'CHAIN_CONFLICT',
   /** The chain failed integrity verification. */
   CHAIN_BROKEN: 'CHAIN_BROKEN',
+  /** An existing anchor commits this position to a DIFFERENT head. The history
+   *  changed underneath an attestation. Nothing was written. */
+  ANCHOR_CONTRADICTION: 'ANCHOR_CONTRADICTION',
   /** Same idempotency key, different arguments. Nothing was written. */
   IDEMPOTENCY_MISMATCH: 'IDEMPOTENCY_MISMATCH',
   /** Requested a paid capability from the open-source build. */

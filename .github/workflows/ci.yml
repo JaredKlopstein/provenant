@@ -27,3 +27,8 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm run test
 
+      # The verifier must work with no network and no code from core or cloud.
+      # That independence is the product's credibility, so it is proven, not asserted.
+      - name: Verifier is offline and independent
+        run: pnpm run test:offline
+

@@ -253,7 +253,7 @@ const defaultIO: CliIO = {
   err: (t) => process.stderr.write(t + '\n'),
 };
 
-export function runCli(argv: string[], io: CliIO = defaultIO): number {
+export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<number> {
   const { positional, flags } = parseArgv(argv);
   const json = flags.json === true || flags.json === 'true';
 
@@ -374,7 +374,7 @@ export function runCli(argv: string[], io: CliIO = defaultIO): number {
     }
 
     const input = parsed.data as never;
-    const result = wantDryRun ? matched.dryRun!(input, ctx) : matched.handler(input, ctx);
+    const result = await (wantDryRun ? matched.dryRun!(input, ctx) : matched.handler(input, ctx));
 
     const nextActions: NextAction[] = matched.nextActions
       ? matched.nextActions(input, result, ctx)

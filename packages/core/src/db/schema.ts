@@ -101,5 +101,53 @@ export const receipts = sqliteTable(
   ],
 );
 
+/**
+ * Store-level metadata. Currently holds `chain_id`, generated once at init.
+ *
+ * The chain id binds an anchor to THIS store: without it, a genuine timestamp
+ * token from one chain could be replayed as evidence for a different chain that
+ * happened to reach the same head hash.
+ */
+export const meta = sqliteTable('meta', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});
+
+/**
+ * Anchor points: commitments of the chain head to an external authority.
+ *
+ * Append-only like receipts. An anchor that could be deleted would let an
+ * operator drop the one attestation that contradicts a rewritten history.
+ */
+export const anchors = sqliteTable(
+  'anchors',
+  {
+    id: text('id').primaryKey(),
+    /** Chain position this anchor commits to. */
+    seq: integer('seq').notNull(),
+    headHash: text('head_hash').notNull(),
+    receiptCount: integer('receipt_count').notNull(),
+    chainId: text('chain_id').notNull(),
+
+    backend: text('backend').notNull(),
+    proofType: text('proof_type').notNull(),
+    /** base64 DER of the RFC 3161 TimeStampToken. Null for the noop backend. */
+    proofToken: text('proof_token'),
+    /** The time the external authority attests to. Null for noop. This is the
+     *  value that carries evidentiary weight -- not created_at. */
+    provenTime: text('proven_time'),
+    authority: text('authority'),
+
+    /** Our local clock. Untrusted. Kept so drift from proven_time is visible. */
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('anchors_seq_backend_idx').on(t.seq, t.backend),
+    index('anchors_seq_idx').on(t.seq),
+    index('anchors_proven_time_idx').on(t.provenTime),
+  ],
+);
+
 export type AgentRow = typeof agents.$inferSelect;
+export type AnchorRow = typeof anchors.$inferSelect;
 export type ReceiptRow = typeof receipts.$inferSelect;

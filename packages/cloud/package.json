@@ -5,11 +5,25 @@
   "license": "UNLICENSED",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.5.0" },
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "scripts": { "build": "tsc -b" },
+  "scripts": {
+    "build": "tsc -b"
+  },
   "dependencies": {
-    "@provenant/core": "workspace:*"
+    "@provenant/core": "workspace:*",
+    "@provenant/verifier": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "pdfkit": "^0.20.2",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/pdfkit": "^0.13.9"
+  },
+  "bin": {
+    "provenant-cloud": "./bin/provenant-cloud.mjs"
   }
 }
