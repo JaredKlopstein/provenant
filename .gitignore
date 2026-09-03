@@ -11,3 +11,6 @@ dist/
 .env.*
 coverage/
 *.srl
+
+# Internal business notes. Never committed - the repo is public.
+internal/

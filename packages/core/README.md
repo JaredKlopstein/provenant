@@ -99,10 +99,11 @@ a determined operator. Do not oversell them.
   tamper-evident records that *support* logging obligations such as EU AI Act
   Article 12. It is not a compliance product, we are not lawyers, and this is not
   legal advice. Compliance claims are legal exposure.
-- **The regulatory deadline may move.** A Digital Omnibus proposal to delay parts
-  of the EU AI Act has been under negotiation. If enforcement slips, the
-  compliance pitch softens. The reliability and debugging pitch does not depend
-  on regulation — lead with whichever lands.
+- **Do not adopt this on a regulatory timetable alone.** A Digital Omnibus
+  proposal to delay parts of the EU AI Act has been under negotiation, and
+  enforcement dates may move. Adopt Provenant because you need to debug and prove
+  what your agents did; treat any compliance benefit as a consequence, not a
+  reason.
 - **The standard we align with is a draft with no IETF standing.**
   `draft-sharif-agent-audit-trail` may change. We pin the version we implement
   and document exactly where we diverge (see
