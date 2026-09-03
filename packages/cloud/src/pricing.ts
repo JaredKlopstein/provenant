@@ -52,11 +52,15 @@ export const PLANS: Record<PlanId, Plan> = {
     anchorCadence: 'none',
     fairUseReceiptsPerMonth: null, // unlimited
     includedBundlesPerMonth: 0,
+    // Only list what actually ships today. A pricing sheet advertising features
+    // that do not exist is the same defect as a README overclaim, with worse
+    // consequences: someone chooses a plan because of it.
     features: [
       'Unlimited receipts and agents, self-hosted',
-      'Local hash chain, contracts, leases',
-      'CLI + MCP, single-node SQLite',
-      'Local verification',
+      'Local hash chain, single-node SQLite',
+      'CLI with --json on every command',
+      'Local chain verification',
+      'Offline evidence-bundle verification (provenant-verify)',
       'MIT licensed, no time limit, no agent cap',
     ],
   },
@@ -131,10 +135,13 @@ export const BUNDLE_PRICE_USD = 99;
 export const NEVER_PAYWALLED = [
   'writing receipts',
   'local hash chaining',
-  'contract evaluation',
-  'leases and fencing tokens',
   'local chain verification',
   'offline bundle verification (provenant-verify)',
+  // Commitments for features not yet built. Listed here so that when contracts
+  // (Phase 3) and leases (Phase 4) ship, they ship free -- but they are NOT
+  // advertised in `features` until they exist.
+  'contract evaluation (when built, Phase 3)',
+  'leases and fencing tokens (when built, Phase 4)',
 ] as const;
 
 export function planFor(id: PlanId): Plan {

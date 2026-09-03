@@ -34,7 +34,27 @@ const OFFLINE_FORBIDDEN = [
   'undici', 'axios', 'node-fetch', 'got',
 ];
 
-const IMPORT_RE = /(?:^|[^.\w])(?:import|export)\s[^;]*?from\s*['"]([^'"]+)['"]|(?:^|[^.\w])(?:import|require)\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+/**
+ * Module-specifier extraction.
+ *
+ * Rewritten after an audit found ~12 bypasses of the original regex: `import{x}`
+ * with no space, template-literal specifiers, concatenated specifiers,
+ * `createRequire` bound to another name, deep relative escapes, absolute paths,
+ * and `.cts`/`.cjs`/`.tsx` files. Rather than enumerate syntax, this now scans
+ * for the FORBIDDEN PACKAGE NAMES themselves anywhere in the source, outside
+ * comments and strings that are obviously prose.
+ *
+ * The trade-off is deliberate: a stricter, dumber check that occasionally needs
+ * an explicit allow-comment beats a clever one that can be walked around. This
+ * boundary is the product's credibility, so it should fail loudly and often
+ * rather than quietly and never.
+ */
+const IMPORT_RE = /(?:^|[^.\w])(?:import|export)\s*[{*\s][^;]*?from\s*['"`]([^'"`]+)['"`]|(?:^|[^.\w])(?:import|require)\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
+
+/** Strip comments so prose about the boundary does not trip the scanner. */
+function stripComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
 
 /**
  * Only `src/` is scanned. The verifier's TEST suite is deliberately allowed to
@@ -46,10 +66,12 @@ const IMPORT_RE = /(?:^|[^.\w])(?:import|export)\s[^;]*?from\s*['"]([^'"]+)['"]|
 function walk(dir, out = []) {
   if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir)) {
-    if (entry === 'node_modules' || entry === 'dist' || entry === 'test' || entry.startsWith('.')) continue;
+    // `test` is skipped only at the package root, never at arbitrary depth --
+    // a directory named `test` nested inside src/ was a bypass.
+    if (entry === 'node_modules' || entry === 'dist' || entry.startsWith('.')) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) walk(full, out);
-    else if (/\.(ts|mts|js|mjs)$/.test(full)) out.push(full);
+    else if (/\.(ts|mts|cts|tsx|js|mjs|cjs|jsx)$/.test(full)) out.push(full);
   }
   return out;
 }
@@ -57,10 +79,56 @@ function walk(dir, out = []) {
 const violations = [];
 
 for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
-  const pkgDir = join(ROOT, 'packages', pkg, 'src');
-  for (const file of walk(pkgDir)) {
-    const src = readFileSync(file, 'utf8');
+  // `bin/` ships too (it is listed in package.json "files"), so it is in scope.
+  // `test/` is out of scope by design: verifier/test/cross-impl.test.ts must
+  // import core to prove the two implementations agree.
+  const files = [...walk(join(ROOT, 'packages', pkg, 'src')), ...walk(join(ROOT, 'packages', pkg, 'bin'))];
+
+  for (const file of files) {
+    const raw = readFileSync(file, 'utf8');
+    const src = stripComments(raw);
     const rel = relative(ROOT, file);
+
+    // Catch the package name however it is written -- template literals,
+    // concatenation, dynamic import, absolute path, deep relative escape.
+    for (const bad of forbidden) {
+      const shortName = bad.replace('@provenant/', '');
+      if (src.includes(bad)) {
+        violations.push(`${rel}: '${pkg}' must not reference '${bad}' (found anywhere in source)`);
+      }
+      // packages/core/... or /packages/core/dist/... in any string form
+      const pathRe = new RegExp(`packages[\\/]${shortName}[\\/]`);
+      if (pathRe.test(src)) {
+        violations.push(`${rel}: '${pkg}' must not reference a path into 'packages/${shortName}/'`);
+      }
+    }
+    /**
+     * Catch the scope prefix on its own. `'@provenant/' + 'core'` splits the
+     * package name across two literals and defeats any whole-name match, so for
+     * a package that has ANY forbidden dependency the bare scope has no
+     * legitimate use in shipped source: the only names it could form are its own
+     * (which it would not import) or a forbidden one.
+     */
+    if (forbidden.length > 0) {
+      for (const m of src.matchAll(/@provenant\//g)) {
+        const tail = src.slice(m.index, m.index + 40);
+        if (!tail.startsWith(`@provenant/${pkg}`)) {
+          violations.push(
+            `${rel}: '${pkg}' must not reference the '@provenant/' scope (found "${tail.split(/['"\`\s]/)[0]}"). ` +
+              `Splitting a package name across string literals is not an escape hatch.`,
+          );
+          break;
+        }
+      }
+    }
+
+    if (pkg === 'verifier') {
+      // Network reachable without any import on modern Node.
+      if (/\bfetch\s*\(/.test(src)) violations.push(`${rel}: verifier must work fully offline; it calls fetch()`);
+      for (const g of ['XMLHttpRequest', 'WebSocket', 'navigator.sendBeacon', 'EventSource']) {
+        if (src.includes(g)) violations.push(`${rel}: verifier must work fully offline; it references ${g}`);
+      }
+    }
     for (const m of src.matchAll(IMPORT_RE)) {
       const spec = m[1] ?? m[2];
       if (!spec) continue;
@@ -84,15 +152,38 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
   }
 }
 
+/**
+ * Non-transitive checks are a trap: `packages/shared` importing core, imported
+ * by verifier, would satisfy every rule above. Fail on any package that is not
+ * explicitly classified, so adding one is a deliberate act.
+ */
+const known = new Set([...Object.keys(FORBIDDEN)]);
+for (const entry of readdirSync(join(ROOT, 'packages'))) {
+  if (entry.startsWith('.')) continue;
+  if (!statSync(join(ROOT, 'packages', entry)).isDirectory()) continue;
+  if (!known.has(entry)) {
+    violations.push(
+      `packages/${entry}: new package is not classified in scripts/check-boundaries.mjs. ` +
+        `Add it to FORBIDDEN with explicit rules -- an unclassified package can be used to ` +
+        `launder a forbidden dependency transitively.`,
+    );
+  }
+}
+
 // The verifier's declared dependencies must also stay minimal and offline.
 const verifierPkgPath = join(ROOT, 'packages/verifier/package.json');
 if (existsSync(verifierPkgPath)) {
   const parsed = JSON.parse(readFileSync(verifierPkgPath, 'utf8'));
-  const deps = Object.keys(parsed.dependencies ?? {});
+  // peer/optional deps install too; reading only `dependencies` was a bypass.
+  const deps = [
+    ...Object.keys(parsed.dependencies ?? {}),
+    ...Object.keys(parsed.peerDependencies ?? {}),
+    ...Object.keys(parsed.optionalDependencies ?? {}),
+  ];
   const ALLOWED_VERIFIER_DEPS = ['@noble/ed25519', '@noble/hashes'];
   for (const d of deps) {
     if (!ALLOWED_VERIFIER_DEPS.includes(d)) {
-      violations.push(`packages/verifier/package.json: dependency '${d}' is not on the verifier allowlist (${ALLOWED_VERIFIER_DEPS.join(', ')})`);
+      violations.push(`packages/verifier/package.json: runtime dependency '${d}' is not on the verifier allowlist (${ALLOWED_VERIFIER_DEPS.join(', ')})`);
     }
   }
 }

@@ -19,9 +19,15 @@ import { loadKeypair } from '../actions/identity.js';
 import { ProvenantError, toProvenantError } from '../errors.js';
 import type { Keypair } from '../crypto/keys.js';
 
+// Registering the action modules IS what populates the CLI. This list must stay
+// in step with src/index.ts -- when it drifted, `anchor now` and `anchor list`
+// vanished from the shipped `provenant` binary while the registry test (which
+// imports index.ts) still asserted they existed. cli.test.ts now asserts the
+// binary's own action set, so that cannot recur silently.
 import '../actions/identity.js';
 import '../actions/record.js';
 import '../actions/chain.js';
+import '../actions/anchor.js';
 
 /** `chain.verify` is reachable as both `chain verify` and `chain.verify`. */
 function commandAliases(name: string): string[] {
@@ -80,16 +86,60 @@ function parseArgv(argv: string[]): ParsedArgs {
 function coerceToSchema(
   flags: Record<string, string | boolean | string[]>,
   schema: z.ZodType,
-): Record<string, unknown> {
+): { input: Record<string, unknown>; unknown: string[] } {
   const shape = getObjectShape(schema);
   const out: Record<string, unknown> = {};
+  const unknown: string[] = [];
 
   for (const [key, raw] of Object.entries(flags)) {
     if (RESERVED_FLAGS.has(key)) continue;
     const field = shape?.[key];
-    out[key] = field ? coerceValue(raw, field) : raw;
+    if (!field) {
+      // Collected, never silently dropped. See rejectUnknownFlags below for why
+      // this is a safety property rather than a nicety.
+      unknown.push(key);
+      continue;
+    }
+    out[key] = coerceValue(raw, field);
   }
-  return out;
+  return { input: out, unknown };
+}
+
+/**
+ * Levenshtein distance, capped. Used only to suggest the flag the caller meant.
+ */
+function editDistance(a: string, b: string): number {
+  const dp: number[] = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0]!;
+    dp[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = dp[j]!;
+      dp[j] = Math.min(dp[j]! + 1, dp[j - 1]! + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[b.length]!;
+}
+
+function suggestFlag(unknownFlag: string, schema: z.ZodType): string | null {
+  const candidates = [...Object.keys(getObjectShape(schema) ?? {}), ...RESERVED_FLAGS];
+
+  // A truncated flag is the most common real typo (`--side-effect` for
+  // `--side-effect-class`), and edit distance scores those poorly because the
+  // missing suffix is long. Prefix match first.
+  const prefix = candidates.filter((c) => c.startsWith(unknownFlag) || unknownFlag.startsWith(c));
+  if (prefix.length === 1) return prefix[0]!;
+  if (prefix.length > 1) {
+    return prefix.reduce((a, b) => (Math.abs(a.length - unknownFlag.length) <= Math.abs(b.length - unknownFlag.length) ? a : b));
+  }
+
+  let best: { name: string; d: number } | null = null;
+  for (const c of candidates) {
+    const d = editDistance(unknownFlag, c);
+    if (!best || d < best.d) best = { name: c, d };
+  }
+  return best && best.d <= Math.max(2, Math.floor(unknownFlag.length / 3)) ? best.name : null;
 }
 
 const RESERVED_FLAGS = new Set(['json', 'dry_run', 'store', 'help', 'quiet']);
@@ -337,7 +387,47 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
       identity: () => (cached ??= loadKeypair(storeDir)),
     };
 
-    const rawInput = coerceToSchema(flags, matched.input as z.ZodType);
+    const { input: rawInput, unknown: unknownFlags } = coerceToSchema(
+      flags,
+      matched.input as z.ZodType,
+    );
+
+    /**
+     * Reject unknown flags. This is a SAFETY property, not tidiness.
+     *
+     * Silently dropping them made the dry-run guard fail OPEN: `--dryrun`
+     * (a typo of `--dry-run`) executed the mutation for real and reported
+     * success. Worse, `--side-effect irreversible` (correct flag:
+     * `--side-effect-class`) recorded the action as `write` and returned ok --
+     * permanently writing the wrong risk class into a tamper-evident chain.
+     * A mistyped filter like `--agent x` silently widened a query to everything.
+     *
+     * For an audit tool, a typo that quietly changes what is recorded or
+     * returned is worse than an error. Fail loudly, and name the likely fix.
+     */
+    if (unknownFlags.length > 0) {
+      const details = unknownFlags.map((f) => {
+        const suggestion = suggestFlag(f, matched!.input as z.ZodType);
+        return suggestion
+          ? `--${f.replace(/_/g, '-')} (did you mean --${suggestion.replace(/_/g, '-')}?)`
+          : `--${f.replace(/_/g, '-')}`;
+      });
+      return emitError(
+        new ProvenantError({
+          code: 'UNKNOWN_ARGUMENT',
+          message:
+            `Unrecognised option(s) for '${matched.name}': ${details.join(', ')}. ` +
+            `Nothing was executed. Unknown options are rejected rather than ignored, because a ` +
+            `mistyped flag could otherwise change what gets recorded or silently widen a query.`,
+          retryable: false,
+          details: { unknown: unknownFlags },
+          fix: {
+            action: matched.name,
+            note: `Run 'provenant ${matched.name.replace('.', ' ')} --help' for the exact option names, or 'provenant discover --json' for the full input schema.`,
+          },
+        }),
+      );
+    }
     // Allow `provenant record refund.issue` as shorthand for --action.
     if (rest[0] && matched.name === 'record' && rawInput.action === undefined) {
       rawInput.action = rest[0];

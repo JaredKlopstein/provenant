@@ -89,10 +89,23 @@ export interface BundleVerdict {
   failures: Failure[];
   intact_ranges: Array<{ from_seq: number; to_seq: number }>;
   anchors: AnchorVerdict[];
-  /** True only if at least one anchor is real evidence AND every receipt it
-   *  covers verified. This is the field that distinguishes "self-attested" from
-   *  "provable to a third party". */
+  /** True if at least one anchor is real evidence. NOTE: this does NOT mean every
+   *  receipt in the bundle is anchored -- read `anchored_through_seq`. */
   anchored: boolean;
+  /**
+   * The highest chain position covered by a verified external anchor, or null.
+   *
+   * Receipts ABOVE this position are not externally anchored: an operator could
+   * have appended them freely. A machine consumer that reads only `anchored`
+   * would treat a bundle as fully proven when its tail is unproven, so this
+   * field carries what the prose conclusion always said.
+   */
+  anchored_through_seq: number | null;
+  /** Count of receipts beyond `anchored_through_seq`. Zero when fully anchored. */
+  unanchored_receipt_count: number;
+  /** True when at least one verified anchor came from an authority in the
+   *  caller's trust list. `anchored` alone says nothing about who vouches. */
+  anchor_authority_trusted: boolean;
   warnings: string[];
   /** Plain-language statement of exactly what was and was not established. */
   conclusion: string;
@@ -117,7 +130,9 @@ function isObj(v: unknown): v is Record<string, unknown> {
 export function verifyBundle(input: unknown, opts: VerifyOptions = {}): BundleVerdict {
   const verdict: BundleVerdict = {
     ok: false, format: 'unknown', chain_id: null, receipts_checked: 0, range: null,
-    failures: [], intact_ranges: [], anchors: [], anchored: false, warnings: [],
+    failures: [], intact_ranges: [], anchors: [], anchored: false,
+    anchored_through_seq: null, unanchored_receipt_count: 0,
+    anchor_authority_trusted: false, warnings: [],
     conclusion: '',
   };
 
@@ -273,6 +288,26 @@ export function verifyBundle(input: unknown, opts: VerifyOptions = {}): BundleVe
   }
 
   verdict.anchored = verdict.anchors.some((a) => a.is_evidence);
+  verdict.anchor_authority_trusted = verdict.anchors.some(
+    (a) => a.is_evidence && a.timestamp?.trusted === true,
+  );
+
+  const evidence = verdict.anchors.filter((a) => a.is_evidence).map((a) => a.seq);
+  verdict.anchored_through_seq = evidence.length ? Math.max(...evidence) : null;
+  verdict.unanchored_receipt_count =
+    verdict.anchored_through_seq === null
+      ? sorted.length
+      : sorted.filter((r) => r.seq > verdict.anchored_through_seq!).length;
+
+  // A tail beyond the last anchor is a real limitation, not a footnote: a pure
+  // hash chain cannot detect receipts appended (or removed) after the anchor.
+  if (verdict.anchored && verdict.unanchored_receipt_count > 0) {
+    verdict.warnings.push(
+      `${verdict.unanchored_receipt_count} receipt(s) after seq ${verdict.anchored_through_seq} are NOT covered by any external anchor. ` +
+        `Those were appended after the last attestation and are backed only by the operator's own chain.`,
+    );
+  }
+
   verdict.ok = verdict.failures.length === 0;
   verdict.conclusion = describe(verdict);
   return verdict;
@@ -403,13 +438,19 @@ function describe(v: BundleVerdict): string {
   }
   if (v.anchored) {
     const ev = v.anchors.filter((a) => a.is_evidence);
-    const trusted = ev.some((a) => a.timestamp?.trusted);
+    const tail =
+      v.unanchored_receipt_count > 0
+        ? ` ${v.unanchored_receipt_count} receipt(s) after seq ${v.anchored_through_seq} are NOT anchored and are backed only by the operator's own chain.`
+        : '';
     return (
-      `VERIFIED AND ANCHORED. All ${v.receipts_checked} receipts are internally consistent and ` +
-      `correctly signed, and ${ev.length} external timestamp(s) prove this exact history existed at ` +
-      `${ev.map((a) => a.proven_time).join(', ')}. The operator could not have altered anything at or ` +
-      `before the anchored position without breaking the timestamp.` +
-      (trusted ? '' : ' NOTE: the timestamp authority was not in your trust list -- confirm you trust it before relying on this.')
+      `VERIFIED AND ANCHORED THROUGH SEQ ${v.anchored_through_seq}. All ${v.receipts_checked} receipts are ` +
+      `internally consistent and correctly signed, and ${ev.length} external timestamp(s) prove the history ` +
+      `up to seq ${v.anchored_through_seq} existed at ${ev.map((a) => a.proven_time).join(', ')}. The operator ` +
+      `could not have altered anything at or before that position without breaking the timestamp.` +
+      tail +
+      (v.anchor_authority_trusted
+        ? ''
+        : ' NOTE: the timestamp authority was not in your trust list -- confirm you trust it before relying on this.')
     );
   }
   return (

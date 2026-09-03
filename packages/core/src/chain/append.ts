@@ -72,19 +72,73 @@ export function readHead(db: Db): { seq: number; selfHash: string } | null {
   return row ?? null;
 }
 
+/**
+ * Canonical fingerprint of the request, for idempotency comparison.
+ *
+ * Deliberately covers only what the CALLER controls and what changes meaning:
+ * not the timestamp, not the record id, not the chain position -- those differ
+ * on every legitimate retry.
+ */
+function argsFingerprint(input: AppendInput): string {
+  return payloadHash({
+    agent_id: input.agentId,
+    action: input.action,
+    action_type: input.actionType,
+    action_detail: input.actionDetail,
+    side_effect_class: input.sideEffectClass,
+    outcome: input.outcome,
+    parent_record_id: input.parentRecordId ?? null,
+    input_hash: input.input !== undefined ? payloadHash(input.input) : null,
+    output_hash: input.output !== undefined ? payloadHash(input.output) : null,
+    model_id: input.modelId ?? null,
+    risk_score: input.riskScore ?? null,
+  });
+}
+
 export function appendReceipt(db: Db, input: AppendInput): AppendResult {
   const run = db.$client.transaction((): AppendResult => {
     // --- idempotency: a replay returns the ORIGINAL recorded result ---
+    let argsHash: string | null = null;
     if (input.idempotencyKey != null) {
+      argsHash = argsFingerprint(input);
+
       const existing = db.$client
         .prepare(
-          'SELECT seq, self_hash as selfHash, canonical_json as canonicalJson FROM receipts WHERE agent_id = ? AND idempotency_key = ?',
+          'SELECT seq, self_hash as selfHash, canonical_json as canonicalJson, idempotency_args_hash as argsHash FROM receipts WHERE agent_id = ? AND idempotency_key = ?',
         )
         .get(input.agentId, input.idempotencyKey) as
-        | { seq: number; selfHash: string; canonicalJson: string }
+        | { seq: number; selfHash: string; canonicalJson: string; argsHash: string | null }
         | undefined;
 
       if (existing) {
+        // A replay must be a replay of the SAME action. Returning the original
+        // receipt for a materially different request would silently discard the
+        // second action and report success -- so a caller who reused a key by
+        // mistake would believe a refund was recorded that never was.
+        if (existing.argsHash !== null && existing.argsHash !== argsHash) {
+          throw new ProvenantError({
+            code: 'IDEMPOTENCY_MISMATCH',
+            message:
+              `Idempotency key '${input.idempotencyKey}' was already used by agent ${input.agentId} ` +
+              `for a DIFFERENT action (recorded at seq ${existing.seq}). Nothing was written, and the ` +
+              `original receipt is unchanged. Reusing a key with different arguments would silently ` +
+              `discard this action.`,
+            retryable: false,
+            details: {
+              existing_seq: existing.seq,
+              existing_args_hash: existing.argsHash,
+              submitted_args_hash: argsHash,
+            },
+            fix: {
+              action: 'record',
+              note:
+                'Use a new idempotency_key for this action, or resubmit the identical arguments to ' +
+                'replay the original receipt. To inspect what was recorded under this key, run ' +
+                `receipts.query with from_seq ${existing.seq}.`,
+            },
+          });
+        }
+
         return {
           receipt: JSON.parse(existing.canonicalJson) as Receipt,
           seq: existing.seq,
@@ -152,6 +206,7 @@ export function appendReceipt(db: Db, input: AppendInput): AppendResult {
           keyId: receipt.provenant.key_id,
           signature: receipt.signature,
           idempotencyKey: input.idempotencyKey ?? null,
+          idempotencyArgsHash: argsHash,
           canonicalJson,
         })
         .run();

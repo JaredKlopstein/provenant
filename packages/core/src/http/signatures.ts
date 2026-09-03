@@ -30,6 +30,7 @@
  * individual IETF submissions with no working group adoption as of this
  * writing. The wire format may shift; RFC 9421 itself is a published standard.
  */
+import { randomUUID } from 'node:crypto';
 import { sign, verify, type AgentJwk, jwkToPublicKey } from '../crypto/keys.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { toBase64Url } from '../crypto/hash.js';
@@ -37,8 +38,16 @@ import { toBase64Url } from '../crypto/hash.js';
 export const MAX_REPLAY_WINDOW_SECONDS = 60;
 export const MAX_EXPIRY_SECONDS = 24 * 60 * 60;
 
-/** Components every Provenant request must cover. Anything less is rejected. */
-export const REQUIRED_COMPONENTS = ['@method', '@authority', '@path'] as const;
+/**
+ * Components every Provenant request must cover. Anything less is rejected.
+ *
+ * `@query` is here for a reason found in audit: `@path` strips the query string,
+ * and the collector passes `pathname + search` through to handlers. Covering
+ * @path alone left `?limit=100000&agent_id=someone_else` unauthenticated and
+ * mutable in flight -- the same class of hole as covering @authority without
+ * @path, one level down.
+ */
+export const REQUIRED_COMPONENTS = ['@method', '@authority', '@path', '@query'] as const;
 
 export interface SignatureParams {
   keyid: string;
@@ -133,6 +142,11 @@ export function signRequest(
   const headers = { ...req.headers };
   const components = [...REQUIRED_COMPONENTS] as string[];
 
+  // A nonce is minted by default. The doc comment used to claim a nonce cache
+  // was required while nothing ever produced one, which made verbatim replay
+  // inside the freshness window possible.
+  const nonce = opts.nonce ?? randomUUID();
+
   // A body that is not covered by the signature is a body an attacker can swap.
   if (req.body && req.body.length > 0) {
     headers['content-digest'] = contentDigest(req.body);
@@ -144,7 +158,7 @@ export function signRequest(
     created,
     expires,
     alg: 'ed25519',
-    ...(opts.nonce ? { nonce: opts.nonce } : {}),
+    nonce,
   };
 
   const base = signatureBase(components, params, { ...req, headers });
@@ -249,7 +263,16 @@ export function verifyRequest(req: RequestLike, opts: VerifyRequestOptions): Ver
       return fail(`signature lifetime exceeds the ${MAX_EXPIRY_SECONDS}s maximum`, keyId);
     }
   }
-  if (opts.requireNonce && !nonce) return fail('a nonce is required', keyId);
+  // Default to REQUIRING a nonce. The freshness window alone leaves a ~120s
+  // replay hole (60s each side for clock skew); the nonce is what closes it.
+  // Callers may opt out explicitly, but not by omission.
+  if (opts.requireNonce !== false && !nonce) {
+    return fail(
+      'a nonce is required; add nonce="<unique value>" to Signature-Input. Without it, this exact ' +
+        'request could be replayed inside the freshness window.',
+      keyId,
+    );
+  }
   if (nonce && opts.seenNonce?.(nonce)) {
     return fail('nonce has already been used; this request is a replay', keyId);
   }

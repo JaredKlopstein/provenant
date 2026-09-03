@@ -66,12 +66,15 @@ export function registerAgent(db: Db, input: RegisterInput): RegisteredAgent {
       retryable: false,
       details: { registered_key_id: existing.keyId, presented_key_id: keyId },
       fix: {
-        action: 'agent.register',
-        arguments: { agent_id: `${input.agentId}-2`, display_name: input.displayName },
+        // Must name an action that actually exists in the registry -- a fix
+        // block pointing at a nonexistent action is worse than none, because an
+        // agent will spend a turn discovering it is a dead end.
+        action: 'agent.list',
+        arguments: {},
         note:
-          'Register under a new agent id, or sign with the original key. If this agent ' +
-          'legitimately rotated keys, key rotation is not yet implemented (planned); ' +
-          'use a new agent id for now.',
+          'Sign with the key already registered to this agent id. If this agent legitimately ' +
+          'rotated keys, key rotation is not implemented yet; register under a different ' +
+          'agent_id instead. Run agent.list to see the key bound to each id.',
       },
     });
   }
@@ -102,9 +105,11 @@ export function requireAgent(db: Db, agentId: string): AgentRow {
       message: `No agent registered with id '${agentId}'. Nothing was written.`,
       retryable: false,
       fix: {
-        action: 'agent.register',
-        arguments: { agent_id: agentId, display_name: agentId },
-        note: 'Register first. Registration is self-service and needs no approval.',
+        action: 'init',
+        arguments: {},
+        note:
+          'Run init to create a keypair and self-register this machine. Registration is ' +
+          'self-service and needs no approval. To see which agents already exist, run agent.list.',
       },
     });
   }

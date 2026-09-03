@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, existsSync } from 'node:fs';
 import { defineAction, type NextAction } from '@provenant/core';
 import { verifyBundle } from '@provenant/verifier';
 import { exportBundle, bundleToJson } from '../bundle/export.js';
@@ -14,7 +14,10 @@ import { bundleToHtml } from '../bundle/html.js';
 export const bundleExportAction = defineAction({
   name: 'bundle.export',
   summary: 'Export a signed, self-contained evidence bundle',
-  sideEffect: 'read',
+  // `write`, not `read`: with --out this creates or OVERWRITES files on disk.
+  // Declaring it read routed it around the registry's dry-run requirement and
+  // around the test that enforces it, leaving the one mutation with no preview.
+  sideEffect: 'write',
   description: {
     what: 'Packages a range of receipts, the agent key directory and every external anchor proof into one self-contained archive that a third party can verify offline, with no access to this system and no Provenant code from the paid package.',
     when: 'When someone outside your organisation needs to check what your agents did: an audit, a customer security questionnaire, an incident postmortem, or a regulatory request. Anchor first (anchor.now) so the bundle carries external proof rather than only your own word.',
@@ -37,6 +40,8 @@ export const bundleExportAction = defineAction({
     anchored: z.boolean(),
     anchor_count: z.number(),
     written: z.array(z.string()),
+    would_write: z.array(z.string()).optional(),
+    would_overwrite: z.array(z.string()).optional(),
     bundle: z.record(z.string(), z.unknown()).optional(),
     verify_with: z.string(),
     warning: z.string().nullable(),
@@ -94,6 +99,39 @@ export const bundleExportAction = defineAction({
           'anyone is meant to rely on.',
     };
   },
+  /** Shows exactly what would be written, and whether anything would be
+   *  overwritten, without touching the filesystem. */
+  async dryRun(input, ctx) {
+    const bundle = exportBundle(ctx.db, {
+      ...(input.from_seq !== undefined ? { fromSeq: input.from_seq } : {}),
+      ...(input.to_seq !== undefined ? { toSeq: input.to_seq } : {}),
+    });
+    const verdict = verifyBundle(bundle);
+
+    const would: string[] = [];
+    if (input.out) {
+      const base = input.out.replace(/\.json$/, '');
+      if (input.format === 'json' || input.format === 'both' || input.format === 'all') would.push(input.out);
+      if (input.format === 'pdf' || input.format === 'both' || input.format === 'all') would.push(base + '.pdf');
+      if (input.format === 'html' || input.format === 'all') would.push(base + '.html');
+    }
+    const clobbered = would.filter((f) => existsSync(f));
+
+    return {
+      range: bundle.range,
+      receipt_count: bundle.receipts.length,
+      anchored: verdict.anchored,
+      anchor_count: bundle.anchors.length,
+      written: [],
+      would_write: would,
+      would_overwrite: clobbered,
+      verify_with: `npx @provenant/verifier ${input.out ?? 'bundle.json'} --trust <authority-root.pem>`,
+      warning: clobbered.length
+        ? `DRY RUN: nothing was written. ${clobbered.length} existing file(s) WOULD BE OVERWRITTEN: ${clobbered.join(', ')}.`
+        : 'DRY RUN: nothing was written.',
+    };
+  },
+
   nextActions(_input, output) {
     const next: NextAction[] = [];
     if (!output.anchored) {

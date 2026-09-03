@@ -56,6 +56,17 @@ export interface CertRef {
 }
 
 export interface ChainStatus {
+  /**
+   * The certificates this walk actually verified, leaf first. Trust is computed
+   * from THIS list and nothing else.
+   *
+   * Why it exists: a token's CertificateSet is entirely attacker-controlled and
+   * may carry certificates that are not in the chain at all. Deriving trust from
+   * the bag rather than from the verified path let an attacker append a real
+   * root as an inert decoy and be marked trusted -- see the regression test
+   * "a decoy certificate in the token cannot confer trust".
+   */
+  verified: CertRef[];
   /** Reached a self-signed certificate. NOTE: this implies NOTHING about
    *  trust -- an attacker can embed their own self-signed root in a token.
    *  Trust is decided solely by `trusted` below. */
@@ -120,7 +131,7 @@ export function verifyTimestampToken(
 ): TimestampVerdict {
   const verdict: TimestampVerdict = {
     ok: false, failures: [], proven_time: null, imprint_hex: null, signer: null,
-    chain: { complete: false, top: null, root: null, reason: '' },
+    chain: { complete: false, verified: [], top: null, root: null, reason: '' },
     trusted: false,
   };
 
@@ -273,20 +284,22 @@ export function verifyTimestampToken(
     // --- chain, reported separately from cryptographic soundness ---
     verdict.chain = buildChain(signerCert, certs, opts.trustAnchors ?? []);
 
-    // Trust is decided ONLY by the caller's list, never by what the token
-    // carries. A self-signed root inside a token proves nothing -- an attacker
-    // can mint one.
+    // Trust is decided ONLY by the caller's list, and ONLY against certificates
+    // this verification actually walked and checked.
+    //
+    // The subtle part, and a bug that shipped once: a token's CertificateSet is
+    // attacker-controlled and may contain certificates that are not in the chain
+    // at all. Matching the caller's pins against that bag let an attacker append
+    // a genuine well-known root as an inert decoy -- never used to verify
+    // anything -- and be reported as trusted. Only chain.verified is eligible.
     const wanted = (opts.trustedFingerprints ?? []).map((f) => f.replace(/:/g, '').toLowerCase());
-    if (wanted.length > 0) {
-      const chainFps = [signerCert, ...certs].map((c) => fp(c));
-      if (verdict.chain.root) chainFps.push(verdict.chain.root.fingerprint_sha256);
-      if (verdict.chain.top) chainFps.push(verdict.chain.top.fingerprint_sha256);
-      verdict.trusted = chainFps.some((f) => wanted.includes(f));
-    } else if ((opts.trustAnchors ?? []).length > 0) {
-      // An anchor set was supplied and the chain reached one of them.
-      verdict.trusted = verdict.chain.complete && verdict.chain.root !== null &&
-        (opts.trustAnchors ?? []).some((a) => fp(a) === verdict.chain.root!.fingerprint_sha256);
-    }
+    const eligible = verdict.chain.verified.map((c) => c.fingerprint_sha256);
+
+    // Both inputs are honoured; supplying one must never disable the other.
+    const anchorFps = (opts.trustAnchors ?? []).map((a) => fp(a));
+    verdict.trusted =
+      (wanted.length > 0 && eligible.some((f) => wanted.includes(f))) ||
+      (anchorFps.length > 0 && eligible.some((f) => anchorFps.includes(f)));
 
     verdict.ok = verdict.failures.length === 0;
     return verdict;
@@ -408,10 +421,13 @@ function buildChain(
 ): ChainStatus {
   let current = leaf;
   const seen = new Set<string>([fp(current)]);
+  // Every certificate below has been cryptographically verified as part of this
+  // path. Nothing else from the token is eligible to confer trust.
+  const verified: CertRef[] = [ref(leaf)];
 
   for (let depth = 0; depth < 10; depth++) {
     if (current.checkIssued(current) && current.verify(current.publicKey)) {
-      return { complete: true, top: ref(current), root: ref(current), reason: '' };
+      return { complete: true, verified, top: ref(current), root: ref(current), reason: '' };
     }
 
     const candidates = [...pool, ...anchors];
@@ -420,6 +436,7 @@ function buildChain(
     if (!issuer) {
       return {
         complete: false,
+        verified,
         top: ref(current),
         root: null,
         reason:
@@ -429,15 +446,18 @@ function buildChain(
     }
     if (!current.verify(issuer.publicKey)) {
       return {
-        complete: false, top: ref(current), root: null,
+        complete: false, verified, top: ref(current), root: null,
         reason: `certificate '${current.subject.replace(/\n/g, ', ')}' does not verify under its stated issuer`,
       };
     }
     if (seen.has(fp(issuer))) {
-      return { complete: false, top: ref(current), root: null, reason: 'certificate chain contains a cycle' };
+      return { complete: false, verified, top: ref(current), root: null, reason: 'certificate chain contains a cycle' };
     }
     seen.add(fp(issuer));
+    // The issuer's signature over `current` just verified, so it is part of the
+    // path and eligible for trust matching.
+    verified.push(ref(issuer));
     current = issuer;
   }
-  return { complete: false, top: ref(current), root: null, reason: 'certificate chain is longer than 10; refusing to continue' };
+  return { complete: false, verified, top: ref(current), root: null, reason: 'certificate chain is longer than 10; refusing to continue' };
 }

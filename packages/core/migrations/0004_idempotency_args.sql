@@ -1,0 +1,1 @@
+ALTER TABLE `receipts` ADD `idempotency_args_hash` text;

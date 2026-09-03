@@ -305,6 +305,61 @@ describe('the forgery test', () => {
     expect(temporal!.message).toContain('backdating');
   });
 
+  it('does NOT report an un-anchored tail as anchored evidence', async () => {
+    // GAP found in audit: `anchored` is a bare some(is_evidence), so appending
+    // fabricated receipts after the anchor still produced anchored:true with no
+    // structured signal that the tail was unproven.
+    await createAnchor(db, 'test-tsa'); // covers 0..9
+    record({ actionDetail: { fabricated: 1 } });
+    record({ actionDetail: { fabricated: 2 } });
+
+    const v = verifyBundle(exportBundle(db), { trustedFingerprints: [tsa.rootFingerprint] });
+
+    expect(v.receipts_checked).toBe(12);
+    expect(v.anchored).toBe(true);
+    // The machine-readable fields must expose the gap, not only the prose.
+    expect(v.anchored_through_seq).toBe(9);
+    expect(v.unanchored_receipt_count).toBe(2);
+    expect(v.warnings.join(' ')).toMatch(/are NOT covered by any external anchor/);
+    expect(v.conclusion).toContain('ANCHORED THROUGH SEQ 9');
+    expect(v.conclusion).toContain('are NOT anchored');
+  });
+
+  it('reports whether the anchoring authority is actually trusted', async () => {
+    await createAnchor(db, 'test-tsa');
+    const untrusted = verifyBundle(exportBundle(db));
+    expect(untrusted.anchored).toBe(true);
+    expect(untrusted.anchor_authority_trusted).toBe(false);
+
+    const trusted = verifyBundle(exportBundle(db), { trustedFingerprints: [tsa.rootFingerprint] });
+    expect(trusted.anchor_authority_trusted).toBe(true);
+  });
+
+  it('ignores the bundle summary entirely, since it is unhashed operator prose', async () => {
+    // GAP found in audit: `summary` sits outside everything that is hashed, so
+    // an operator can rewrite it freely. The verifier must never read it, and
+    // must not be contradicted by it.
+    await createAnchor(db, 'test-tsa');
+    const bundle = exportBundle(db);
+    const lied = {
+      ...bundle,
+      summary: {
+        ...(bundle.summary as object),
+        unverified_note: 'Everything here is fully anchored and independently proven.',
+        anchored_through_seq: 9999,
+        receipt_count: 1,
+      },
+    };
+
+    const honest = verifyBundle(bundle, { trustedFingerprints: [tsa.rootFingerprint] });
+    const withLies = verifyBundle(lied, { trustedFingerprints: [tsa.rootFingerprint] });
+
+    // Rewriting the summary changes nothing about the verdict.
+    expect(withLies.anchored_through_seq).toBe(honest.anchored_through_seq);
+    expect(withLies.receipts_checked).toBe(honest.receipts_checked);
+    expect(withLies.conclusion).toBe(honest.conclusion);
+  });
+
   it('tolerates ordinary clock skew rather than crying forgery', async () => {
     await createAnchor(db, 'test-tsa');
     // A minute of NTP drift must not be reported as backdating: a verifier that
@@ -323,10 +378,12 @@ describe('the forgery test', () => {
     registerAnchorBackend({ ...rogue, name: 'rogue' });
     await createAnchor(db, 'rogue');
 
-    const v = verifyBundle(exportBundle(db), {
-      // The reviewer trusts a real authority, not whatever is in the bundle.
-      trustedFingerprints: ['aa'.repeat(32)],
-    });
+    // Pin the REAL DigiCert root, the one a reviewer would actually trust and
+    // that an attacker can copy from this repo's own public sample bundle.
+    // Pinning an arbitrary nonexistent fingerprint would make this test pass
+    // trivially and prove nothing.
+    const DIGICERT_ROOT_FP = '33846b545a49c9be4903c60e01713c1bd4e4ef31ea65cd95d69e62794f30b941';
+    const v = verifyBundle(exportBundle(db), { trustedFingerprints: [DIGICERT_ROOT_FP] });
 
     // Cryptographically sound, and it does commit to the real head...
     expect(v.anchors[0]!.timestamp?.ok).toBe(true);

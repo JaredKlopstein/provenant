@@ -31,4 +31,18 @@ physically cannot provide about itself.
 
 ## Status
 
-Phase 1 ships `pricing.ts` only. Everything else lands in Phase 2.
+Shipped: RFC 3161 anchoring against real timestamp authorities, evidence bundle
+export (JSON / PDF / HTML), and invoice computation derived from `pricing.ts`.
+
+**Not shipped, despite scaffolding existing — do not present these as working:**
+
+- **Receipt ingestion over HTTP.** The collector authenticates correctly
+  (RFC 9421, replay and body-swap rejection all tested), but `POST /receipts`
+  returns a documented "not implemented". The collector must never hold agent
+  secret keys — otherwise a hosted deployment could forge its customers' records,
+  which destroys the thing being sold — so agents sign locally and the submission
+  protocol for pre-signed receipts still needs its own design pass.
+- **Stripe integration.** `computeInvoice` and the catalog builder are real and
+  tested, but there is no `stripe` dependency, no webhook handling and no
+  subscription persistence. The client is an injected interface; nothing has ever
+  called Stripe.

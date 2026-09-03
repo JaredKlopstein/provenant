@@ -104,6 +104,9 @@ async function handle(
     {
       resolveKey: (keyId: string) => resolveKeyId(opts.db, keyId),
       seenNonce: (n: string) => nonces.has(n),
+      // Explicit rather than defaulted, so the replay protection is visible at
+      // the call site of the thing it protects.
+      requireNonce: true,
     },
   );
 

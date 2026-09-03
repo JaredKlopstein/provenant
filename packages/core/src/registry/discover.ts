@@ -43,9 +43,36 @@ export function buildManifest(): Record<string, unknown> {
     },
 
     auth: {
-      scheme: 'none (local CLI)',
+      /** The CLI authenticates by possession of the key file; every network
+       *  endpoint except the discovery surface requires an RFC 9421 signature.
+       *  Saying "none" here was wrong and stalled agents that read this manifest
+       *  from the collector and then got a 401. */
+      scheme: 'ed25519-http-message-signatures (RFC 9421); local CLI uses the on-disk keypair',
+      unauthenticated_endpoints: ['/discover', '/llms.txt', '/health', '/.well-known/http-message-signatures-directory', 'POST /agents'],
+      required_covered_components: ['@method', '@authority', '@path'],
+      also_required_with_a_body: ['content-digest'],
+      replay_window_seconds: 60,
+      max_signature_lifetime_seconds: 86400,
       note:
-        'The local CLI authenticates by possession of the keypair file. Network surfaces will use Ed25519 HTTP Message Signatures (RFC 9421) with trust-on-first-use; no sessions, cookies, bearer tokens or refresh tokens are used anywhere.',
+        'Sign with Ed25519 over the RFC 9421 signature base. Registration (POST /agents) is ' +
+        'unauthenticated by design -- it is how you establish the key, under trust-on-first-use. ' +
+        'No sessions, cookies, bearer tokens or refresh tokens exist anywhere.',
+      worked_example: {
+        request: 'POST /receipts HTTP/1.1 to collector.example',
+        signature_base: [
+          '"@method": POST',
+          '"@authority": collector.example',
+          '"@path": /receipts',
+          '"content-digest": sha-256=:<base64 of SHA-256(body)>:',
+          '"@signature-params": ("@method" "@authority" "@path" "content-digest");created=1788460000;expires=1788460300;keyid="<RFC 7638 JWK thumbprint>";alg="ed25519"',
+        ].join('\n'),
+        headers: {
+          'signature-input': 'sig1=("@method" "@authority" "@path" "content-digest");created=1788460000;expires=1788460300;keyid="<thumbprint>";alg="ed25519"',
+          signature: 'sig1=:<base64 Ed25519 over the signature base>:',
+          'content-digest': 'sha-256=:<base64 of SHA-256(body)>:',
+        },
+        note: 'Join base lines with a single \n and do NOT add a trailing newline.',
+      },
     },
 
     pagination: {
@@ -67,6 +94,21 @@ export function buildManifest(): Record<string, unknown> {
       examples: a.examples ?? [],
     })),
 
+    success: {
+      shape: {
+        ok: true,
+        action: 'the.action.that.ran',
+        result: { '...': 'the action-specific output, matching output_schema' },
+        next_actions: [
+          { action: 'another.action', arguments: { ready: 'to execute' }, why: 'why this is a sensible next step' },
+        ],
+      },
+      note:
+        'Every successful call returns this envelope. `next_actions` entries are fully-formed and ' +
+        'ready to execute as-is, with ids already filled in -- they are not endpoint names. The array ' +
+        'may be empty when there is no meaningful follow-up.',
+    },
+
     errors: {
       shape: {
         error: {
@@ -74,9 +116,12 @@ export function buildManifest(): Record<string, unknown> {
           message: 'Human and agent readable statement of what went wrong.',
           retryable: false,
           fix: {
-            action: 'the.action.to.call.next',
-            arguments: { ready: 'to execute' },
-            note: 'Whether the action executed, and what to do about it.',
+            // A real action name, not a placeholder: the shape an agent reads
+            // here should itself be executable, and every fix block we emit
+            // names an action that exists in this manifest's `actions` list.
+            action: 'record',
+            arguments: { action: 'example.action', side_effect_class: 'write' },
+            note: 'Whether the action executed, and what to do about it. Arguments are ready to execute as-is.',
           },
         },
       },
@@ -129,6 +174,8 @@ export function buildManifest(): Record<string, unknown> {
       'A self-hosted chain is self-attested. It proves internal consistency, not that the operator left history alone. External anchoring is what makes it evidence to a third party.',
       'Trust-on-first-use binds an agent id to its first key, but cannot tell you that first key was legitimate.',
       'Provenant produces tamper-evident records that support logging obligations. It does not make anyone compliant with anything, and this is not legal advice.',
+      'An anchor does not prove completeness. Truncating the receipts recorded since the last anchor leaves a chain that still verifies. Anchor cadence bounds that window; it does not eliminate it.',
+      'A timestamp token carried inside a bundle proves nothing about who vouches for the signer. Trust must come from the reader, via a pinned fingerprint or trust anchor.',
     ],
   };
 }

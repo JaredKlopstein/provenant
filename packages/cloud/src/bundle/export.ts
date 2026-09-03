@@ -93,11 +93,14 @@ export function exportBundle(db: Db, opts: ExportOptions = {}): Bundle {
       by_outcome: Object.fromEntries(byOutcome),
       external_anchors: external.length,
       anchored_through_seq: external.length ? external[external.length - 1]!.seq : null,
-      // Said in the bundle itself, so a reviewer reading the raw JSON cannot
-      // miss it and an operator cannot quietly omit it.
-      what_this_proves: external.length
-        ? `Receipts 0 through ${external[external.length - 1]!.seq} were externally timestamped and cannot have been altered afterwards without breaking the attestation. Receipts after that position are covered only by this operator's own hash chain.`
-        : 'NOTHING IS EXTERNALLY ANCHORED. Every receipt here is self-attested: the operator could have generated this entire bundle, and it would verify exactly as it does now. Do not treat this as independent evidence.',
+      // A convenience note for a human skimming the raw JSON. It is NOT evidence
+      // and must not be read as any kind of assertion: `summary` sits outside
+      // everything that is hashed, so an operator can rewrite this text freely
+      // and the verifier will neither notice nor contradict it. The verifier
+      // ignores this field entirely and recomputes its own conclusion.
+      unverified_note: external.length
+        ? `Claims (UNVERIFIED, recompute with provenant-verify): receipts 0 through ${external[external.length - 1]!.seq} were externally timestamped. Receipts after that position are covered only by this operator's own hash chain.`
+        : 'Claims (UNVERIFIED): NOTHING IS EXTERNALLY ANCHORED. Every receipt here would be self-attested. Do not treat this bundle as independent evidence.',
     };
   }
 

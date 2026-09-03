@@ -32,7 +32,13 @@ provenant chain verify --json
 including full RFC 3161 timestamp checking. Verifying is never paywalled.
 
 **Paid — Provenant Cloud:** RFC 3161 anchoring against a real timestamp
-authority, evidence bundle export (JSON + PDF), the hosted collector, and billing.
+authority, and evidence bundle export (JSON, PDF, HTML).
+
+**Partly built, and not to be presented as working** — the collector
+authenticates correctly (RFC 9421, with replay and body-swap rejection tested)
+but `POST /receipts` is a documented "not implemented"; and invoice computation
+is real while nothing has ever called Stripe. Details in
+[packages/cloud/README.md](packages/cloud/README.md).
 
 Not built yet: contracts and approvals (Phase 3); leases and fencing tokens
 (Phase 4); MCP adapter (Phase 5).
@@ -91,6 +97,11 @@ a determined operator. Do not oversell them.
   conformance**.
 - **Web Bot Auth / RFC 9421 agent identity drafts are individual submissions**
   with no working group adoption. The wire format may shift.
+- **An anchor does not prove completeness.** Truncating the un-anchored tail
+  leaves a valid chain. Anchor cadence bounds the forgeable window; it does not
+  eliminate it. The verifier reports `anchored_through_seq` and warns about
+  un-anchored receipts rather than letting "anchored: true" imply more than it
+  should.
 
 ## What an anchor does and does not prove
 

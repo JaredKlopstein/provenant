@@ -63,19 +63,19 @@
 <body>
 <main>
   <h1>Q3 Agent Activity</h1>
-  <p class="sub">Acme Corp &middot; generated 2026-09-03T18:15:13.708Z</p>
+  <p class="sub">Acme Corp &middot; generated 2026-09-03T18:42:30.800Z</p>
 
   <div class="verdict ok">
-    <strong>Verified — externally anchored</strong>
-    <p>VERIFIED AND ANCHORED. All 3 receipts are internally consistent and correctly signed, and 1 external timestamp(s) prove this exact history existed at 2026-09-03T17:58:47.000Z. The operator could not have altered anything at or before the anchored position without breaking the timestamp. NOTE: the timestamp authority was not in your trust list -- confirm you trust it before relying on this.</p>
+    <strong>Verified — anchored by an unverified authority</strong>
+    <p>VERIFIED AND ANCHORED THROUGH SEQ 2. All 3 receipts are internally consistent and correctly signed, and 1 external timestamp(s) prove the history up to seq 2 existed at 2026-09-03T18:42:30.000Z. The operator could not have altered anything at or before that position without breaking the timestamp. NOTE: the timestamp authority was not in your trust list -- confirm you trust it before relying on this.</p>
   </div>
 
   <h2>Scope</h2>
   <div class="panel"><dl>
-    <dt>Chain</dt><dd>978ed540-98a6-44c1-ab72-907614f1b629</dd>
+    <dt>Chain</dt><dd>81a11f16-41f1-4507-b792-20ab61ac0c44</dd>
     <dt>Receipts</dt><dd>3</dd>
     <dt>Positions</dt><dd>seq 0 &ndash; 2</dd>
-    <dt>Time span</dt><dd>2026-09-03T17:58:46.471Z &rarr; 2026-09-03T17:58:46.983Z</dd>
+    <dt>Time span</dt><dd>2026-09-03T18:42:29.401Z &rarr; 2026-09-03T18:42:29.911Z</dd>
     <dt>Agents</dt><dd>1</dd>
     <dt>Irreversible</dt><dd>3</dd>
   </dl></div>
@@ -86,13 +86,13 @@
       <span class="tag ev">EVIDENCE</span>
       <dl>
         <dt>Position</dt><dd>seq 2</dd>
-        <dt>Attested</dt><dd>2026-09-03T17:58:47.000Z</dd>
+        <dt>Attested</dt><dd>2026-09-03T18:42:30.000Z</dd>
         <dt>Authority</dt><dd>C=US, O=DigiCert\, Inc., CN=DigiCert SHA256 RSA4096 Timestamp Responder 2026 1</dd>
         <dt>Trust anchor</dt><dd>C=US, O=DigiCert Inc, OU=www.digicert.com, CN=DigiCert Trusted Root G4</dd>
         <dt>Fingerprint</dt><dd>33846b545a49c9be4903c60e01713c1bd4e4ef31ea65cd95d69e62794f30b941</dd>
         <dt>In your trust list</dt><dd>NO — confirm independently</dd>
       </dl>
-      <p class="note">verified: &#39;C=US, O=DigiCert\, Inc., CN=DigiCert SHA256 RSA4096 Timestamp Responder 2026 1&#39; attests this chain reached seq 2 at 2026-09-03T17:58:47.000Z (authority NOT in your trust list -- confirm you trust it)</p>
+      <p class="note">verified: &#39;C=US, O=DigiCert\, Inc., CN=DigiCert SHA256 RSA4096 Timestamp Responder 2026 1&#39; attests this chain reached seq 2 at 2026-09-03T18:42:30.000Z (authority NOT in your trust list -- confirm you trust it)</p>
     </div></div>
 
   
@@ -117,7 +117,7 @@
   <ul>
     <li>It establishes that the receipts shown are internally consistent and were
         signed by the registered agent keys.</li>
-    <li>It establishes, via an independent timestamp authority, that this exact history existed at the attested time and has not been altered since.</li>
+    <li><b>It does not yet establish that the history is unaltered.</b> A timestamp token is present and cryptographically sound, but the authority that signed it is <b>not in your trust list</b>, so nothing here rules out that the signer was chosen by whoever produced this bundle. Confirm the fingerprint above against the authority directly, then re-run the verifier with <code>--trust-fingerprint</code>.</li>
     <li><b>It does not make anyone compliant with any regulation.</b> Provenant
         produces tamper-evident records that support logging obligations. This is
         not legal advice.</li>
@@ -125,7 +125,7 @@
 
   <footer>
     Provenant &middot; bundle format provenant-bundle-v1 &middot;
-    externally anchored
+    anchored, authority unverified
   </footer>
 </main>
 </body>

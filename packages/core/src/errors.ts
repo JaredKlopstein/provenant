@@ -11,6 +11,9 @@
 export const ERROR_CODES = {
   /** Input failed schema validation. Never executed. */
   INVALID_INPUT: 'INVALID_INPUT',
+  /** An option was supplied that the action does not define. Never executed --
+   *  ignoring it could silently change what is recorded or returned. */
+  UNKNOWN_ARGUMENT: 'UNKNOWN_ARGUMENT',
   /** No agent registered under that id. Never executed. */
   AGENT_NOT_FOUND: 'AGENT_NOT_FOUND',
   /** Agent id is registered to a DIFFERENT key than the one presented. */

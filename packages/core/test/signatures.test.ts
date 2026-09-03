@@ -41,7 +41,20 @@ describe('RFC 9421 signature base construction', () => {
     expect(base.endsWith('\n')).toBe(false);
   });
 
-  it('excludes the query string from @path', () => {
+  it('covers the query string via @query, not @path', () => {
+    // @path deliberately excludes the query, so @query must be covered
+    // separately -- otherwise `?limit=100000&agent_id=someone_else` travels
+    // unauthenticated and can be rewritten in flight.
+    const r = signed(req({ path: '/receipts?limit=10' }));
+    expect(r.headers['signature-input']).toContain('"@query"');
+    expect(verifyRequest(r, { resolveKey }).ok).toBe(true);
+
+    const rewritten = { ...r, path: '/receipts?limit=100000&agent_id=someone_else' };
+    const v = verifyRequest(rewritten, { resolveKey });
+    expect(v.ok, 'query string rewrite went undetected').toBe(false);
+  });
+
+  it('excludes the query string from @path itself', () => {
     const base = signatureBase(['@path'], { keyid: 'k', created: 1 }, req({ path: '/receipts?limit=10' }));
     expect(base).toContain('"@path": /receipts');
     expect(base).not.toContain('limit=10');
@@ -206,9 +219,37 @@ describe('freshness and replay', () => {
     expect(second.reason).toMatch(/replay/);
   });
 
-  it('can require a nonce', () => {
+  it('mints a nonce by default, so verbatim replay is blocked', () => {
+    // The freshness window alone leaves a ~120s replay hole (60s each side for
+    // clock skew). Previously signRequest never produced a nonce and
+    // requireNonce defaulted off, so the nonce cache was dead code and an
+    // identical signed request could simply be resent.
     const r = signed(req(), { created: now, expires: now + 60 });
-    expect(verifyRequest(r, { resolveKey, nowSeconds: now, requireNonce: true }).reason).toMatch(/nonce is required/);
+    expect(r.headers['signature-input']).toMatch(/nonce="/);
+
+    const cache = new NonceCache();
+    const seen = (n: string) => cache.has(n);
+    const first = verifyRequest(r, { resolveKey, nowSeconds: now, seenNonce: seen });
+    expect(first.ok).toBe(true);
+    cache.add(first.nonce!);
+
+    const replay = verifyRequest(r, { resolveKey, nowSeconds: now, seenNonce: seen });
+    expect(replay.ok).toBe(false);
+    expect(replay.reason).toMatch(/replay/);
+  });
+
+  it('rejects a nonce-less signature unless the caller opts out explicitly', () => {
+    const r = signed(req(), { created: now, expires: now + 60 });
+    // Strip the nonce the signer added.
+    const stripped = {
+      ...r,
+      headers: { ...r.headers, 'signature-input': r.headers['signature-input']!.replace(/;nonce="[^"]*"/, '') },
+    };
+    expect(verifyRequest(stripped, { resolveKey, nowSeconds: now }).reason).toMatch(/nonce is required/);
+    // Opting out is possible, but only by saying so.
+    expect(
+      verifyRequest(stripped, { resolveKey, nowSeconds: now, requireNonce: false }).reason,
+    ).not.toMatch(/nonce is required/);
   });
 });
 

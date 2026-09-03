@@ -21,6 +21,11 @@ export interface PdfOptions extends VerifyOptions {
 
 export function bundleToPdf(bundle: Bundle, opts: PdfOptions = {}): Promise<Buffer> {
   const verdict = verifyBundle(bundle, opts);
+  // Same rule as the HTML report: an anchor from an authority the reader has not
+  // vouched for must not be presented as settled proof. `is_evidence` requires
+  // only that the token is sound and commits to this history -- it deliberately
+  // says nothing about who vouches for the signer.
+  const trustedAnchor = verdict.anchors.some((a) => a.is_evidence && a.timestamp?.trusted);
   const doc = new PDFDocument({ size: 'LETTER', margin: 54 });
   const chunks: Buffer[] = [];
 
@@ -46,14 +51,20 @@ export function bundleToPdf(bundle: Bundle, opts: PdfOptions = {}): Promise<Buff
     doc.moveTo(54, doc.y).lineTo(558, doc.y).strokeColor('#ddd').stroke();
 
     // ---- verdict banner ----
-    const good = verdict.ok && verdict.anchored;
-    const warn = verdict.ok && !verdict.anchored;
+    const good = verdict.ok && verdict.anchored && trustedAnchor;
+    const warn = verdict.ok && (!verdict.anchored || !trustedAnchor);
     doc.moveDown(0.8);
     doc.rect(54, doc.y, 504, 26).fill(good ? '#e7f5ec' : warn ? '#fff6e5' : '#fdeaea');
     doc.fillColor(good ? '#1a7f45' : warn ? '#8a5a00' : '#a11')
       .font('Helvetica-Bold').fontSize(12)
       .text(
-        verdict.ok ? (verdict.anchored ? 'VERIFIED — EXTERNALLY ANCHORED' : 'VERIFIED — NOT ANCHORED') : 'VERIFICATION FAILED',
+        verdict.ok
+          ? verdict.anchored
+            ? trustedAnchor
+              ? 'VERIFIED — EXTERNALLY ANCHORED'
+              : 'VERIFIED — AUTHORITY NOT VERIFIED'
+            : 'VERIFIED — NOT ANCHORED'
+          : 'VERIFICATION FAILED',
         62, doc.y - 19,
       );
     doc.moveDown(1.4);
@@ -142,12 +153,17 @@ export function bundleToPdf(bundle: Bundle, opts: PdfOptions = {}): Promise<Buff
       '#333',
     );
     P(
-      verdict.anchored
-        ? '• It establishes, via an independent timestamp authority, that this exact history existed at the ' +
-          'attested time and has not been altered since.'
-        : '• It does NOT establish that the history is unaltered. Without an external anchor, the operator ' +
-          'could have rewritten everything and it would still verify.',
-      verdict.anchored ? '#1a7f45' : '#8a5a00',
+      !verdict.anchored
+        ? '• It does NOT establish that the history is unaltered. Without an external anchor, the operator ' +
+          'could have rewritten everything and it would still verify.'
+        : trustedAnchor
+          ? '• It establishes, via a timestamp authority you have told this tool to trust, that this exact ' +
+            'history existed at the attested time and has not been altered since.'
+          : '• It does NOT yet establish that the history is unaltered. A timestamp token is present and ' +
+            'cryptographically sound, but the authority that signed it is not in your trust list, so ' +
+            'nothing rules out that the signer was chosen by whoever produced this bundle. Confirm the ' +
+            'fingerprint above against the authority directly, then re-run with --trust-fingerprint.',
+      trustedAnchor ? '#1a7f45' : '#8a5a00',
     );
     P(
       '• It does NOT make anyone compliant with any regulation. Provenant produces tamper-evident ' +

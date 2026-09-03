@@ -84,6 +84,15 @@ export const receipts = sqliteTable(
     signature: text('signature').notNull(),
 
     idempotencyKey: text('idempotency_key'),
+    /**
+     * SHA-256 over the canonical form of the request that produced this receipt.
+     *
+     * An idempotency key that replays regardless of arguments is worse than no
+     * idempotency at all: a SECOND, DIFFERENT action under a reused key would be
+     * silently discarded and the caller told it succeeded. Storing the argument
+     * hash lets a replay with different arguments be rejected loudly.
+     */
+    idempotencyArgsHash: text('idempotency_args_hash'),
 
     /** The authoritative bytes. Everything above is derived from this. */
     canonicalJson: text('canonical_json').notNull(),

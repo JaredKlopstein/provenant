@@ -15,9 +15,28 @@ describe('HTML evidence report', () => {
   const html = bundleToHtml(bundle, { title: 'Q3 Agent Activity', organization: 'Acme Corp' });
 
   it('renders the verdict and the attesting authority', () => {
-    expect(html).toContain('Verified — externally anchored');
     expect(html).toContain('DigiCert');
     expect(html).toContain('Q3 Agent Activity');
+  });
+
+  it('does NOT claim settled proof when the authority is untrusted', () => {
+    // The sample carries a real DigiCert token but no trust list. Calling that
+    // "externally anchored" in the headline while the anchor row says "not in
+    // your trust list" would contradict itself on the same page -- and would be
+    // the exact overclaim the product exists to avoid.
+    expect(html).toContain('Verified — anchored by an unverified authority');
+    expect(html).not.toContain('Verified — externally anchored');
+    expect(html).toContain('not in your trust list');
+    expect(html).toContain('It does not yet establish that the history is unaltered');
+  });
+
+  it('claims proof only once the authority is actually trusted', () => {
+    const DIGICERT_ROOT_FP =
+      '33846b545a49c9be4903c60e01713c1bd4e4ef31ea65cd95d69e62794f30b941';
+    const trusted = bundleToHtml(bundle, { trustedFingerprints: [DIGICERT_ROOT_FP] });
+    expect(trusted).toContain('Verified — externally anchored');
+    expect(trusted).toContain('a timestamp authority you have told this tool to trust');
+    expect(trusted).toContain('authority trusted');
   });
 
   it('states that the page is not the evidence', () => {
