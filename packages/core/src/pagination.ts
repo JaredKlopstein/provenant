@@ -20,7 +20,10 @@ export function encodeCursor(seq: number): string {
 export function decodeCursor(cursor: string): number {
   try {
     const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as { seq: number };
-    if (typeof parsed.seq !== 'number' || !Number.isInteger(parsed.seq)) throw new Error('bad seq');
+    // A chain seq is a non-negative safe integer; anything else is a malformed cursor.
+    if (typeof parsed.seq !== 'number' || !Number.isSafeInteger(parsed.seq) || parsed.seq < 0) {
+      throw new Error('bad seq');
+    }
     return parsed.seq;
   } catch {
     throw new ProvenantError({
@@ -42,7 +45,9 @@ export function decodeCursor(cursor: string): number {
 export function project<T extends Record<string, unknown>>(row: T, fields?: string[]): Partial<T> {
   if (!fields || fields.length === 0) return row;
   const out: Record<string, unknown> = {};
-  for (const f of fields) if (f in row) out[f] = row[f];
+  // Own properties only: `in` would also match inherited names such as
+  // `constructor` or `toString` and copy Object.prototype into the result.
+  for (const f of fields) if (Object.hasOwn(row, f)) out[f] = row[f];
   return out as Partial<T>;
 }
 
