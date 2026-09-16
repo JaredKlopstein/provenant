@@ -1,0 +1,6 @@
+# Landing page for Provenant — https://jaredklopstein.github.io/provenant
+# Nothing here is private: the page is a public explainer with a demo chain.
+User-agent: *
+Allow: /
+
+Sitemap: https://jaredklopstein.github.io/provenant/sitemap.xml

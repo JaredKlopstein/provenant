@@ -1,0 +1,16 @@
+# Response headers for the landing page, in the Netlify / Cloudflare Pages
+# `_headers` format.
+#
+# Honest limitation: GitHub Pages, which serves this directory today, does not
+# read this file and does not allow custom headers. Until the site moves to a
+# host (or CDN) that does, the only enforcement that actually reaches a browser
+# is the equivalent `<meta>` declarations in index.html — and browsers ignore
+# `frame-ancestors` and `X-Content-Type-Options` when they arrive by meta tag.
+# This file exists so the intended policy is stated in one place and applies the
+# moment a header-capable host serves it.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com
