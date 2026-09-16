@@ -3,6 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Security policy. The authoritative copy is docs/_headers, for hosts that can
+     send real headers; these meta equivalents are what a browser honours while
+     GitHub Pages serves the page. `frame-ancestors` is ignored in a meta CSP, so
+     the clickjacking guard below backs it up. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>
+  /* Clickjacking guard: this page is a demo you are meant to interact with, and
+     GitHub Pages cannot send X-Frame-Options. If we are framed, leave the frame. */
+  if (self !== top) { try { top.location = self.location; } catch (e) {} }
+</script>
 <title>Provenant — prove what your agents did</title>
 <meta name="description" content="Signed, hash-chained receipts of what your AI agents actually did. Anyone can verify them offline, without trusting you.">
 <meta property="og:title" content="Provenant — prove what your agents did">
