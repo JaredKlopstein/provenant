@@ -8,6 +8,7 @@ export {
 } from './crypto/keys.js';
 export {
   Receipt, UnsignedReceipt, ActionType, Outcome, TrustLevel, SideEffectClass,
+  IssuerKind, ProvenanceClass,
   AAT_DRAFT_VERSION, PROVENANT_RECEIPT_VERSION,
 } from './receipt/schema.js';
 export {

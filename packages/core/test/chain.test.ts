@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { openDb, closeDb, type Db } from '../src/db/client.js';
 import { appendReceipt, readHead } from '../src/chain/append.js';
 import { verifyChain, type VerifiableRecord } from '../src/chain/verify.js';
+import { signReceipt, receiptHash, canonicalReceiptJson, payloadHash } from '../src/receipt/hash.js';
 import { registerAgent, keyDirectory } from '../src/agents/store.js';
 import { generateKeypair, deriveAgentId, publicKeyToJwk, type Keypair } from '../src/crypto/keys.js';
 
@@ -282,6 +283,85 @@ describe('the tamper test', () => {
     const result = verifyChain(readChain(), keyDirectory(db));
     expect(result.ok).toBe(true);
     expect(result.warnings.some((w) => w.kind === 'CLOCK_REGRESSION')).toBe(true);
+  });
+});
+
+describe('tool-call fields (ADR 0004)', () => {
+  it('records all five fields under provenant, signed and verifiable', () => {
+    record();
+    const { receipt } = record({
+      issuerKind: 'sdk',
+      runId: 'run-test-1',
+      turnId: 'turn-test-1',
+      attemptId: 'attempt-test-1',
+      provenanceClass: 'attested',
+      input: { query: 'status' },
+      output: { ok: true },
+    });
+    record();
+
+    expect(receipt.provenant).toMatchObject({
+      issuer_kind: 'sdk',
+      run_id: 'run-test-1',
+      turn_id: 'turn-test-1',
+      attempt_id: 'attempt-test-1',
+      provenance_class: 'attested',
+    });
+    // Nothing new at the top level: the AAT core is untouched.
+    for (const k of ['issuer_kind', 'run_id', 'turn_id', 'attempt_id', 'provenance_class']) {
+      expect(k in receipt).toBe(false);
+    }
+
+    const result = verifyChain(readChain(), keyDirectory(db));
+    expect(result.ok).toBe(true);
+    expect(result.failures).toEqual([]);
+    expect(result.intact_ranges).toEqual([{ from_seq: 0, to_seq: 2 }]);
+  });
+
+  it('a receipt appended without them is byte-identical to one appended with today\'s input', () => {
+    // Explicit undefineds must be omitted, not nulled: same canonical bytes and
+    // hash as a receipt built from the pre-ADR-0004 input shape.
+    const timestamp = '2026-10-16T12:00:00.000Z';
+    const { receipt, selfHash } = record({
+      timestamp,
+      input: { a: 1 },
+      issuerKind: undefined,
+      runId: undefined,
+      turnId: undefined,
+      attemptId: undefined,
+      provenanceClass: undefined,
+    });
+
+    // The exact key set today's appendReceipt produces for this input.
+    const expected = signReceipt(
+      {
+        record_id: receipt.record_id,
+        timestamp,
+        agent_id: agentId,
+        agent_version: '1.0.0',
+        session_id: sessionId,
+        action_type: 'tool_call',
+        action_detail: { customer: 'c_1', amount_usd: 42 },
+        outcome: 'success',
+        trust_level: 'L1',
+        parent_record_id: null,
+        prev_hash: null,
+        input_hash: payloadHash({ a: 1 }),
+        provenant: {
+          v: '1',
+          action: 'refund.issue',
+          side_effect_class: 'irreversible',
+          seq: 0,
+          signature_alg: 'ed25519',
+          key_id: kp.keyId,
+        },
+      },
+      kp.secretKey,
+    );
+
+    expect(Object.keys(receipt.provenant).sort()).toEqual(Object.keys(expected.provenant).sort());
+    expect(readChain()[0]!.canonical_json).toBe(canonicalReceiptJson(expected));
+    expect(selfHash).toBe(receiptHash(expected));
   });
 });
 
