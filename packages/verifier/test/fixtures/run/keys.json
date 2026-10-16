@@ -1,0 +1,24 @@
+{
+  "test-key-a": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": {
+      "$chunks": [
+        "vHy8tWNjdfodgkNN",
+        "Rmck2SN39TuYBpXd",
+        "SdJtDOEiBaU"
+      ]
+    }
+  },
+  "test-key-b": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": {
+      "$chunks": [
+        "VRVPQgZepaG-oFRj",
+        "gmviaE65LfksEAAn",
+        "qrquV8pVQgc"
+      ]
+    }
+  }
+}

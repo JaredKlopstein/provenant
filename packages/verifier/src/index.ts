@@ -22,6 +22,8 @@ export type {
   Bundle, BundleVerdict, BundleReceipt, BundleAnchor, AnchorVerdict,
   Failure, FailureKind, VerifyOptions,
 } from './bundle.js';
+export { checkRun } from './run.js';
+export type { RunReport, RunKeys, BrokenLink, BrokenLinkKind, Gap, DuplicateAttempt } from './run.js';
 export { verifyTimestampToken } from './rfc3161.js';
 export type { TimestampVerdict, ChainStatus, CertRef } from './rfc3161.js';
 export { canonicalize, canonicalBytes, CanonicalizationError } from './jcs.js';
