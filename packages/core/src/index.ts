@@ -49,6 +49,9 @@ export { defineAction, allActions, getAction, actionNames } from './registry/reg
 export { buildManifest } from './registry/discover.js';
 export type { ActionDef, ActionContext, ActionDescription, NextAction } from './registry/types.js';
 export { runCli } from './adapters/cli.js';
+export {
+  wrapMcpClient, type WrapMcpClientOptions, type McpToolClient, type McpCallToolParams,
+} from './adapters/mcp.js';
 export { loadKeypair, saveKeypair } from './actions/identity.js';
 
 // Importing these registers them in the action registry.
