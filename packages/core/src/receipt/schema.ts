@@ -69,6 +69,22 @@ export type SideEffectClass = z.infer<typeof SideEffectClass>;
 export const ContractResult = z.enum(['passed', 'rejected', 'not_applicable']);
 export type ContractResult = z.infer<typeof ContractResult>;
 
+/**
+ * Who wrote the receipt (docs/adr/0004-tool-call-receipts.md). `sdk`: the
+ * agent's own process, in-band. `gateway`: an intermediary (e.g. an MCP proxy)
+ * that saw the call on the wire.
+ */
+export const IssuerKind = z.enum(['sdk', 'gateway']);
+export type IssuerKind = z.infer<typeof IssuerKind>;
+
+/**
+ * How much trust the recorded content deserves (ADR 0004). `attested`: vouched
+ * for by the party that performed it. `observed`: seen by the issuer on the
+ * wire. `claimed`: reported to the issuer and not independently seen.
+ */
+export const ProvenanceClass = z.enum(['attested', 'observed', 'claimed']);
+export type ProvenanceClass = z.infer<typeof ProvenanceClass>;
+
 /** Provenant extension namespace. Everything here is outside AAT's schema. */
 export const ProvenantExtension = z.object({
   v: z.literal(PROVENANT_RECEIPT_VERSION),
@@ -93,6 +109,17 @@ export const ProvenantExtension = z.object({
 
   /** Replay key. A repeat with the same key returns the original receipt. */
   idempotency_key: z.string().min(1).max(255).nullish(),
+
+  /** Tool-call context (ADR 0004). Omitted when not supplied, so receipts
+   *  written without them keep their exact pre-ADR-0004 bytes. */
+  issuer_kind: IssuerKind.nullish(),
+  /** One agent run (a task or conversation execution). */
+  run_id: z.string().min(1).nullish(),
+  /** One model turn within the run. */
+  turn_id: z.string().min(1).nullish(),
+  /** One try of a tool call; retries share run/turn and differ here. */
+  attempt_id: z.string().min(1).nullish(),
+  provenance_class: ProvenanceClass.nullish(),
 });
 export type ProvenantExtension = z.infer<typeof ProvenantExtension>;
 
@@ -116,7 +143,9 @@ export const UnsignedReceipt = z.object({
   prev_hash: z.string().regex(HEX64).nullable(),
 
   // --- AAT optional, which we always populate for consequential actions ---
+  /** For a tool call: SHA-256 of the JCS (RFC 8785) of the call's arguments. */
   input_hash: z.string().regex(HEX64).nullish(),
+  /** For a tool call: SHA-256 of the JCS (RFC 8785) of the call's result. */
   output_hash: z.string().regex(HEX64).nullish(),
   risk_score: z.number().min(0).max(1).nullish(),
   model_id: z.string().max(200).nullish(),

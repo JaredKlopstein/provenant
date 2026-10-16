@@ -59,6 +59,83 @@ describe('receipt schema', () => {
   });
 });
 
+describe('receipt schema -- tool-call fields (ADR 0004)', () => {
+  const toolCallFields = {
+    issuer_kind: 'gateway',
+    run_id: 'run-test-1',
+    turn_id: 'turn-test-3',
+    attempt_id: 'attempt-test-2',
+    provenance_class: 'observed',
+  } as const;
+
+  function withToolCall(extra: Record<string, unknown>): UnsignedReceipt {
+    const base = makeUnsigned();
+    return { ...base, provenant: { ...base.provenant, ...extra } } as UnsignedReceipt;
+  }
+
+  it('accepts a receipt carrying all tool-call fields and keeps them through a parse', () => {
+    const parsed = UnsignedReceipt.parse(withToolCall(toolCallFields));
+    expect(parsed.provenant).toMatchObject(toolCallFields);
+  });
+
+  it('hashes a receipt with tool-call fields deterministically, and the fields are signed', () => {
+    const kp = generateKeypair();
+    const receipt = signReceipt(withToolCall(toolCallFields), kp.secretKey);
+    const reparsed = Receipt.parse(JSON.parse(canonicalReceiptJson(receipt)));
+
+    // The parse must not strip them: verification hashes the parsed form.
+    expect(receiptHash(reparsed)).toBe(receiptHash(receipt));
+    expect(verifyReceiptSignature(reparsed, kp.publicKey)).toBe(true);
+
+    for (const [field, value] of Object.entries({
+      issuer_kind: 'sdk',
+      run_id: 'run-other',
+      turn_id: 'turn-other',
+      attempt_id: 'attempt-other',
+      provenance_class: 'attested',
+    })) {
+      const mutated: Receipt = { ...receipt, provenant: { ...receipt.provenant, [field]: value } };
+      expect(verifyReceiptSignature(mutated, kp.publicKey), `mutation of ${field} went undetected`).toBe(
+        false,
+      );
+      expect(receiptHash(mutated)).not.toBe(receiptHash(receipt));
+    }
+  });
+
+  it('accepts every documented enum value', () => {
+    for (const issuer_kind of ['sdk', 'gateway']) {
+      expect(() => UnsignedReceipt.parse(withToolCall({ issuer_kind }))).not.toThrow();
+    }
+    for (const provenance_class of ['attested', 'observed', 'claimed']) {
+      expect(() => UnsignedReceipt.parse(withToolCall({ provenance_class }))).not.toThrow();
+    }
+  });
+
+  it('rejects invalid issuer_kind and provenance_class values', () => {
+    for (const issuer_kind of ['proxy', 'SDK', '', 1]) {
+      expect(() => UnsignedReceipt.parse(withToolCall({ issuer_kind }))).toThrow();
+    }
+    for (const provenance_class of ['verified', 'Observed', '', 0]) {
+      expect(() => UnsignedReceipt.parse(withToolCall({ provenance_class }))).toThrow();
+    }
+  });
+
+  it('rejects empty or non-string run/turn/attempt ids', () => {
+    for (const field of ['run_id', 'turn_id', 'attempt_id']) {
+      expect(() => UnsignedReceipt.parse(withToolCall({ [field]: '' })), field).toThrow();
+      expect(() => UnsignedReceipt.parse(withToolCall({ [field]: 7 })), field).toThrow();
+    }
+  });
+
+  it('still validates a receipt without any tool-call fields', () => {
+    const r = makeUnsigned();
+    const parsed = UnsignedReceipt.parse(r);
+    for (const field of Object.keys(toolCallFields)) {
+      expect(field in parsed.provenant).toBe(false);
+    }
+  });
+});
+
 describe('stripUndefined -- the absent-vs-null invariant', () => {
   it('drops undefined keys but preserves null exactly', () => {
     expect(stripUndefined({ a: 1, b: undefined, c: null })).toEqual({ a: 1, c: null });

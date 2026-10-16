@@ -20,6 +20,8 @@ import {
   type Outcome,
   type SideEffectClass,
   type TrustLevel,
+  type IssuerKind,
+  type ProvenanceClass,
   PROVENANT_RECEIPT_VERSION,
 } from '../receipt/schema.js';
 import { ProvenantError } from '../errors.js';
@@ -45,6 +47,13 @@ export interface AppendInput {
   riskScore?: number;
   latencyMs?: number;
   idempotencyKey?: string;
+  /** Tool-call context (docs/adr/0004-tool-call-receipts.md). Each is omitted
+   *  from the receipt when undefined. */
+  issuerKind?: IssuerKind;
+  runId?: string;
+  turnId?: string;
+  attemptId?: string;
+  provenanceClass?: ProvenanceClass;
   /** Overridable only for tests and backfill; defaults to now. */
   timestamp?: string;
 }
@@ -180,6 +189,11 @@ export function appendReceipt(db: Db, input: AppendInput): AppendResult {
         signature_alg: 'ed25519',
         key_id: input.keyId,
         ...(input.idempotencyKey !== undefined ? { idempotency_key: input.idempotencyKey } : {}),
+        ...(input.issuerKind !== undefined ? { issuer_kind: input.issuerKind } : {}),
+        ...(input.runId !== undefined ? { run_id: input.runId } : {}),
+        ...(input.turnId !== undefined ? { turn_id: input.turnId } : {}),
+        ...(input.attemptId !== undefined ? { attempt_id: input.attemptId } : {}),
+        ...(input.provenanceClass !== undefined ? { provenance_class: input.provenanceClass } : {}),
       },
     });
 
