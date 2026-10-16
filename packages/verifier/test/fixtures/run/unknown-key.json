@@ -1,0 +1,154 @@
+[
+  {
+    "record_id": "00000000-0000-4000-8000-000000000200",
+    "timestamp": "2026-10-16T12:00:00.000Z",
+    "agent_id": "urn:provenant:agent:test-agent",
+    "agent_version": "1.0.0",
+    "session_id": "00000000-0000-4000-8000-00000000aaaa",
+    "action_type": "tool_call",
+    "action_detail": {
+      "tool": "ticket.read"
+    },
+    "outcome": "success",
+    "trust_level": "L1",
+    "parent_record_id": null,
+    "prev_hash": null,
+    "input_hash": {
+      "$chunks": [
+        "569fa3552521e6d5",
+        "ad879aa8de54dfad",
+        "5d3468c5e048456c",
+        "4504df4867fea5da"
+      ]
+    },
+    "provenant": {
+      "v": "1",
+      "action": "ticket.read",
+      "side_effect_class": "read",
+      "seq": 0,
+      "signature_alg": "ed25519",
+      "key_id": "test-key-a",
+      "issuer_kind": "sdk",
+      "run_id": "run-unknown-key",
+      "turn_id": "turn-1",
+      "attempt_id": "attempt-1",
+      "provenance_class": "observed"
+    },
+    "signature": {
+      "$chunks": [
+        "QAbg__vdYb2axsfL",
+        "FQaQ8WwKCMpF9gwi",
+        "p1yy0WAoVjomiMGY",
+        "zyYKnryPiNYUh13e",
+        "cvYcw8sNuPEuWvHC",
+        "qF9oDg"
+      ]
+    }
+  },
+  {
+    "record_id": "00000000-0000-4000-8000-000000000201",
+    "timestamp": "2026-10-16T12:00:01.000Z",
+    "agent_id": "urn:provenant:agent:test-agent",
+    "agent_version": "1.0.0",
+    "session_id": "00000000-0000-4000-8000-00000000aaaa",
+    "action_type": "tool_call",
+    "action_detail": {
+      "tool": "customer.lookup"
+    },
+    "outcome": "success",
+    "trust_level": "L1",
+    "parent_record_id": null,
+    "prev_hash": {
+      "$chunks": [
+        "c066c64320cea9b6",
+        "297f8198e5a07863",
+        "f697afd1c42c9cd9",
+        "799fd725db9b60e0"
+      ]
+    },
+    "input_hash": {
+      "$chunks": [
+        "7f25eaddba5a0490",
+        "88e34724e62e702d",
+        "148f39d0ef1f6683",
+        "05d7b6dfc3fda0bf"
+      ]
+    },
+    "provenant": {
+      "v": "1",
+      "action": "customer.lookup",
+      "side_effect_class": "read",
+      "seq": 1,
+      "signature_alg": "ed25519",
+      "key_id": "test-key-a",
+      "issuer_kind": "sdk",
+      "run_id": "run-unknown-key",
+      "turn_id": "turn-1",
+      "attempt_id": "attempt-2",
+      "provenance_class": "observed"
+    },
+    "signature": {
+      "$chunks": [
+        "D17ZvBY_AR_g2JkH",
+        "BigOM_VITuP3eJqM",
+        "rTRDCqD-DzJJZiRD",
+        "EPHq8ZCJOZqIEvkt",
+        "VD6l64yk_plm07QW",
+        "sCMHCw"
+      ]
+    }
+  },
+  {
+    "record_id": "00000000-0000-4000-8000-000000000202",
+    "timestamp": "2026-10-16T12:00:02.000Z",
+    "agent_id": "urn:provenant:agent:test-agent",
+    "agent_version": "1.0.0",
+    "session_id": "00000000-0000-4000-8000-00000000aaaa",
+    "action_type": "tool_call",
+    "action_detail": {
+      "tool": "refund.issue"
+    },
+    "outcome": "success",
+    "trust_level": "L1",
+    "parent_record_id": null,
+    "prev_hash": {
+      "$chunks": [
+        "9e337ca1960da725",
+        "eee196ae9731bc1c",
+        "2fd44ca75bae0173",
+        "dfe47858091fc005"
+      ]
+    },
+    "input_hash": {
+      "$chunks": [
+        "7a034e371ca3542f",
+        "4e8a33403a8ce405",
+        "d4b21b64e080318a",
+        "b7f904747c0817dd"
+      ]
+    },
+    "provenant": {
+      "v": "1",
+      "action": "refund.issue",
+      "side_effect_class": "irreversible",
+      "seq": 2,
+      "signature_alg": "ed25519",
+      "key_id": "test-key-unregistered",
+      "issuer_kind": "sdk",
+      "run_id": "run-unknown-key",
+      "turn_id": "turn-2",
+      "attempt_id": "attempt-3",
+      "provenance_class": "observed"
+    },
+    "signature": {
+      "$chunks": [
+        "wzKevb2C0-R9jepa",
+        "ehprkJiFFFnAVSgc",
+        "EdeMEh9qO6is4Rxd",
+        "6kaY6XmK1rBJfMUd",
+        "-nicZ-MIYdwZKOT5",
+        "4ITTAw"
+      ]
+    }
+  }
+]

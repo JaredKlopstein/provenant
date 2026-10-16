@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { X509Certificate } from 'node:crypto';
 import { verifyBundle, type BundleVerdict, type VerifyOptions } from './bundle.js';
+import { checkRun, type RunReport } from './run.js';
 
 export interface VerifyIO {
   out(s: string): void;
@@ -49,6 +50,7 @@ This tool makes no network connections and shares no code with the Provenant
 server or the commercial package. Everything it needs is in the bundle.`;
 
 export function runVerify(argv: string[], io: VerifyIO = defaultIO): number {
+  if (argv[0] === 'run') return runCheck(argv.slice(1), io);
   const json = argv.includes('--json');
   if (argv.length === 0 || argv.includes('--help')) {
     io.out(HELP);
@@ -153,6 +155,142 @@ function render(v: BundleVerdict): string {
   }
 
   L.push('');
+  L.push(rule);
+  return L.join('\n');
+}
+
+const RUN_HELP = `provenant-verify run -- check one agent run's receipts, offline
+
+USAGE
+  provenant-verify run RECEIPTS --keys KEYS [--json]
+
+ARGUMENTS
+  RECEIPTS            JSON array of signed receipts in stored form, in chain
+                      order (ascending seq).
+  --keys <file>       JSON object mapping each provenant.key_id to its public
+                      key as an Ed25519 JWK. Include every key the run was
+                      signed under, rotated ones too.
+  --json              Machine-readable report on stdout
+  --help
+
+REPORTS
+  broken links        prev_hash mismatch, failed signature, or unknown key_id
+  gaps                seq not contiguous from 0, or a first record whose
+                      prev_hash is not null
+  duplicate attempts  the same action, input_hash and turn_id under more than
+                      one attempt_id. Reported, not a failure.
+
+EXIT CODES
+  0 intact   1 broken links or gaps   2 input unreadable`;
+
+function runCheck(argv: string[], io: VerifyIO): number {
+  if (argv.includes('--help')) {
+    io.out(RUN_HELP);
+    return 0;
+  }
+
+  let json = false;
+  let keysFile: string | null = null;
+  let file: string | null = null;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (a === '--json') json = true;
+    else if (a === '--keys') keysFile = argv[++i] ?? null;
+    else if (a.startsWith('--')) {
+      io.err(`provenant-verify run: unknown option '${a}'. Options are --keys, --json and --help.`);
+      return 2;
+    } else if (file === null) file = a;
+    else {
+      io.err(`provenant-verify run: unexpected argument '${a}'; give exactly one RECEIPTS file.`);
+      return 2;
+    }
+  }
+
+  if (!file || !keysFile) {
+    io.err(`provenant-verify run: ${!file ? 'no RECEIPTS file' : 'no --keys file'} given. Usage: provenant-verify run RECEIPTS --keys KEYS`);
+    return 2;
+  }
+
+  let receipts: unknown;
+  let keys: unknown;
+  try {
+    receipts = JSON.parse(readFileSync(file, 'utf8'));
+  } catch (err) {
+    io.err(`provenant-verify run: could not read '${file}': ${String(err)}`);
+    return 2;
+  }
+  if (!Array.isArray(receipts)) {
+    io.err(`provenant-verify run: '${file}' must hold a JSON array of receipts.`);
+    return 2;
+  }
+  try {
+    keys = JSON.parse(readFileSync(keysFile, 'utf8'));
+  } catch (err) {
+    io.err(`provenant-verify run: could not read keys file '${keysFile}': ${String(err)}`);
+    return 2;
+  }
+  if (keys === null || typeof keys !== 'object' || Array.isArray(keys)) {
+    io.err(`provenant-verify run: keys file '${keysFile}' must hold a JSON object of key_id to public JWK.`);
+    return 2;
+  }
+
+  const report = checkRun(receipts, keys as Record<string, unknown>);
+  if (json) io.out(JSON.stringify(report, null, 2));
+  else io.out(renderRun(report, file));
+  return report.ok ? 0 : 1;
+}
+
+function renderRun(r: RunReport, file: string): string {
+  const L: string[] = [];
+  const rule = '-'.repeat(72);
+  const where = (x: { seq: number | null; index: number }) => (x.seq === null ? `#${x.index}` : `seq ${x.seq}`);
+
+  L.push(rule);
+  L.push(r.ok ? 'RUN INTACT' : 'RUN BROKEN');
+  L.push(rule);
+  L.push('');
+  L.push(`receipts   ${r.receiptsChecked} from ${file}`);
+
+  if (r.brokenLinks.length) {
+    L.push('');
+    L.push(`BROKEN LINKS (${r.brokenLinks.length})`);
+    for (const b of r.brokenLinks) {
+      L.push(`  ${where(b)}  ${b.kind}`);
+      L.push(`    ${b.message}`);
+      if (b.expected) L.push(`    expected: ${b.expected}`);
+      if (b.actual) L.push(`    actual  : ${b.actual}`);
+    }
+  }
+
+  if (r.gaps.length) {
+    L.push('');
+    L.push(`GAPS (${r.gaps.length})`);
+    for (const g of r.gaps) {
+      L.push(`  ${where(g)}`);
+      L.push(`    ${g.message}`);
+    }
+  }
+
+  if (r.duplicateAttempts.length) {
+    L.push('');
+    L.push(`DUPLICATE ATTEMPTS (${r.duplicateAttempts.length}) -- reported, not a failure`);
+    for (const d of r.duplicateAttempts) {
+      L.push(`  ${d.action}  turn ${d.turnId}  input_hash ${d.inputHash}`);
+      for (const a of d.attempts) {
+        L.push(`    attempt ${a.attemptId}  at ${a.seqs.map((s) => (s === null ? '?' : `seq ${s}`)).join(', ')}`);
+      }
+    }
+  }
+
+  L.push('');
+  L.push(
+    r.ok
+      ? 'Every record links to the one before it and verifies under the key it names. ' +
+        'This proves internal consistency only: it cannot show that records were not cut ' +
+        'from the end, or that the operator did not rewrite and re-sign the run. ' +
+        'Only an anchored head binds the operator.'
+      : 'Do not rely on records at or after the first broken link or gap without further evidence.',
+  );
   L.push(rule);
   return L.join('\n');
 }

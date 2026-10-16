@@ -13,6 +13,21 @@ npx @provenant/verifier evidence.json --trust digicert-root.pem
 
 Exit codes: `0` verified, `1` verification failed, `2` bundle unreadable.
 
+## Checking a single run
+
+```bash
+npx @provenant/verifier run receipts.json --keys keys.json [--json]
+```
+
+`receipts.json` is a JSON array of signed receipts in stored form, in seq
+order; `keys.json` maps each `provenant.key_id` to its Ed25519 JWK (include
+rotated keys). The report lists **broken links** (prev_hash mismatch, bad
+signature, unknown key_id), **gaps** (seq not contiguous from 0, or a non-null
+genesis prev_hash) and **duplicate attempts** (the same action, input_hash and
+turn_id under more than one attempt_id). Duplicate attempts are reported, never
+a failure. Exit codes: `0` intact, `1` broken links or gaps, `2` input
+unreadable. The same check is available as `checkRun(receipts, keys)`.
+
 ## Why this package is deliberately paranoid
 
 It is the credibility anchor of the whole product, so its independence is
