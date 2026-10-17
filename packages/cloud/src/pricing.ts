@@ -81,8 +81,8 @@ export const PLANS: Record<PlanId, Plan> = {
     includedAgentIdentities: 10,
     perExtraIdentityUsd: 4,
     retentionDays: 90,
-    // A promise of at most 15 minutes between anchors. Data only: continuous
-    // anchoring is not built yet, so it stays out of `features` below.
+    // A promise of at most 15 minutes between anchors, kept by the batch
+    // scheduler in anchor/scheduler.ts, which reads this value as its default.
     anchorCadence: 'continuous',
     maxAnchorIntervalMinutes: 15,
     fairUseReceiptsPerMonth: 1_000_000,
@@ -91,6 +91,7 @@ export const PLANS: Record<PlanId, Plan> = {
       'Managed collector',
       '90-day retention',
       'RFC 3161 anchoring',
+      'Continuous anchoring (batched, at most 15 minutes)',
       '5 anchored evidence bundles per month',
       'Hosted verifier page',
     ],
