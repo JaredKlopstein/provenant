@@ -22,6 +22,11 @@ provenant record --action refund.issue \
 provenant chain verify --json
 ```
 
+**Trying it?** The packages are not on npm yet, so run Provenant from a source
+checkout: [Getting started from source](https://github.com/JaredKlopstein/provenant/blob/main/docs/getting-started.md)
+covers clone and build, a first receipt, and an offline check of a real
+anchored bundle.
+
 ## Status: Phase 2 complete
 
 **Free — Provenant Core (MIT):**
@@ -67,7 +72,7 @@ provenant-cloud anchor now --backend tsa --json
 provenant-cloud bundle export --format both --out evidence.json --json
 
 # anyone, offline, with no Provenant server and no commercial code
-npx @provenant/verifier evidence.json --trust digicert-root.pem
+node packages/verifier/bin/provenant-verify.mjs evidence.json --trust digicert-root.pem
 ```
 
 ## What this is honestly worth
