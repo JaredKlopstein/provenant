@@ -35,8 +35,11 @@ describe('pricing shape', () => {
     expect(cloud.maxAnchorIntervalMinutes).toBe(15);
   });
 
-  it('keeps continuous anchoring out of the Cloud features list until it ships', () => {
-    expect(PLANS.cloud.features.join(' ')).not.toMatch(/continuous|15.minute/i);
+  it('lists continuous anchoring on Cloud only, now that the scheduler ships', () => {
+    // Backed by packages/cloud/test/anchor-scheduler.test.ts.
+    expect(PLANS.cloud.features).toContain('Continuous anchoring (batched, at most 15 minutes)');
+    expect(PLANS.free.features.join(' ')).not.toMatch(/continuous|15.minute/i);
+    expect(PLANS.enterprise.features.join(' ')).not.toMatch(/continuous|15.minute/i);
   });
 
   it('shows no Enterprise price', () => {

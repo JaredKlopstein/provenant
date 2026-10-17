@@ -17,6 +17,7 @@ import {
   ProvenantError, toProvenantError, jwkToPublicKey, jwkThumbprint,
   type Db, type AgentJwk,
 } from '@provenant/core';
+import { createAnchorScheduler, type AnchorSchedulerOptions } from '../anchor/scheduler.js';
 
 export interface CollectorOptions {
   db: Db;
@@ -24,6 +25,13 @@ export interface CollectorOptions {
   authority?: string;
   /** Max request body, bytes. A receipt is small; anything large is abuse. */
   maxBodyBytes?: number;
+  /**
+   * Continuous anchoring for self-hosted and local use: when set, a scheduler
+   * starts when the server starts listening and stops when it closes. Off by
+   * default. Platforms with no long-running process should call runAnchorTick
+   * from a cron job instead.
+   */
+  anchoring?: Omit<AnchorSchedulerOptions, 'db'>;
 }
 
 const DEFAULT_MAX_BODY = 256 * 1024;
@@ -32,13 +40,21 @@ export function createCollector(opts: CollectorOptions): Server {
   const nonces = new NonceCache();
   const maxBody = opts.maxBodyBytes ?? DEFAULT_MAX_BODY;
 
-  return createServer((req, res) => {
+  const server = createServer((req, res) => {
     handle(req, res, opts, nonces, maxBody).catch((err) => {
       // Never leak a stack trace to an unauthenticated caller.
       send(res, 500, { error: { code: 'INTERNAL', message: 'internal error', retryable: true } });
       console.error('collector error:', err);
     });
   });
+
+  if (opts.anchoring) {
+    const scheduler = createAnchorScheduler({ ...opts.anchoring, db: opts.db });
+    server.on('listening', () => scheduler.start());
+    server.on('close', () => void scheduler.stop());
+  }
+
+  return server;
 }
 
 async function handle(

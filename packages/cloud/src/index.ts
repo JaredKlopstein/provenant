@@ -14,6 +14,12 @@
 export * from './pricing.js';
 export { createTsaBackend, PUBLIC_TSAS, type TsaConfig } from './anchor/tsa.js';
 export { createTestAuthority, type TestAuthority } from './anchor/test-authority.js';
+export {
+  createAnchorScheduler, runAnchorTick,
+  DEFAULT_MAX_ANCHOR_DELAY_MS, DEFAULT_TICK_INTERVAL_MS, DEFAULT_SAFETY_MARGIN_MS, DEFAULT_ANCHOR_RETRY,
+  type AnchorScheduler, type AnchorSchedulerOptions, type AnchorSchedulerMetrics,
+  type AnchorTickOptions, type AnchorTickResult, type AnchorRetryPolicy,
+} from './anchor/scheduler.js';
 export { mintTimeStampToken } from './anchor/cms.js';
 export { buildTimeStampReq } from './anchor/der.js';
 export { exportBundle, bundleToJson, type ExportOptions } from './bundle/export.js';
