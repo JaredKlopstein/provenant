@@ -274,7 +274,7 @@ forge a replacement timestamp.
     </div>
 
     <div class="tiers">
-      <div class="tier">
+      <div class="tier" data-tier="core">
         <h4>Provenant Core</h4>
         <div class="price">MIT · free forever</div>
         <ul>
@@ -285,15 +285,38 @@ forge a replacement timestamp.
           <li>No time limit, no agent cap</li>
         </ul>
       </div>
-      <div class="tier paid">
+      <div class="tier" data-tier="bundle">
         <h4>Evidence bundle</h4>
-        <div class="price">$99 per bundle</div>
+        <div class="price">$15 each</div>
         <ul>
+          <li>Pay as you go, no subscription</li>
           <li>Your chain head timestamped by a public RFC&nbsp;3161 authority</li>
           <li>A self-contained archive an auditor verifies offline</li>
           <li>Human-readable report for the people who won't read JSON</li>
           <li>We hold a copy, so the evidence exists when you need it</li>
           <li>You cannot anchor retroactively — that's the whole point</li>
+        </ul>
+      </div>
+      <div class="tier paid" data-tier="cloud">
+        <h4>Cloud</h4>
+        <div class="price">$49/mo or $490/yr</div>
+        <ul>
+          <li>Continuous anchoring, batched, at most 15 minutes apart</li>
+          <li>5 bundles/month, no rollover</li>
+          <li>$10 per extra bundle</li>
+          <li>10 agent identities included</li>
+          <li>$4/mo per extra identity</li>
+          <li>90-day retention</li>
+          <li>1M receipts/month fair-use cap (not billed)</li>
+        </ul>
+      </div>
+      <div class="tier" data-tier="enterprise">
+        <h4>Enterprise</h4>
+        <div class="price">Contact us</div>
+        <ul>
+          <li>Retention and anchoring cadence set by contract</li>
+          <li>Volume beyond the Cloud fair-use cap</li>
+          <li>Terms agreed with you, not listed here</li>
         </ul>
       </div>
     </div>

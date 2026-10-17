@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  OVERAGE_BUNDLE_PRICE_USD,
+  PAYG_BUNDLE_PRICE_USD,
+  PLANS,
+} from '../packages/cloud/src/pricing.js';
 
 /**
  * The landing page in docs/ is a public site. These tests pin the launch-readiness
@@ -82,5 +87,88 @@ describe('index.html', () => {
     expect(csp).toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
     expect(csp).toContain('font-src https://fonts.gstatic.com');
     expect(html).toContain('https://fonts.googleapis.com/css2?');
+  });
+});
+
+/**
+ * The pricing cards are the public price list. Each card carries a data-tier
+ * attribute so these assertions can be scoped to one card: a term that moves to
+ * the wrong card, or drops out of it, must fail here even if it still appears
+ * somewhere else on the page.
+ */
+describe('pricing cards', () => {
+  const html = read('index.html');
+
+  /** The markup of every card, keyed by its data-tier value. */
+  function cards(): Map<string, string> {
+    const start = html.indexOf('<div class="tiers">');
+    expect(start).toBeGreaterThan(-1);
+    const block = html.slice(start, html.indexOf('</section>', start));
+    const found = new Map<string, string>();
+    const parts = block.split(/(?=<div class="tier[^"]*" data-tier=")/).slice(1);
+    for (const part of parts) {
+      const tier = /data-tier="([^"]+)"/.exec(part)?.[1];
+      if (tier) found.set(tier, part);
+    }
+    return found;
+  }
+
+  const price = (card: string) => /<div class="price">([^<]*)<\/div>/.exec(card)?.[1];
+
+  it('shows exactly four cards, in order', () => {
+    expect([...cards().keys()]).toEqual(['core', 'bundle', 'cloud', 'enterprise']);
+    expect(html.match(/<div class="tier[ "]/g)).toHaveLength(4);
+  });
+
+  it('prices each card', () => {
+    const c = cards();
+    expect(price(c.get('core')!)).toMatch(/free/i);
+    expect(price(c.get('bundle')!)).toBe(`$${PAYG_BUNDLE_PRICE_USD} each`);
+    expect(price(c.get('cloud')!)).toBe(
+      `$${PLANS.cloud.monthlyUsd}/mo or $${PLANS.cloud.annualUsd}/yr`,
+    );
+    expect(price(c.get('enterprise')!)).toMatch(/contact us/i);
+  });
+
+  it('no longer advertises the old $99 bundle price', () => {
+    expect(html).not.toContain('$99 per bundle');
+    // The tamper demo's dollar figure is part of the exhibit, not a price.
+    expect(html).toContain('Alter the refund to $99,999');
+  });
+
+  it('lists every Cloud term on the Cloud card', () => {
+    const cloud = cards().get('cloud')!;
+    expect(cloud).toContain('$49/mo or $490/yr');
+    expect(cloud).toMatch(/5 bundles\/month, no rollover/);
+    expect(cloud).toContain('$10 per extra bundle');
+    expect(cloud).toMatch(/\b10 agent identities included/);
+    expect(cloud).toContain('$4/mo per extra identity');
+    expect(cloud).toContain('90-day retention');
+    expect(cloud).toMatch(/\b(1M|1,000,000) receipts\/month fair-use cap/);
+    expect(cloud).toMatch(/at most 15 minutes/);
+  });
+
+  it('matches the cloud plan in pricing.ts', () => {
+    const cloud = cards().get('cloud')!;
+    const p = PLANS.cloud;
+    expect(p.fairUseReceiptsPerMonth).toBe(1_000_000);
+    expect(cloud).toContain(`${p.includedBundlesPerMonth} bundles/month, no rollover`);
+    expect(cloud).toContain(`$${OVERAGE_BUNDLE_PRICE_USD} per extra bundle`);
+    expect(cloud).toContain(`${p.includedAgentIdentities} agent identities included`);
+    expect(cloud).toContain(`$${p.perExtraIdentityUsd}/mo per extra identity`);
+    expect(cloud).toContain(`${p.retentionDays}-day retention`);
+    expect(cloud).toContain(`at most ${p.maxAnchorIntervalMinutes} minutes`);
+  });
+
+  it('shows no price on the Enterprise card', () => {
+    expect(cards().get('enterprise')!).not.toMatch(/\$\s*\d/);
+  });
+
+  it('has no Team plan anywhere on the site', () => {
+    expect(html).not.toMatch(/\bTeam\b/);
+  });
+
+  it('does not claim checkout is live', () => {
+    expect(html).not.toMatch(/stripe|checkout/i);
   });
 });
