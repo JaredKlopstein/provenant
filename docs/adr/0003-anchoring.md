@@ -53,9 +53,11 @@ valid token from one chain and confirms it is rejected by another.
 ### What an anchor does NOT prove
 
 **Completeness since the last anchor.** Truncating the un-anchored tail leaves a
-valid chain. This is why anchor cadence is a pricing tier rather than a checkbox:
-daily anchoring bounds the forgeable window to a day, monthly to a month. Stated
-plainly in `anchor.list` output and in the bundle summary.
+valid chain. This is why Cloud anchors continuously: the batch scheduler
+(`packages/cloud/src/anchor/scheduler.ts`) batches new receipts and anchors the
+chain head at most 15 minutes after the oldest receipt not yet anchored, so the
+forgeable window is at most 15 minutes. Stated plainly in `anchor.list` output
+and in the bundle summary.
 
 ### Trust is separate from cryptographic soundness
 

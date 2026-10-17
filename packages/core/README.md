@@ -150,9 +150,10 @@ not just here.
 | Detects backdating after the anchor | no | yes |
 | Detects truncation of the un-anchored tail | no | **no** |
 
-That last row is why anchor cadence is a pricing tier rather than a checkbox:
-daily anchoring bounds the forgeable window to a day, monthly to a month. The
-CLI says so in `anchor list` output rather than leaving you to work it out.
+That last row is why Cloud anchors continuously: new receipts are batched and
+the chain head is anchored at most every 15 minutes, which bounds the forgeable
+window to 15 minutes. The CLI says so in `anchor list` output rather than
+leaving you to work it out.
 
 ## Architecture
 
