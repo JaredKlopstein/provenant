@@ -140,6 +140,14 @@ describe('CLI conventions', () => {
     expect((r.body.error as { fix: { note: string } }).fix.note).toMatch(/without a cursor/i);
   });
 
+  it('documents exit codes in root help and points to them from per-command help', async () => {
+    const root = (await cli('--help')).out;
+    expect(root).toMatch(/^EXIT CODES$/m);
+    expect(root).toMatch(/^ {2}0 +Success/m);
+    expect(root).toMatch(/^ {2}1 +Any error/m);
+    expect((await cli('chain verify --help')).out).toMatch(/EXIT CODES: 0 success, 1 any error/);
+  });
+
   it('never emits an untyped error', async () => {
     for (const cmd of ['nope', 'record', 'receipts query --cursor x', 'chain verify --dry-run']) {
       const r = await cli(cmd + ' --json');
@@ -151,5 +159,43 @@ describe('CLI conventions', () => {
         expect(body.error.message.toLowerCase()).toMatch(/nothing was (executed|written|returned)|did not/);
       }
     }
+  });
+});
+
+/**
+ * The exit-code contract documented in root help and `discover.exit_codes`.
+ * Scripts and agents branch on these, so each one is pinned here.
+ */
+describe('exit codes', () => {
+  describe('0: success', () => {
+    beforeEach(async () => { expect((await cli('init')).code).toBe(0); });
+
+    it.each([
+      ['a successful command', 'chain verify'],
+      ['a mutation dry-run', 'record --action refund.issue --dry-run'],
+      ['--help', '--help'],
+      ['per-command --help', 'chain verify --help'],
+      ['discover', 'discover'],
+      ['no arguments', ''],
+    ])('%s exits 0 with nothing on stderr', async (_label, args) => {
+      const r = await cli(args);
+      expect(r.code).toBe(0);
+      expect(r.out).not.toBe('');
+      expect(r.err).toBe('');
+    });
+  });
+
+  describe('1: any error, typed error on stderr', () => {
+    it.each([
+      ['an unknown command', 'nope', 'INVALID_INPUT'],
+      ['a validation error', 'record', 'INVALID_INPUT'],
+      ['--dry-run on a read action', 'chain verify --dry-run', 'INVALID_INPUT'],
+    ])('%s exits 1', async (_label, args, code) => {
+      const r = await cli(args + ' --json');
+      expect(r.code).toBe(1);
+      expect(r.out).toBe('');
+      const body = JSON.parse(r.err) as { error: { code: string } };
+      expect(body.error.code).toBe(code);
+    });
   });
 });
