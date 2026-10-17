@@ -11,7 +11,7 @@ package**.
 npx @provenant/verifier evidence.json --trust digicert-root.pem
 ```
 
-Exit codes: `0` verified, `1` verification failed, `2` bundle unreadable.
+Exit codes: `0` verified, `1` verification failed, `2` bundle unreadable or bad arguments.
 
 ## Checking a single run
 

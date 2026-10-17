@@ -4,7 +4,7 @@
  * Exit codes are the contract for CI and scripts:
  *   0  verified
  *   1  verification FAILED (tampering, forgery, or a broken chain)
- *   2  the bundle could not be read at all
+ *   2  the bundle could not be read at all, or the arguments were invalid
  *
  * The human output is written for someone during an incident who has to decide,
  * quickly, whether they can rely on this. It says what was established and --
@@ -44,7 +44,7 @@ OPTIONS
   --help
 
 EXIT CODES
-  0 verified   1 verification failed   2 bundle unreadable
+  0 verified   1 verification failed   2 bundle unreadable or bad arguments
 
 This tool makes no network connections and shares no code with the Provenant
 server or the commercial package. Everything it needs is in the bundle.`;
@@ -57,6 +57,15 @@ export function runVerify(argv: string[], io: VerifyIO = defaultIO): number {
     return argv.length === 0 ? 2 : 0;
   }
 
+  // A usage error must never fall through to a verdict: a mistyped flag that
+  // silently did nothing (say, --trusted for --trust) would report a result
+  // checked under options the caller never got.
+  const usage = (message: string): number => {
+    io.err(`provenant-verify: ${message}`);
+    if (json) io.out(JSON.stringify({ ok: false, error: { code: 'USAGE', message } }, null, 2));
+    return 2;
+  };
+
   const opts: VerifyOptions = {};
   const trustFiles: string[] = [];
   const fingerprints: string[] = [];
@@ -64,16 +73,25 @@ export function runVerify(argv: string[], io: VerifyIO = defaultIO): number {
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
-    if (a === '--trust') trustFiles.push(argv[++i] ?? '');
-    else if (a === '--trust-fingerprint') fingerprints.push(argv[++i] ?? '');
-    else if (a === '--backdate-tolerance-ms') opts.backdateToleranceMs = Number(argv[++i]);
-    else if (!a.startsWith('--')) file = a;
+    if (a === '--json') continue;
+    if (a === '--trust' || a === '--trust-fingerprint' || a === '--backdate-tolerance-ms') {
+      const v = argv[i + 1];
+      if (v === undefined || v === '' || v.startsWith('--')) return usage(`${a} needs a value. Try --help.`);
+      i++;
+      if (a === '--trust') trustFiles.push(v);
+      else if (a === '--trust-fingerprint') fingerprints.push(v);
+      else if (!/^\d+$/.test(v) || !Number.isSafeInteger(Number(v))) {
+        return usage(`--backdate-tolerance-ms must be a non-negative integer of milliseconds, got '${v}'.`);
+      } else opts.backdateToleranceMs = Number(v);
+    } else if (a.startsWith('--')) {
+      return usage(
+        `unknown option '${a}'. Options are --json, --trust, --trust-fingerprint, --backdate-tolerance-ms and --help.`,
+      );
+    } else if (file === null) file = a;
+    else return usage(`unexpected argument '${a}'; give exactly one bundle file.`);
   }
 
-  if (!file) {
-    io.err('provenant-verify: no bundle file given. Try --help.');
-    return 2;
-  }
+  if (!file) return usage('no bundle file given. Try --help.');
 
   let bundle: unknown;
   try {
