@@ -4,11 +4,15 @@
 Ed25519-signed, with the chain head timestamped by **DigiCert's production
 RFC 3161 authority** on 2026-09-03.
 
-Nothing here is mocked. You can check it yourself, offline, right now:
+Nothing here is mocked. You can check it yourself, offline, right now, from the
+root of a built source checkout (see [docs/getting-started.md](../../docs/getting-started.md)):
 
 ```bash
-npx @provenant/verifier examples/sample-evidence/evidence.json
+node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidence.json
 ```
+
+`npx @provenant/verifier` works in place of the `node …` path once the package
+is published to npm.
 
 It will report `VERIFIED / ANCHORED` and print DigiCert as the attesting
 authority — while also telling you the authority is **not in your trust list**,
@@ -16,9 +20,11 @@ because trust has to come from you, not from the bundle. To close that loop, pin
 the root:
 
 ```bash
-npx @provenant/verifier examples/sample-evidence/evidence.json \
+node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidence.json \
   --trust-fingerprint 33846b545a49c9be4903c60e01713c1bd4e4ef31ea65cd95d69e62794f30b941
 ```
+
+Again, `npx @provenant/verifier` works here once the package is published to npm.
 
 That fingerprint is DigiCert Trusted Root G4. Confirm it against DigiCert
 directly rather than taking it from this file — a repository is exactly the kind

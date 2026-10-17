@@ -8,16 +8,22 @@ anchored — with **no network access** and **no code from the commercial
 package**.
 
 ```bash
-npx @provenant/verifier evidence.json --trust digicert-root.pem
+node packages/verifier/bin/provenant-verify.mjs evidence.json --trust digicert-root.pem
 ```
+
+Run from a built source checkout; see the
+[getting-started guide](https://github.com/JaredKlopstein/provenant/blob/main/docs/getting-started.md).
+`npx @provenant/verifier` works once the package is published to npm.
 
 Exit codes: `0` verified, `1` verification failed, `2` bundle unreadable.
 
 ## Checking a single run
 
 ```bash
-npx @provenant/verifier run receipts.json --keys keys.json [--json]
+node packages/verifier/bin/provenant-verify.mjs run receipts.json --keys keys.json [--json]
 ```
+
+`npx @provenant/verifier run …` works once the package is published to npm.
 
 `receipts.json` is a JSON array of signed receipts in stored form, in seq
 order; `keys.json` maps each `provenant.key_id` to its Ed25519 JWK (include

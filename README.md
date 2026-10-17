@@ -13,6 +13,11 @@ not altered — and see exactly which record was, if one was.
 Agents are the users. Humans read this during incidents, audits and security
 reviews. The write path is designed for agents; the read path for humans.
 
+**New here?** The packages are not on npm yet. The
+[getting-started guide](https://github.com/JaredKlopstein/provenant/blob/main/docs/getting-started.md)
+runs everything from a source checkout, including verifying a real
+DigiCert-anchored evidence bundle.
+
 ```bash
 provenant init --json
 provenant record --action refund.issue \
@@ -67,7 +72,7 @@ provenant-cloud anchor now --backend tsa --json
 provenant-cloud bundle export --format both --out evidence.json --json
 
 # anyone, offline, with no Provenant server and no commercial code
-npx @provenant/verifier evidence.json --trust digicert-root.pem
+node packages/verifier/bin/provenant-verify.mjs evidence.json --trust digicert-root.pem
 ```
 
 ## What this is honestly worth
