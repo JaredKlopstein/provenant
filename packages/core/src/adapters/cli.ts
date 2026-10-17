@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { allActions, getAction } from '../registry/registry.js';
 import type { ActionContext, ActionDef, NextAction } from '../registry/types.js';
-import { buildManifest } from '../registry/discover.js';
+import { buildManifest, EXIT_CODES } from '../registry/discover.js';
 import { openDb, closeDb } from '../db/client.js';
 import { resolveStoreDir, dbPath } from '../config.js';
 import { loadKeypair } from '../actions/identity.js';
@@ -242,6 +242,8 @@ function renderActionHelp(action: ActionDef<never, never>): string {
   lines.push('  --json          Emit machine-readable JSON (recommended for agents)');
   if (action.dryRun) lines.push('  --dry-run       Show the exact effect, apply nothing');
   lines.push('  --store <dir>   Override the store location');
+  lines.push('');
+  lines.push("EXIT CODES: 0 success, 1 any error. See 'provenant --help'.");
 
   if (action.examples?.length) {
     lines.push('');
@@ -303,6 +305,11 @@ function renderRootHelp(): string {
   lines.push('  --dry-run       On mutations: show the exact effect, apply nothing.');
   lines.push('  --store <dir>   Store location (default: $PROVENANT_HOME or ~/.provenant)');
   lines.push('  --help          This help, or per-command help.');
+  lines.push('');
+  lines.push('EXIT CODES');
+  for (const [code, meaning] of Object.entries(EXIT_CODES)) {
+    lines.push(`  ${code.padEnd(4)}${wrap(meaning, 6)}`);
+  }
   lines.push('');
   lines.push('START HERE');
   lines.push('  provenant init --json');

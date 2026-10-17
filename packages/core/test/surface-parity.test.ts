@@ -55,6 +55,26 @@ describe('the shipped binary exposes the same actions as the library', () => {
     expect(names).toContain('anchor.list');
   });
 
+  it('documents the same exit codes in --help and the discover manifest', () => {
+    const manifest = runBin(['discover']) as { exit_codes: Record<string, string> };
+    const help = execFileSync('node', [BIN, '--help'], { encoding: 'utf8' });
+
+    // The EXIT CODES section runs to the next blank line. A code line is
+    // `  <code>  <meaning>`; wrapped continuation lines are indented further.
+    const section = /^EXIT CODES\n([\s\S]*?)\n\n/m.exec(help);
+    expect(section, 'root help has no EXIT CODES section').not.toBeNull();
+    const fromHelp: Record<string, string> = {};
+    let last = '';
+    for (const line of section![1]!.split('\n')) {
+      const m = /^ {2}(\d+) +(.*)$/.exec(line);
+      if (m) fromHelp[(last = m[1]!)] = m[2]!;
+      else fromHelp[last] += ' ' + line.trim();
+    }
+
+    expect(Object.keys(manifest.exit_codes)).toEqual(['0', '1']);
+    expect(fromHelp).toEqual(manifest.exit_codes);
+  });
+
   afterAll(() => rmSync(store, { recursive: true, force: true }));
 });
 
