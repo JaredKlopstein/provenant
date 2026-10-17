@@ -19,24 +19,30 @@
  *    without flinching.
  */
 
-export type PlanId = 'free' | 'starter' | 'team' | 'enterprise';
+export type PlanId = 'free' | 'cloud' | 'enterprise';
 
 export interface Plan {
   id: PlanId;
   name: string;
-  /** USD per month. null = not self-serve (Enterprise) or free. */
+  /** USD per month. null = not self-serve (Enterprise). */
   monthlyUsd: number | null;
+  /** USD per year when billed annually. null = no self-serve annual price. */
+  annualUsd: number | null;
   /** Billable unit: agent identities retained in the window. */
   includedAgentIdentities: number | null;
   /** Additional identity, USD/month, beyond the included count. */
   perExtraIdentityUsd: number | null;
-  /** How long receipts are retained. Team's 13 months clears the >=6-month
-   *  statutory floor with margin, and covers an annual audit cycle plus lag. */
+  /** How long receipts are retained. */
   retentionDays: number | null;
-  anchorCadence: 'none' | 'monthly' | 'daily' | 'custom';
+  anchorCadence: 'none' | 'monthly' | 'daily' | 'continuous' | 'custom';
+  /** Longest gap between anchors the plan promises, in minutes. null = no
+   *  anchoring (free) or set by contract (Enterprise). */
+  maxAnchorIntervalMinutes: number | null;
   /** Fair-use ceiling, NOT a meter. Exceeding it starts a conversation, not an
    *  invoice. */
   fairUseReceiptsPerMonth: number | null;
+  /** Bundles included each calendar month. Applies on monthly and annual
+   *  billing alike, and unused bundles do NOT roll over. */
   includedBundlesPerMonth: number;
   features: string[];
 }
@@ -46,10 +52,12 @@ export const PLANS: Record<PlanId, Plan> = {
     id: 'free',
     name: 'Provenant Core',
     monthlyUsd: 0,
+    annualUsd: 0,
     includedAgentIdentities: null, // unlimited
     perExtraIdentityUsd: null,
     retentionDays: null, // your disk, your rules
     anchorCadence: 'none',
+    maxAnchorIntervalMinutes: null,
     fairUseReceiptsPerMonth: null, // unlimited
     includedBundlesPerMonth: 0,
     // Only list what actually ships today. A pricing sheet advertising features
@@ -65,41 +73,25 @@ export const PLANS: Record<PlanId, Plan> = {
     ],
   },
 
-  starter: {
-    id: 'starter',
-    name: 'Starter',
+  cloud: {
+    id: 'cloud',
+    name: 'Cloud',
     monthlyUsd: 49,
+    annualUsd: 490,
     includedAgentIdentities: 10,
     perExtraIdentityUsd: 4,
     retentionDays: 90,
-    anchorCadence: 'monthly',
+    // A promise of at most 15 minutes between anchors. Data only: continuous
+    // anchoring is not built yet, so it stays out of `features` below.
+    anchorCadence: 'continuous',
+    maxAnchorIntervalMinutes: 15,
     fairUseReceiptsPerMonth: 1_000_000,
-    includedBundlesPerMonth: 1,
+    includedBundlesPerMonth: 5,
     features: [
       'Managed collector',
       '90-day retention',
-      'Monthly RFC 3161 anchoring',
-      'Hosted verifier page',
-    ],
-  },
-
-  team: {
-    id: 'team',
-    name: 'Team',
-    monthlyUsd: 249,
-    includedAgentIdentities: 50,
-    perExtraIdentityUsd: 3,
-    // 13 months: clears the >=6-month statutory floor with margin, and survives
-    // an audit that asks for "the last full year".
-    retentionDays: 396,
-    anchorCadence: 'daily',
-    fairUseReceiptsPerMonth: 20_000_000,
-    includedBundlesPerMonth: Number.POSITIVE_INFINITY,
-    features: [
-      'Everything in Starter',
-      '13-month retention',
-      'Daily anchoring',
-      'Unlimited export bundles',
+      'RFC 3161 anchoring',
+      '5 anchored evidence bundles per month',
       'Hosted verifier page',
     ],
   },
@@ -107,11 +99,13 @@ export const PLANS: Record<PlanId, Plan> = {
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
-    monthlyUsd: null, // contact sales
+    monthlyUsd: null, // contact us; no price is shown anywhere
+    annualUsd: null,
     includedAgentIdentities: null,
     perExtraIdentityUsd: null,
     retentionDays: null, // custom
     anchorCadence: 'custom',
+    maxAnchorIntervalMinutes: null,
     fairUseReceiptsPerMonth: null,
     includedBundlesPerMonth: Number.POSITIVE_INFINITY,
     features: [
@@ -123,12 +117,16 @@ export const PLANS: Record<PlanId, Plan> = {
   },
 };
 
-/**
+/*
  * Anchored export bundles, charged per bundle outside the subscription.
  * Priced against the customer's revenue event, not against our compute cost --
  * generating one costs us cents; it unblocks an audit worth far more.
  */
-export const BUNDLE_PRICE_USD = 99;
+
+/** One bundle bought on its own, with no subscription (free tier). */
+export const PAYG_BUNDLE_PRICE_USD = 15;
+/** Each bundle a subscriber exports beyond the month's included allowance. */
+export const OVERAGE_BUNDLE_PRICE_USD = 10;
 
 /** What the free tier deliberately does NOT gate. Encoded so a future change
  *  that cripples the funnel has to be explicit rather than incidental. */
