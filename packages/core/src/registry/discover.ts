@@ -14,6 +14,16 @@ import { ERROR_CODES } from '../errors.js';
 import { AAT_DRAFT_VERSION, PROVENANT_RECEIPT_VERSION } from '../receipt/schema.js';
 import { DEFAULT_LIMIT, MAX_LIMIT } from '../pagination.js';
 
+/**
+ * The `provenant` CLI's exit-code contract. Root help renders this same object,
+ * and surface-parity.test.ts fails if the shipped binary's help and manifest
+ * disagree, so scripts can branch on it without guessing.
+ */
+export const EXIT_CODES: Readonly<Record<string, string>> = {
+  '0': 'Success, including help, discover and --dry-run.',
+  '1': 'Any error, an unknown command included. The typed error is on stderr (JSON with --json).',
+};
+
 function jsonSchema(schema: z.ZodType): unknown {
   try {
     return z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' });
@@ -131,6 +141,8 @@ export function buildManifest(): Record<string, unknown> {
       codes: Object.values(ERROR_CODES),
       note: 'Every error states whether the action executed. If a fix block is present, its arguments are ready to execute as-is.',
     },
+
+    exit_codes: { ...EXIT_CODES },
 
     /** Literal ordered calls from nothing to a first verified receipt. */
     quickstart: [
