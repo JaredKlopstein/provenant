@@ -179,7 +179,8 @@ describe('stripe catalog', () => {
 
     const overage = catalog.find((c) => meta(c).kind === 'overage_bundle')!;
     expect(price(overage).unit_amount).toBe(1000);
-    expect(price(overage).recurring).toBeUndefined();
+    // Metered monthly: each bundle beyond the allowance is one meter event.
+    expect(price(overage).recurring).toEqual({ interval: 'month', usage_type: 'metered' });
   });
 
   it('does not list the free or enterprise plans as purchasable products', () => {

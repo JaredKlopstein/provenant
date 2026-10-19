@@ -6,6 +6,7 @@
 import { registerAnchorBackend } from '@provenant/core';
 import { createTsaBackend, PUBLIC_TSAS } from './anchor/tsa.js';
 import './actions/bundle.js';
+import './billing/sync.js';
 
 /**
  * Configure the timestamp authority from the environment so an operator can
