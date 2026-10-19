@@ -30,3 +30,8 @@ export {
   computeInvoice, createCheckoutSession, createPortalSession, stripeCatalog,
   type Usage, type Invoice, type StripeLike, type CheckoutOptions,
 } from './billing/stripe.js';
+export {
+  createBillingRoutes, BILLING_PATHS,
+  type BillingRoutes, type BillingRoutesOptions, type BillingHandler, type BillingCaller,
+  type Authenticate, type AuthResult, type CustomerLookup,
+} from './billing/routes.js';

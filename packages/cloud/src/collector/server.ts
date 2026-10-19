@@ -15,9 +15,12 @@ import {
   verifyRequest, NonceCache, keyDirectoryDocument, buildManifest,
   registerAgent, keyDirectory, requireAgent,
   ProvenantError, toProvenantError, jwkToPublicKey, jwkThumbprint,
-  type Db, type AgentJwk,
+  type Db, type AgentJwk, type RequestLike, type SignatureVerifyResult,
 } from '@provenant/core';
 import { createAnchorScheduler, type AnchorSchedulerOptions } from '../anchor/scheduler.js';
+import {
+  createBillingRoutes, BILLING_PATHS, type BillingRoutes, type BillingRoutesOptions,
+} from '../billing/routes.js';
 
 export interface CollectorOptions {
   db: Db;
@@ -32,6 +35,13 @@ export interface CollectorOptions {
    * from a cron job instead.
    */
   anchoring?: Omit<AnchorSchedulerOptions, 'db'>;
+  /**
+   * Serves POST /billing/checkout (public) and POST /billing/portal (signed)
+   * when set. Off by default. Billing config is read from `env` here, so a
+   * missing or unsafe config (a live key without PROVENANT_BILLING_MODE=live)
+   * throws and the server never starts.
+   */
+  billing?: Omit<BillingRoutesOptions, 'authenticate'>;
 }
 
 const DEFAULT_MAX_BODY = 256 * 1024;
@@ -40,8 +50,29 @@ export function createCollector(opts: CollectorOptions): Server {
   const nonces = new NonceCache();
   const maxBody = opts.maxBodyBytes ?? DEFAULT_MAX_BODY;
 
+  // The portal sits behind the same RFC 9421 check, nonce cache and key
+  // directory as every other signed endpoint.
+  const billing = opts.billing
+    ? createBillingRoutes({
+        ...opts.billing,
+        authenticate: (request, body) => {
+          const url = new URL(request.url);
+          const verdict = checkSignature(opts, nonces, {
+            method: request.method,
+            authority: opts.authority ?? url.host,
+            path: url.pathname + url.search,
+            headers: Object.fromEntries(request.headers),
+            body,
+          });
+          const agent = verdict.ok ? resolveAgent(opts.db, verdict.keyId!) : null;
+          if (!agent) return { ok: false, reason: verdict.ok ? 'unknown key' : verdict.reason };
+          return { ok: true, caller: { keyId: verdict.keyId!, agentId: agent.agentId } };
+        },
+      })
+    : null;
+
   const server = createServer((req, res) => {
-    handle(req, res, opts, nonces, maxBody).catch((err) => {
+    handle(req, res, opts, nonces, maxBody, billing).catch((err) => {
       // Never leak a stack trace to an unauthenticated caller.
       send(res, 500, { error: { code: 'INTERNAL', message: 'internal error', retryable: true } });
       console.error('collector error:', err);
@@ -63,6 +94,7 @@ async function handle(
   opts: CollectorOptions,
   nonces: NonceCache,
   maxBody: number,
+  billing: BillingRoutes | null,
 ): Promise<void> {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   const path = url.pathname;
@@ -107,24 +139,23 @@ async function handle(
     return registerEndpoint(res, opts, body);
   }
 
+  // ---- billing, only when configured ----
+  // Checkout is public: a person buying a plan cannot sign as an agent. The
+  // portal handler runs the same signature check as below, itself.
+  if (billing && req.method === 'POST' && (path === BILLING_PATHS.checkout || path === BILLING_PATHS.portal)) {
+    const handler = path === BILLING_PATHS.checkout ? billing.checkout : billing.portal;
+    return relay(res, await handler(toRequest(req, url, body)));
+  }
+
   // ---- everything else requires a valid signature ----
   const authority = opts.authority ?? String(req.headers.host ?? '');
-  const verdict = verifyRequest(
-    {
-      method: req.method ?? 'GET',
-      authority,
-      path: url.pathname + url.search,
-      headers: normalizeHeaders(req.headers),
-      body,
-    },
-    {
-      resolveKey: (keyId: string) => resolveKeyId(opts.db, keyId),
-      seenNonce: (n: string) => nonces.has(n),
-      // Explicit rather than defaulted, so the replay protection is visible at
-      // the call site of the thing it protects.
-      requireNonce: true,
-    },
-  );
+  const verdict = checkSignature(opts, nonces, {
+    method: req.method ?? 'GET',
+    authority,
+    path: url.pathname + url.search,
+    headers: normalizeHeaders(req.headers),
+    body,
+  });
 
   if (!verdict.ok) {
     return send(res, 401, {
@@ -140,7 +171,6 @@ async function handle(
       },
     });
   }
-  if (verdict.nonce) nonces.add(verdict.nonce);
 
   if (req.method === 'POST' && path === '/receipts') {
     return recordEndpoint(res, opts, body, verdict.keyId!);
@@ -236,17 +266,53 @@ function recordEndpoint(res: ServerResponse, opts: CollectorOptions, body: Uint8
   }
 }
 
+/** RFC 9421 verification against registered keys. Records the nonce on success. */
+function checkSignature(opts: CollectorOptions, nonces: NonceCache, req: RequestLike): SignatureVerifyResult {
+  const verdict = verifyRequest(req, {
+    resolveKey: (keyId: string) => resolveAgent(opts.db, keyId)?.jwk ?? null,
+    seenNonce: (n: string) => nonces.has(n),
+    // Explicit rather than defaulted, so the replay protection is visible at
+    // the call site of the thing it protects.
+    requireNonce: true,
+  });
+  if (verdict.ok && verdict.nonce) nonces.add(verdict.nonce);
+  return verdict;
+}
+
 /** Map an RFC 9421 keyid (an RFC 7638 thumbprint) back to a registered key. */
-function resolveKeyId(db: Db, keyId: string): AgentJwk | null {
-  for (const jwk of Object.values(keyDirectory(db))) {
+function resolveAgent(db: Db, keyId: string): { agentId: string; jwk: AgentJwk } | null {
+  for (const [agentId, jwk] of Object.entries(keyDirectory(db))) {
     try {
-      if (jwkThumbprint(jwk) === keyId) return jwk;
+      if (jwkThumbprint(jwk) === keyId) return { agentId, jwk };
     } catch {
       // A stored key we cannot fingerprint is not a match; keep looking rather
       // than failing the whole request.
     }
   }
   return null;
+}
+
+/** Hop-by-hop and framing headers: the Request recomputes or rejects them. */
+const NOT_FORWARDED = new Set(['host', 'connection', 'keep-alive', 'transfer-encoding', 'content-length', 'upgrade']);
+
+/** The already-read request as a Web Request, for the billing handlers. */
+function toRequest(req: IncomingMessage, url: URL, body: Uint8Array): Request {
+  const headers = Object.entries(normalizeHeaders(req.headers)).filter(([k]) => !NOT_FORWARDED.has(k));
+  const method = req.method ?? 'GET';
+  return new Request(url, {
+    method,
+    headers,
+    ...(method === 'GET' || method === 'HEAD' ? {} : { body }),
+  });
+}
+
+async function relay(res: ServerResponse, response: Response): Promise<void> {
+  const payload = Buffer.from(await response.arrayBuffer());
+  res.writeHead(response.status, {
+    'content-type': response.headers.get('content-type') ?? 'application/json; charset=utf-8',
+    'content-length': payload.length,
+  });
+  res.end(payload);
 }
 
 function normalizeHeaders(h: IncomingMessage['headers']): Record<string, string> {
