@@ -483,8 +483,12 @@ describe('plan state changes only through verified webhooks', () => {
 
   it('only the webhook writes the billing tables', () => {
     const files = walk(SRC);
-    const writers = files.filter((f) => /\.(insert|update|delete)\(billing/.test(readFileSync(f, 'utf8')));
-    expect(writers.map((f) => relative(SRC, f))).toEqual([join('billing', 'store.ts')]);
+    const written = (f: string) => [...readFileSync(f, 'utf8').matchAll(/\.(?:insert|update|delete)\((billing\w*)/g)].map((m) => m[1]);
+    const writers = files.filter((f) => written(f).length > 0);
+    // Overage reporting (#28) writes its own usage tables, and never plan state.
+    expect(writers.map((f) => relative(SRC, f))).toEqual([join('billing', 'overage.ts'), join('billing', 'store.ts')]);
+    const overage = new Set(written(join(SRC, 'billing', 'overage.ts')));
+    expect([...overage].sort()).toEqual(['billingBundleExports', 'billingOverageSubscriptions', 'billingUsageReports']);
     const writeFns = /\b(applyEventOnce|linkCustomer|saveSubscription|updateSubscription|creditBundle|ensureCustomer)\b/;
     const callers = files.filter((f) => !f.endsWith(join('billing', 'store.ts')) && writeFns.test(readFileSync(f, 'utf8')));
     expect(callers.map((f) => relative(SRC, f))).toEqual([join('billing', 'webhook.ts')]);

@@ -5,6 +5,7 @@ import { verifyBundle } from '@provenant/verifier';
 import { exportBundle, bundleToJson } from '../bundle/export.js';
 import { bundleToPdf } from '../bundle/pdf.js';
 import { bundleToHtml } from '../bundle/html.js';
+import { retryPendingOverage, recordBundleOverage } from '../billing/overage.js';
 
 /**
  * Registered into core's action registry by importing this module, so the paid
@@ -50,6 +51,10 @@ export const bundleExportAction = defineAction({
     warning: z.string().nullable(),
   }),
   async handler(input, ctx) {
+    // Overage billing (billing/overage.ts), when a reporter is installed: send
+    // what earlier exports left unreported. Never throws, never blocks.
+    await retryPendingOverage();
+
     const bundle = exportBundle(ctx.db, {
       ...(input.from_seq !== undefined ? { fromSeq: input.from_seq } : {}),
       ...(input.to_seq !== undefined ? { toSeq: input.to_seq } : {}),
@@ -86,6 +91,10 @@ export const bundleExportAction = defineAction({
         written.push(htmlPath);
       }
     }
+
+    // Counted only once the export exists. A billing failure is logged and
+    // retried; the export is returned either way.
+    await recordBundleOverage(ctx, bundle);
 
     return {
       range: bundle.range,

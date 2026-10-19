@@ -36,15 +36,21 @@ export const PRICE_ENV = {
 } as const;
 export type CatalogKey = keyof typeof PRICE_ENV;
 
+/** The event name overage bundles are reported under: the event name of the
+ *  Meter that backs the metered overage price. Never written in code. */
+export const METER_EVENT_ENV = 'STRIPE_METER_EVENT_NAME';
+
 /** What a caller needs. The sync needs only the Stripe key; the webhook needs
- *  its secret and the database; checkout needs the price ids. */
-export type BillingNeed = 'stripe' | 'webhook' | 'database' | 'prices';
+ *  its secret and the database; checkout needs the price ids; overage
+ *  reporting needs the meter event name as well. */
+export type BillingNeed = 'stripe' | 'webhook' | 'database' | 'prices' | 'meter';
 
 export interface BillingConfig {
   mode: BillingMode;
   stripeSecretKey?: string;
   webhookSecret?: string;
   databaseUrl?: string;
+  meterEventName?: string;
   prices: Partial<Record<CatalogKey, string>>;
   /** Removes every secret this config holds, and anything secret-shaped,
    *  from text before it is logged or returned. */
@@ -117,6 +123,10 @@ const schemas = {
   PROVENANT_BILLING_MODE: z.enum(['test', 'live'], {
     error: "PROVENANT_BILLING_MODE must be 'test' or 'live'",
   }),
+  STRIPE_METER_EVENT_NAME: present(METER_EVENT_ENV).regex(
+    /^[A-Za-z0-9_.:-]{1,100}$/,
+    `${METER_EVENT_ENV} is not a Stripe meter event name`,
+  ),
   price: (name: string) =>
     present(name).regex(/^price_[A-Za-z0-9]+$/, `${name} is not a Stripe price id`),
 };
@@ -166,6 +176,9 @@ export function loadBillingConfig(env: Env = process.env, needs: readonly Billin
   const databaseUrl = needs.includes('database')
     ? read('DATABASE_URL', schemas.DATABASE_URL, env.DATABASE_URL)
     : undefined;
+  const meterEventName = needs.includes('meter')
+    ? read(METER_EVENT_ENV, schemas.STRIPE_METER_EVENT_NAME, env[METER_EVENT_ENV])
+    : undefined;
 
   const prices: Partial<Record<CatalogKey, string>> = {};
   if (needs.includes('prices')) {
@@ -195,13 +208,14 @@ export function loadBillingConfig(env: Env = process.env, needs: readonly Billin
   if (problems.length) throw configError(problems, variables);
 
   const secrets = [
-    stripeSecretKey, webhookSecret, ...(databaseUrl ? databaseUrlParts(databaseUrl) : []),
+    stripeSecretKey, webhookSecret, meterEventName, ...(databaseUrl ? databaseUrlParts(databaseUrl) : []),
   ].filter((s): s is string => !!s);
   const view = () => ({
     mode,
     stripeSecretKey: stripeSecretKey ? REDACTED : undefined,
     webhookSecret: webhookSecret ? REDACTED : undefined,
     databaseUrl: databaseUrl ? REDACTED : undefined,
+    meterEventName: meterEventName ? REDACTED : undefined,
     prices: Object.fromEntries(Object.keys(prices).map((k) => [k, REDACTED])),
   });
 
@@ -211,7 +225,7 @@ export function loadBillingConfig(env: Env = process.env, needs: readonly Billin
     redact: (text: string) => redact(text, secrets),
   };
   // Non-enumerable, so spreading or iterating the config never copies them out.
-  for (const [k, v] of [['stripeSecretKey', stripeSecretKey], ['webhookSecret', webhookSecret], ['databaseUrl', databaseUrl]] as const) {
+  for (const [k, v] of [['stripeSecretKey', stripeSecretKey], ['webhookSecret', webhookSecret], ['databaseUrl', databaseUrl], ['meterEventName', meterEventName]] as const) {
     if (v !== undefined) Object.defineProperty(config, k, { value: v, enumerable: false });
   }
   Object.defineProperties(config, {
