@@ -212,6 +212,10 @@ export async function createPortalSession(
   return stripe.billingPortal.sessions.create({ customer: customerId, return_url: returnUrl });
 }
 
+/** Meter event name for overage bundles. One event per bundle beyond the
+ *  monthly allowance; the meter counts them. */
+export const OVERAGE_METER_EVENT = 'provenant_overage_bundle';
+
 /** The product catalog to create in Stripe, generated from pricing.ts so the
  *  two can never disagree. */
 export function stripeCatalog(): Array<Record<string, unknown>> {
@@ -246,7 +250,9 @@ export function stripeCatalog(): Array<Record<string, unknown>> {
       });
     }
   }
-  // Both bundle prices are one-time, never recurring.
+  // The pay-as-you-go bundle is a one-time payment. The overage bundle is
+  // metered: each bundle beyond the allowance is one event on the meter, and
+  // Stripe bills the month's count on the subscriber's next invoice.
   out.push({
     product: {
       name: 'Provenant anchored evidence bundle',
@@ -260,7 +266,15 @@ export function stripeCatalog(): Array<Record<string, unknown>> {
       name: 'Provenant anchored evidence bundle — beyond plan allowance',
       description: 'One evidence bundle beyond the monthly allowance included in a subscription.',
     },
-    price: { unit_amount: OVERAGE_BUNDLE_PRICE_USD * 100, currency: 'usd' },
+    price: {
+      unit_amount: OVERAGE_BUNDLE_PRICE_USD * 100,
+      currency: 'usd',
+      recurring: { interval: 'month', usage_type: 'metered' },
+    },
+    meter: {
+      event_name: OVERAGE_METER_EVENT,
+      display_name: 'Provenant evidence bundles beyond plan allowance',
+    },
     metadata: { kind: 'overage_bundle' },
   });
   return out;
