@@ -175,6 +175,9 @@ export async function createCheckoutSession(
     return stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ price: opts.priceId, quantity: 1 }],
+      // Payment mode creates no customer by default; the webhook credits the
+      // bundle to one, and links it to the account.
+      customer_creation: 'always',
       ...common,
       metadata,
       payment_intent_data: { metadata },

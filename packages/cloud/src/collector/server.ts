@@ -21,6 +21,9 @@ import { createAnchorScheduler, type AnchorSchedulerOptions } from '../anchor/sc
 import {
   createBillingRoutes, BILLING_PATHS, type BillingRoutes, type BillingRoutesOptions,
 } from '../billing/routes.js';
+import {
+  createBillingWebhook, BILLING_WEBHOOK_PATH, type BillingWebhook, type BillingWebhookOptions,
+} from '../billing/webhook.js';
 
 export interface CollectorOptions {
   db: Db;
@@ -42,6 +45,13 @@ export interface CollectorOptions {
    * throws and the server never starts.
    */
   billing?: Omit<BillingRoutesOptions, 'authenticate'>;
+  /**
+   * Serves POST /billing/webhook when set. Off by default. Stripe signs it, not
+   * an agent, so it skips the RFC 9421 check and verifies the Stripe signature
+   * on the raw body instead. STRIPE_WEBHOOK_SECRET and DATABASE_URL are read
+   * from `env` here, so a missing one stops the server from starting.
+   */
+  billingWebhook?: BillingWebhookOptions;
 }
 
 const DEFAULT_MAX_BODY = 256 * 1024;
@@ -70,9 +80,10 @@ export function createCollector(opts: CollectorOptions): Server {
         },
       })
     : null;
+  const webhook = opts.billingWebhook ? createBillingWebhook(opts.billingWebhook) : null;
 
   const server = createServer((req, res) => {
-    handle(req, res, opts, nonces, maxBody, billing).catch((err) => {
+    handle(req, res, opts, nonces, maxBody, billing, webhook).catch((err) => {
       // Never leak a stack trace to an unauthenticated caller.
       send(res, 500, { error: { code: 'INTERNAL', message: 'internal error', retryable: true } });
       console.error('collector error:', err);
@@ -95,6 +106,7 @@ async function handle(
   nonces: NonceCache,
   maxBody: number,
   billing: BillingRoutes | null,
+  webhook: BillingWebhook | null,
 ): Promise<void> {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   const path = url.pathname;
@@ -145,6 +157,12 @@ async function handle(
   if (billing && req.method === 'POST' && (path === BILLING_PATHS.checkout || path === BILLING_PATHS.portal)) {
     const handler = path === BILLING_PATHS.checkout ? billing.checkout : billing.portal;
     return relay(res, await handler(toRequest(req, url, body)));
+  }
+
+  // The body goes through as the exact bytes read: Stripe's signature covers
+  // them, and parsing and re-serializing would break it.
+  if (webhook && req.method === 'POST' && path === BILLING_WEBHOOK_PATH) {
+    return relay(res, await webhook.webhook(toRequest(req, url, body)));
   }
 
   // ---- everything else requires a valid signature ----
