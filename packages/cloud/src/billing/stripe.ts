@@ -128,6 +128,9 @@ export type BillingInterval = 'month' | 'year';
 
 interface CheckoutBase {
   customerEmail?: string;
+  /** The Provenant account id, so the webhook can link the new Stripe
+   *  customer to it. */
+  clientReferenceId?: string;
   successUrl: string;
   cancelUrl: string;
   /** Stripe Price id for what is being bought. */
@@ -164,6 +167,7 @@ export async function createCheckoutSession(
     success_url: opts.successUrl,
     cancel_url: opts.cancelUrl,
     ...(opts.customerEmail ? { customer_email: opts.customerEmail } : {}),
+    ...(opts.clientReferenceId ? { client_reference_id: opts.clientReferenceId } : {}),
   };
 
   if (opts.kind === 'payg_bundle') {
