@@ -35,3 +35,11 @@ export {
   type BillingRoutes, type BillingRoutesOptions, type BillingHandler, type BillingCaller,
   type Authenticate, type AuthResult, type CustomerLookup,
 } from './billing/routes.js';
+export {
+  createBillingWebhook, BILLING_WEBHOOK_PATH, BILLING_WEBHOOK_EVENTS,
+  type BillingWebhook, type BillingWebhookOptions, type BillingWebhookLog,
+} from './billing/webhook.js';
+export { createCustomerLookup, type BillingDb } from './billing/store.js';
+export {
+  billingSchema, billingCustomers, billingSubscriptions, billingBundleCredits, billingWebhookEvents,
+} from './billing/schema.js';

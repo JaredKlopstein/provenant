@@ -227,6 +227,8 @@ describe('self-serve checkout', () => {
     expect(calls[0]!.mode).toBe('payment');
     expect(calls[0]!.line_items).toEqual([{ price: 'price_payg_bundle', quantity: 1 }]);
     expect(calls[0]!.subscription_data).toBeUndefined();
+    // So the webhook has a customer to credit the bundle to and link.
+    expect(calls[0]!.customer_creation).toBe('always');
   });
 
   it('rejects enterprise and free, which are not self-serve purchases', async () => {
