@@ -31,8 +31,12 @@ worth", and [ADR 0003](docs/adr/0003-anchoring.md)).
 
 1. Read [PRODUCT.md](PRODUCT.md) first.
 2. Never expose secrets. Do not touch `.env*` files or `.github/workflows/`.
+   Exception: a names-only `.env.example`, with no values, when the issue
+   explicitly scopes it.
 3. Run `pnpm run ci` before opening a PR. It must pass.
-4. Keep changes scoped to the issue. No drive-by refactors or dependency changes.
+4. Keep changes scoped to the issue. No drive-by refactors. Dependency changes
+   only when the issue names the package; the lockfile update that follows is
+   in scope.
 5. From the README: "Test-first is mandatory for anything touching the hash
    chain, fencing tokens, idempotency or signature verification. Those are the
    only places correctness genuinely matters, and the places where a bug
