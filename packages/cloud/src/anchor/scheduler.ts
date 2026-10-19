@@ -23,8 +23,8 @@
  *     long-running process. Call it at least every 15 minutes (every 5 is
  *     better) and pass that period as `tickIntervalMs`.
  */
-import { and, asc, desc, eq, gt } from 'drizzle-orm';
 import {
+  and, asc, desc, eq, gt,
   createAnchor, dbSchema, getAnchorBackend, registerAnchorBackend, ProvenantError,
   type AnchorBackend, type AnchorRecord, type Db,
 } from '@provenant/core';

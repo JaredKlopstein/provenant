@@ -14,6 +14,7 @@
     "build": "tsc -b"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@provenant/core": "workspace:*",
     "@provenant/verifier": "workspace:*",
     "drizzle-orm": "^0.45.2",
@@ -22,6 +23,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@types/pdfkit": "^0.13.9"
   },
   "bin": {
