@@ -201,11 +201,27 @@ export async function createCheckoutSession(
   const lineItems: Array<Record<string, unknown>> = [{ price: opts.priceId, quantity: 1 }];
   if (opts.extraIdentityPriceId) lineItems.push({ price: opts.extraIdentityPriceId });
 
+  // Annual overage is charged to the card saved here with no further consent
+  // step, so the annual checkout has to say so before the customer pays.
+  const overageDisclosure =
+    opts.interval === 'year'
+      ? {
+          custom_text: {
+            submit: {
+              message:
+                `Evidence bundles over the ${plan.includedBundlesPerMonth} included each month are billed ` +
+                `monthly, at $${OVERAGE_BUNDLE_PRICE_USD} per bundle, to the card saved at this checkout.`,
+            },
+          },
+        }
+      : {};
+
   const metadata = { provenant_plan: opts.planId, provenant_interval: opts.interval };
   return stripe.checkout.sessions.create({
     mode: 'subscription',
     line_items: lineItems,
     ...common,
+    ...overageDisclosure,
     metadata,
     subscription_data: { metadata },
   });
