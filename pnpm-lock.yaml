@@ -76,9 +76,15 @@ importers:
 
   packages/site:
     dependencies:
+      '@neondatabase/serverless':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@provenant/cloud':
         specifier: workspace:*
         version: link:../cloud
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@electric-sql/pglite@0.5.10)(@neondatabase/serverless@1.2.0)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)
       next:
         specifier: ^16.4.2
         version: 16.4.2(@types/node@22.20.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -89,6 +95,9 @@ importers:
         specifier: ^19.3.1
         version: 19.3.1(react@19.3.1)
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.10
+        version: 0.5.10
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
