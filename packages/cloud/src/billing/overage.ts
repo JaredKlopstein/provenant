@@ -14,8 +14,23 @@
  *    a reported row is never sent again.
  *
  *  - Unreported rows are retried at the start of every bundle export, and by
- *    retryPendingOverage, which a cron tick can call the way it calls
- *    runAnchorTick.
+ *    retryPendingOverage, which the daily cron route (api/cron/overage-retry.ts)
+ *    calls with its own reporter.
+ *
+ *  - Every send re-reads its row and claims it first, with a conditional update
+ *    that succeeds only while the row is unreported, not abandoned and not
+ *    changed since the re-read. Two runs at once cannot both send a row: the
+ *    loser of the claim skips it, and so does a run that finds it claimed by a
+ *    send still in flight.
+ *
+ *  - Stripe rejects a meter event timestamped more than 35 days ago. A row whose
+ *    computed event timestamp (above) is more than 34 days old is marked
+ *    abandoned, never sent, and logged once as an alert naming only its row id
+ *    and month.
+ *
+ *  - A send that ended with no answer from Stripe (a timeout or network error)
+ *    may have been counted. Resent inside 24 hours, Stripe dedupes it. Resent
+ *    later, it is logged as a possible duplicate, naming only its row id.
  *
  *  - Stripe requires every price on a subscription to share one interval. A
  *    monthly subscriber's overage bills on their own subscription. An annual
@@ -33,8 +48,9 @@
  *    month always come from the export time; only the Stripe timestamp moves.
  *
  *  - Billing never blocks an export. A Stripe failure, or a database without
- *    0001_overage.sql, is logged redacted and the export goes ahead; the row, if
- *    there is one, stays unreported for the next retry.
+ *    0001_overage.sql or 0002_overage_retry.sql, is logged redacted and the
+ *    export goes ahead; the row, if there is one, stays unreported for the
+ *    next retry.
  *
  * Free and pay-as-you-go users have no Cloud subscription and are never
  * reported here: they buy bundles through checkout.
@@ -44,7 +60,7 @@
  * deployment installs a reporter with installOverageReporter.
  */
 import {
-  and, asc, desc, eq, sha256Hex, deriveAgentId,
+  and, asc, desc, eq, isNull, sha256Hex, deriveAgentId,
   type ActionContext,
 } from '@provenant/core';
 import type { Bundle } from '@provenant/verifier';
@@ -128,16 +144,17 @@ export type OverageOutcome =
   | { status: 'failed'; error: string };
 
 export type OverageRetryResult =
-  | { status: 'idle'; reported: 0; failed: 0; errors: [] }
-  | { status: 'done'; reported: number; failed: number; errors: string[] }
-  | { status: 'failed'; reported: 0; failed: 0; errors: string[] };
+  | { status: 'idle'; reported: 0; failed: 0; abandoned: 0; errors: [] }
+  | { status: 'done'; reported: number; failed: number; abandoned: number; errors: string[] }
+  | { status: 'failed'; reported: 0; failed: 0; abandoned: 0; errors: string[] };
 
 export interface OverageReporter {
   mode: BillingMode;
   /** Records one export for the account, and reports it if it is beyond the
    *  month's allowance. Never throws. */
   recordExport(e: { accountId: string; bundleId: string }): Promise<OverageOutcome>;
-  /** Sends every unreported row, oldest first. Never throws. */
+  /** Sends every unreported row, oldest first, and abandons those past
+   *  Stripe's window. Never throws. */
   retryPending(): Promise<OverageRetryResult>;
   /** The account an export in this action context bills to. May throw. */
   accountOf(ctx: ActionContext): string | null;
@@ -148,6 +165,15 @@ export interface OverageReporter {
 /** Subscription statuses that still hold the plan, and so its allowance. */
 const ACTIVE = new Set(['active', 'trialing', 'past_due']);
 const REDACTED = '[redacted]';
+const DAY_MS = 24 * 60 * 60_000;
+/** Stripe rejects meter events more than 35 days old; a day's margin under it. */
+const CUTOFF_MS = 34 * DAY_MS;
+/** Stripe dedupes a meter event identifier for this long, and no longer. */
+const DEDUPE_MS = DAY_MS;
+/** How long a claimed send keeps other runs off its row: longer than any one
+ *  request takes, Stripe's network retries included. A 'sending' row older
+ *  than this lost its sender and counts as having had no response. */
+const IN_FLIGHT_MS = 10 * 60_000;
 const STRIPE_ID = /\b(cus|sub|si|cs|pi|in|il|ii|ch|evt|price|prod|pm|seti|src|card|mtr)_[A-Za-z0-9]+/g;
 const ACCOUNT_ID = /\burn:provenant:agent:[A-Za-z0-9_-]+/g;
 
@@ -245,7 +271,18 @@ interface ReportRow {
   stripeSubscriptionId: string;
   bundleId: string;
   exportedAt: Date;
+  reported: boolean;
+  abandonedAt: Date | null;
+  attemptCount: number;
+  lastErrorKind: string | null;
+  lastAttemptAt: Date | null;
 }
+
+/** How one row's turn ended, short of a throw. */
+type Attempt =
+  | { status: 'reported'; subscription: string }
+  | { status: 'abandoned' }
+  | { status: 'skipped'; reason: string };
 
 class Reporter {
   constructor(
@@ -271,19 +308,17 @@ class Reporter {
     try {
       const db = await this.database();
       const [row] = await db
-        .select({
-          id: billingUsageReports.id,
-          stripeSubscriptionId: billingUsageReports.stripeSubscriptionId,
-          bundleId: billingUsageReports.bundleId,
-          exportedAt: billingUsageReports.exportedAt,
-        })
+        .select({ id: billingUsageReports.id })
         .from(billingUsageReports)
         .where(and(
           eq(billingUsageReports.stripeSubscriptionId, sub.stripeSubscriptionId),
           eq(billingUsageReports.bundleId, e.bundleId),
         ));
       if (!row) throw new Error('usage report row vanished after it was written');
-      return { status: 'reported', month, count, subscription: await this.report(row) };
+      const attempt = await this.attempt(row.id);
+      if (attempt.status === 'reported') return { status: 'reported', month, count, subscription: attempt.subscription };
+      const error = attempt.status === 'abandoned' ? "it was past Stripe's meter event window and was abandoned" : attempt.reason;
+      return { status: 'unreported', month, count, error };
     } catch (err) {
       this.log(`billing overage: reporting an overage bundle failed: ${describe(err)}. The export went ahead; the bundle stays unreported and is retried.`);
       return { status: 'unreported', month, count, error: scrub(this.config, describe(err)) };
@@ -291,38 +326,35 @@ class Reporter {
   }
 
   async retryPending(limit: number): Promise<OverageRetryResult> {
-    let rows: ReportRow[];
+    let rows: { id: number }[];
     try {
       const db = await this.database();
       rows = await db
-        .select({
-          id: billingUsageReports.id,
-          stripeSubscriptionId: billingUsageReports.stripeSubscriptionId,
-          bundleId: billingUsageReports.bundleId,
-          exportedAt: billingUsageReports.exportedAt,
-        })
+        .select({ id: billingUsageReports.id })
         .from(billingUsageReports)
-        .where(eq(billingUsageReports.reported, false))
+        .where(and(eq(billingUsageReports.reported, false), isNull(billingUsageReports.abandonedAt)))
         .orderBy(asc(billingUsageReports.id))
         .limit(limit);
     } catch (err) {
       this.log(`billing overage: listing unreported bundles failed: ${describe(err)}. Nothing was sent.`);
-      return { status: 'failed', reported: 0, failed: 0, errors: [scrub(this.config, describe(err))] };
+      return { status: 'failed', reported: 0, failed: 0, abandoned: 0, errors: [scrub(this.config, describe(err))] };
     }
-    if (rows.length === 0) return { status: 'idle', reported: 0, failed: 0, errors: [] };
+    if (rows.length === 0) return { status: 'idle', reported: 0, failed: 0, abandoned: 0, errors: [] };
 
     let reported = 0;
+    let abandoned = 0;
     const errors: string[] = [];
     for (const row of rows) {
       try {
-        await this.report(row);
-        reported++;
+        const attempt = await this.attempt(row.id);
+        if (attempt.status === 'reported') reported++;
+        else if (attempt.status === 'abandoned') abandoned++;
       } catch (err) {
         errors.push(scrub(this.config, describe(err)));
         this.log(`billing overage: retrying an overage bundle failed: ${describe(err)}. It stays unreported.`);
       }
     }
-    return { status: 'done', reported, failed: errors.length, errors };
+    return { status: 'done', reported, failed: errors.length, abandoned, errors };
   }
 
   /** Records the export and, in the same transaction, a usage report if it is
@@ -401,10 +433,117 @@ class Reporter {
     return sub ? { ...sub, plan: sub.plan as PlanId } : null;
   }
 
-  /** Sends one row's meter event and marks it reported. Returns the
-   *  subscription that bills it. */
-  private async report(row: ReportRow): Promise<string> {
+  /**
+   * One row's turn: re-read it, abandon it if its event is past Stripe's
+   * window, otherwise claim it, send its meter event and mark it reported.
+   * Every write is conditional on the row being unreported and not abandoned,
+   * so a row reported or abandoned elsewhere is left alone. Throws when the
+   * event could not be sent or Stripe did not accept it.
+   */
+  private async attempt(id: number): Promise<Attempt> {
     const db = await this.database();
+    const [row] = await db
+      .select({
+        id: billingUsageReports.id,
+        stripeSubscriptionId: billingUsageReports.stripeSubscriptionId,
+        bundleId: billingUsageReports.bundleId,
+        exportedAt: billingUsageReports.exportedAt,
+        reported: billingUsageReports.reported,
+        abandonedAt: billingUsageReports.abandonedAt,
+        attemptCount: billingUsageReports.attemptCount,
+        lastErrorKind: billingUsageReports.lastErrorKind,
+        lastAttemptAt: billingUsageReports.lastAttemptAt,
+      })
+      .from(billingUsageReports)
+      .where(eq(billingUsageReports.id, id));
+    if (!row || row.reported || row.abandonedAt) return { status: 'skipped', reason: 'it is already reported or abandoned' };
+
+    const at = this.now();
+    const sinceLast = row.lastAttemptAt ? at.getTime() - row.lastAttemptAt.getTime() : null;
+    if (row.lastErrorKind === 'sending' && sinceLast !== null && sinceLast < IN_FLIGHT_MS) {
+      return { status: 'skipped', reason: 'another run is sending it' };
+    }
+    // Unreported, not abandoned, and no send started since the re-read.
+    const untouched = and(
+      eq(billingUsageReports.id, row.id),
+      eq(billingUsageReports.reported, false),
+      isNull(billingUsageReports.abandonedAt),
+      eq(billingUsageReports.attemptCount, row.attemptCount),
+    );
+
+    const target = await this.target(db, row);
+
+    if (at.getTime() - target.timestamp * 1000 > CUTOFF_MS) {
+      const abandoned = await db
+        .update(billingUsageReports)
+        .set({ abandonedAt: at })
+        .where(untouched)
+        .returning({ id: billingUsageReports.id });
+      if (abandoned.length === 0) return { status: 'skipped', reason: 'another run changed it first' };
+      this.log(
+        `billing overage ALERT: usage report ${row.id} for ${row.exportedAt.toISOString().slice(0, 7)} was abandoned unsent: ` +
+          "its meter event is more than 34 days old and Stripe rejects events older than 35. " +
+          'Bill this bundle by hand or write it off.',
+      );
+      return { status: 'abandoned' };
+    }
+
+    const claimed = await db
+      .update(billingUsageReports)
+      .set({ attemptCount: row.attemptCount + 1, lastAttemptAt: at, lastErrorKind: 'sending' })
+      .where(untouched)
+      .returning({ id: billingUsageReports.id });
+    if (claimed.length === 0) return { status: 'skipped', reason: 'another run is sending it' };
+
+    // The last send got no answer (or its sender died before one) and Stripe's
+    // 24-hour dedupe has lapsed since, so it may count this one again.
+    const possibleDuplicate =
+      (row.lastErrorKind === 'no_response' || row.lastErrorKind === 'sending') &&
+      sinceLast !== null && sinceLast > DEDUPE_MS;
+
+    // The bundle id is the identifier on every send, and the idempotency key
+    // is derived from it, so a resend inside Stripe's window is the same event.
+    try {
+      await this.stripe.billing.meterEvents.create({
+        event_name: this.config.meterEventName!,
+        identifier: row.bundleId,
+        timestamp: target.timestamp,
+        payload: { stripe_customer_id: target.customer, value: '1' },
+      }, { idempotencyKey: `provenant-overage-${row.bundleId}` });
+    } catch (err) {
+      await db
+        .update(billingUsageReports)
+        .set({ lastErrorKind: errorKind(err) })
+        .where(and(
+          eq(billingUsageReports.id, row.id),
+          eq(billingUsageReports.reported, false),
+          eq(billingUsageReports.attemptCount, row.attemptCount + 1),
+        ))
+        .catch((e: unknown) => this.log(`billing overage: recording a failed send failed: ${describe(e)}. The row counts as unanswered.`));
+      throw err;
+    }
+
+    await db
+      .update(billingUsageReports)
+      .set({ reported: true, reportedAt: this.now(), reportedSubscriptionId: target.billedOn, lastErrorKind: null })
+      .where(and(
+        eq(billingUsageReports.id, row.id),
+        eq(billingUsageReports.reported, false),
+        isNull(billingUsageReports.abandonedAt),
+      ));
+    if (possibleDuplicate) {
+      this.log(
+        `billing overage: possible duplicate: usage report ${row.id} was resent more than 24 hours after a send Stripe never answered, ` +
+          "so Stripe may have counted it twice. Check the meter's events for this bundle and credit one if so.",
+      );
+    }
+    return { status: 'reported', subscription: target.billedOn };
+  }
+
+  /** The customer a row's meter event is for, the subscription that bills it,
+   *  and its timestamp: the export time, or the overage subscription's start if
+   *  that is later. May create the overage subscription. */
+  private async target(db: BillingDb, row: ReportRow): Promise<{ customer: string; billedOn: string; timestamp: number }> {
     const [sub] = await db
       .select({ stripeCustomerId: billingSubscriptions.stripeCustomerId, interval: billingSubscriptions.interval })
       .from(billingSubscriptions)
@@ -421,21 +560,7 @@ class Reporter {
       // bill it. A bundle exported after the start keeps its own time.
       timestamp = Math.max(timestamp, Math.ceil(overage.startedAt.getTime() / 1000));
     } else throw new Error(`the subscription has interval "${sub.interval}", which overage cannot bill`);
-
-    // The bundle id is the identifier on every send, and the idempotency key
-    // is derived from it, so a resend inside Stripe's window is the same event.
-    await this.stripe.billing.meterEvents.create({
-      event_name: this.config.meterEventName!,
-      identifier: row.bundleId,
-      timestamp,
-      payload: { stripe_customer_id: sub.stripeCustomerId, value: '1' },
-    }, { idempotencyKey: `provenant-overage-${row.bundleId}` });
-
-    await db
-      .update(billingUsageReports)
-      .set({ reported: true, reportedAt: this.now(), reportedSubscriptionId: billedOn })
-      .where(and(eq(billingUsageReports.id, row.id), eq(billingUsageReports.reported, false)));
-    return billedOn;
+    return { customer: sub.stripeCustomerId, billedOn, timestamp };
   }
 
   /** The annual subscription's monthly overage subscription and when it
@@ -492,6 +617,16 @@ function meteredPlan(plan: string): boolean {
   return (p.monthlyUsd ?? 0) > 0 && Number.isFinite(p.includedBundlesPerMonth);
 }
 
+/** 'stripe_error' when Stripe answered (the error carries its HTTP status), and
+ *  'no_response' otherwise: a timeout, a network error, or anything else that
+ *  leaves open whether Stripe got the event. */
+function errorKind(err: unknown): 'stripe_error' | 'no_response' {
+  if (!err || typeof err !== 'object') return 'no_response';
+  const e = err as { type?: unknown; statusCode?: unknown };
+  if (e.type === 'StripeConnectionError') return 'no_response';
+  return typeof e.statusCode === 'number' ? 'stripe_error' : 'no_response';
+}
+
 function idOf(ref: Ref): string | null {
   if (!ref) return null;
   return typeof ref === 'string' ? ref : ref.id;
@@ -531,7 +666,7 @@ function describe(err: unknown): string {
     const x = e as { name?: unknown; code?: unknown; message?: unknown };
     const parts = [x.name, x.code, x.message].filter((v) => v !== undefined && v !== null && v !== '');
     if (parts.length) out = parts.map(String).join(' ');
-    if (x.code === '42P01' || x.code === '42703') out += ' (apply 0001_overage.sql to the billing database)';
+    if (x.code === '42P01' || x.code === '42703') out += ' (apply 0001_overage.sql and 0002_overage_retry.sql to the billing database)';
   }
   return out;
 }

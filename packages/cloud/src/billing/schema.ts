@@ -3,8 +3,9 @@
  * cloud; core's SQLite schema is a separate thing and is not changed here.
  *
  * `migrations/0000_billing.sql` is the hand-written migration for the first
- * four tables, and `migrations/0001_overage.sql` for the three overage tables
- * after them. The owner applies them to Neon by hand, in that order. Nothing in
+ * four tables, `migrations/0001_overage.sql` for the three overage tables
+ * after them, and `migrations/0002_overage_retry.sql` for the retry columns on
+ * billing_usage_reports. The owner applies them to Neon by hand, in that order. Nothing in
  * this package runs them, at startup or at deploy. Tests apply them to an
  * in-process Postgres and check they match this file column for column.
  *
@@ -113,6 +114,20 @@ export const billingUsageReports = pgTable('billing_usage_reports', {
    *  it is monthly, the separate overage subscription when it is annual. */
   reportedSubscriptionId: text('reported_subscription_id'),
   createdAt: timestamptz('created_at').notNull().defaultNow(),
+  // Retry state, from 0002_overage_retry.sql.
+  /** Meter event sends started for this row. A failure before the event is
+   *  sent is not an attempt and changes none of these three columns. */
+  attemptCount: integer('attempt_count').notNull().default(0),
+  /** How the last send ended, while the row is unreported: 'sending' (no
+   *  answer yet, or its sender died), 'no_response' (timeout or network error,
+   *  so Stripe may have it) or 'stripe_error' (Stripe answered with an error).
+   *  Cleared when the row is reported. */
+  lastErrorKind: text('last_error_kind'),
+  /** When the last send started. */
+  lastAttemptAt: timestamptz('last_attempt_at'),
+  /** Set when the event fell past Stripe's 35-day window before it was
+   *  accepted. An abandoned row is never sent. */
+  abandonedAt: timestamptz('abandoned_at'),
 }, (t) => [
   unique('billing_usage_reports_subscription_bundle_unique').on(t.stripeSubscriptionId, t.bundleId),
   foreignKey({
