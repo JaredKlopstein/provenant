@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { verifyBundle } from '../src/bundle.js';
+import * as ed from '@noble/ed25519';
+import { verifyBundle, type BundleAnchor, type BundleReceipt } from '../src/bundle.js';
+import { canonicalBytes } from '../src/jcs.js';
+import { receiptHash } from '../src/receipt.js';
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '../src');
 
@@ -106,5 +109,84 @@ describe('bundle schema validation', () => {
       expect(() => verifyBundle(bad)).not.toThrow();
       expect(verifyBundle(bad).ok).toBe(false);
     }
+  });
+});
+
+/**
+ * A small signed chain built here with the verifier's own primitives, so this
+ * suite still never imports core. The key is a fixed, obviously fake seed.
+ */
+function signedChain(length: number): { receipts: BundleReceipt[]; agents: Record<string, unknown> } {
+  const secret = new Uint8Array(32).fill(7);
+  const x = Buffer.from(ed.getPublicKey(secret)).toString('base64url');
+  const agentId = 'test-agent';
+  const receipts: BundleReceipt[] = [];
+  let prev: string | null = null;
+  for (let seq = 0; seq < length; seq++) {
+    const unsigned = {
+      record_id: `test-record-${seq}`,
+      agent_id: agentId,
+      timestamp: `2026-09-03T00:00:0${seq}.000Z`,
+      action: 'test.action',
+      prev_hash: prev,
+      provenant: { v: '1', seq },
+    };
+    const signature = Buffer.from(ed.sign(canonicalBytes(unsigned), secret)).toString('base64url');
+    const full = { ...unsigned, signature };
+    const selfHash = receiptHash(full);
+    receipts.push({ seq, canonical_json: JSON.stringify(full), self_hash: selfHash });
+    prev = selfHash;
+  }
+  return { receipts, agents: { [agentId]: { kty: 'OKP', crv: 'Ed25519', x } } };
+}
+
+function anchorAt(receipt: BundleReceipt, receiptCount: number): BundleAnchor {
+  return {
+    id: `test-anchor-${receipt.seq}`,
+    statement: { v: '1', chain_id: 'c1', seq: receipt.seq, head_hash: receipt.self_hash, receipt_count: receiptCount },
+    backend: 'noop',
+    proof: { type: 'none' },
+    created_at: '2026-09-03T00:01:00.000Z',
+  };
+}
+
+function bundleOf(receipts: BundleReceipt[], agents: Record<string, unknown>, anchors: BundleAnchor[]) {
+  return {
+    format: 'provenant-bundle-v1',
+    chain_id: 'c1',
+    generated_at: '2026-09-03T00:02:00.000Z',
+    range: { from_seq: receipts[0]!.seq, to_seq: receipts[receipts.length - 1]!.seq },
+    receipts, agents, anchors,
+  };
+}
+
+describe('anchor receipt_count', () => {
+  const { receipts, agents } = signedChain(4);
+
+  it('passes a full bundle whose anchor count matches its receipts', () => {
+    const v = verifyBundle(bundleOf(receipts, agents, [anchorAt(receipts[2]!, 3), anchorAt(receipts[3]!, 4)]));
+    expect(v.failures).toEqual([]);
+    expect(v.ok).toBe(true);
+    expect(v.warnings.join(' ')).not.toMatch(/receipt_count check skipped/);
+  });
+
+  for (const [label, claimed] of [['one too few', 2], ['one too many', 4]] as const) {
+    it(`fails a full bundle whose anchor count is ${label}`, () => {
+      const v = verifyBundle(bundleOf(receipts, agents, [anchorAt(receipts[2]!, claimed)]));
+      expect(v.ok).toBe(false);
+      expect(v.failures).toHaveLength(1);
+      const f = v.failures[0]!;
+      expect(f).toMatchObject({ seq: 2, kind: 'ANCHOR_COUNT_MISMATCH', expected: String(claimed), actual: '3' });
+      expect(f.message).toContain(`commits to ${claimed} receipt(s)`);
+      expect(f.message).toContain('holds 3 receipt(s)');
+    });
+  }
+
+  it('skips the check on a partial bundle and says so', () => {
+    const partial = receipts.slice(2);
+    const v = verifyBundle(bundleOf(partial, agents, [anchorAt(receipts[3]!, 4)]));
+    expect(v.failures).toEqual([]);
+    expect(v.ok).toBe(true);
+    expect(v.warnings.join(' ')).toMatch(/anchor at seq 3: receipt_count check skipped/);
   });
 });
