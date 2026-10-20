@@ -9,10 +9,13 @@ export interface Brand {
   readonly name: string;
   readonly domain: string | null;
   readonly tagline: string;
+  /** Source repository. Its path carries the name, so it lives here too. */
+  readonly repository: string;
 }
 
 export const BRAND: Brand = {
   name: 'Provenant',
   domain: null,
   tagline: 'tamper-evident receipts for autonomous agents',
+  repository: 'https://github.com/JaredKlopstein/provenant',
 };
