@@ -12,11 +12,13 @@ import { openDb, closeDb, type Db } from '@provenant/core';
 import {
   billingSchema, billingCustomers, billingSubscriptions, billingBundleCredits, billingWebhookEvents,
 } from '../src/billing/schema.js';
-import { createBillingWebhook, BILLING_WEBHOOK_PATH, type BillingWebhookOptions } from '../src/billing/webhook.js';
+import {
+  createBillingWebhook, BILLING_WEBHOOK_PATH, type BillingWebhookOptions, type DuplicateGuardStripe,
+} from '../src/billing/webhook.js';
 import { createCustomerLookup, type BillingDb } from '../src/billing/store.js';
 import { createCollector } from '../src/collector/server.js';
 import { PRICE_ENV } from '../src/billing/config.js';
-import type { StripeLike } from '../src/billing/stripe.js';
+import type { StripeLike, SubscriptionLister } from '../src/billing/stripe.js';
 
 /*
  * Every secret-shaped value is assembled at run time, so this file never holds
@@ -31,8 +33,26 @@ const DB_USER = 'test-db-user';
 const DB_PASSWORD = 'test-db-password';
 const DB_HOST = 'db.provenant.test';
 const DATABASE_URL = ['postgresql:', '', `${DB_USER}:${DB_PASSWORD}@${DB_HOST}`, 'billing'].join('/');
-const SECRETS = [WEBHOOK_SECRET, OTHER_SECRET, DATABASE_URL, DB_USER, DB_PASSWORD, DB_HOST];
-const ENV = { STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, DATABASE_URL };
+const STRIPE_KEY = u('sk', 'test', 'k'.repeat(24));
+const SECRETS = [WEBHOOK_SECRET, OTHER_SECRET, DATABASE_URL, DB_USER, DB_PASSWORD, DB_HOST, STRIPE_KEY];
+const ENV = {
+  STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, DATABASE_URL,
+  STRIPE_SECRET_KEY: STRIPE_KEY, [PRICE_ENV.overage_bundle]: u('price', 'testoveragebundle'),
+};
+
+/** The duplicate-metered guard's Stripe, for a customer with no other
+ *  subscription: it lists nothing, so it never cancels or refunds.
+ *  billing-webhook-duplicate-metered.test.ts covers the guard itself. */
+function noOtherSubscriptions(): DuplicateGuardStripe {
+  const never = async (): Promise<never> => {
+    throw new Error('the guard acted with no duplicate');
+  };
+  return {
+    subscriptions: { list: async () => ({ data: [] }), cancel: never },
+    invoices: { retrieve: never },
+    refunds: { list: never, create: never },
+  };
+}
 
 const PRICE_MONTH = u('price', 'testcloudmonth');
 const PRICE_YEAR = u('price', 'testcloudyear');
@@ -170,6 +190,7 @@ function webhook(overrides: Partial<BillingWebhookOptions> = {}) {
   const connect = vi.fn(() => db);
   const w = createBillingWebhook({
     env: ENV,
+    stripe: noOtherSubscriptions(),
     connect,
     log: { warn: (l) => warnings.push(l), error: (l) => errors.push(l) },
     ...overrides,
@@ -426,9 +447,10 @@ describe('plan state changes only through verified webhooks', () => {
   const u2 = (...p: string[]) => p.join('_');
   const prices = Object.fromEntries(Object.values(PRICE_ENV).map((name) => [name, u2('price', name.toLowerCase().replace(/_/g, ''))]));
   const billingEnv = { STRIPE_SECRET_KEY: u2('sk', 'test', 'x'.repeat(24)), ...prices };
-  const stripe: StripeLike = {
+  const stripe: StripeLike & SubscriptionLister = {
     checkout: { sessions: { create: async () => ({ id: 'cs_test_route', url: 'https://checkout.stripe.test/1' }) } },
     billingPortal: { sessions: { create: async () => ({ url: 'https://billing.stripe.test/1' }) } },
+    subscriptions: { list: async () => ({ data: [] }) },
   };
 
   let coreDb: Db;
@@ -444,7 +466,7 @@ describe('plan state changes only through verified webhooks', () => {
         successUrl: 'https://provenant.test/ok', cancelUrl: 'https://provenant.test/no', returnUrl: 'https://provenant.test/a',
         log: () => {},
       },
-      billingWebhook: { env: ENV, connect: () => db, log: { warn: () => {}, error: () => {} } },
+      billingWebhook: { env: ENV, stripe: noOtherSubscriptions(), connect: () => db, log: { warn: () => {}, error: () => {} } },
     });
     await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -592,7 +614,7 @@ describe('redaction', () => {
   it('a bad signature and a link mismatch, through the default console log, leak nothing', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const w = createBillingWebhook({ env: ENV, connect: () => db });
+    const w = createBillingWebhook({ env: ENV, stripe: noOtherSubscriptions(), connect: () => db });
 
     const forged = subscriptionCheckout({ ref: ACCOUNT });
     const bad = signed(forged, { secret: OTHER_SECRET });

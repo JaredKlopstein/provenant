@@ -48,6 +48,22 @@ export async function applyEventOnce<T>(
   });
 }
 
+/**
+ * Claims the cancellation of a duplicate metered subscription, keyed on its
+ * id. True for the first caller only; a concurrent caller waits for the first
+ * transaction and gets false once it commits, or the claim if it rolls back.
+ * The key shares the processed-events table, where no Stripe event id can
+ * collide with it.
+ */
+export async function claimDuplicateCancel(tx: BillingTx, stripeSubscriptionId: string): Promise<boolean> {
+  const claimed = await tx
+    .insert(billingWebhookEvents)
+    .values({ stripeEventId: `duplicate_metered:${stripeSubscriptionId}`, type: 'provenant.duplicate_metered.cancel' })
+    .onConflictDoNothing()
+    .returning({ id: billingWebhookEvents.stripeEventId });
+  return claimed.length > 0;
+}
+
 /** Creates the customer row if it does not exist. Never changes an existing one. */
 export async function ensureCustomer(tx: BillingTx, stripeCustomerId: string): Promise<void> {
   await tx.insert(billingCustomers).values({ stripeCustomerId }).onConflictDoNothing();
