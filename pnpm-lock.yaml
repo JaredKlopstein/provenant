@@ -76,6 +76,9 @@ importers:
 
   packages/site:
     dependencies:
+      '@provenant/cloud':
+        specifier: workspace:*
+        version: link:../cloud
       next:
         specifier: ^16.4.2
         version: 16.4.2(@types/node@22.20.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
