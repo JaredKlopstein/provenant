@@ -40,11 +40,12 @@ const unescape = (html: string) =>
     .replace(/&amp;/g, '&');
 
 describe('site app folder', () => {
-  it('has the layout, the home page and the how-it-works, verify and security pages', () => {
+  it('has the layout, the home page, the pricing page and the how-it-works, verify and security pages', () => {
     expect(sources.map((s) => s.file).sort()).toEqual([
       'how-it-works/page.tsx',
       'layout.tsx',
       'page.tsx',
+      'pricing/page.tsx',
       'security/page.tsx',
       'verify/page.tsx',
     ]);

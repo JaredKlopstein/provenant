@@ -26,10 +26,37 @@ const FORBIDDEN = {
   // two implementations drifting apart.
   verifier: ['@provenant/cloud', '@provenant/core'],
   cloud: [],
-  // The marketing site starts with no internal dependencies. A later site issue
-  // that genuinely needs core or cloud loosens this entry deliberately.
-  site: ['@provenant/core', '@provenant/verifier', '@provenant/cloud'],
+  // The marketing site renders its pricing page from cloud's pricing module, so
+  // cloud is allowed. Core and verifier stay out; a later site issue that
+  // genuinely needs one loosens this entry deliberately.
+  site: ['@provenant/core', '@provenant/verifier'],
 };
+
+/**
+ * pkg -> other internal packages it may name. The scope check below rejects
+ * every `@provenant/` reference except the package's own, so a package that
+ * imports a sibling has to list it here as well as drop it from FORBIDDEN.
+ */
+const MAY_NAME = {
+  site: ['@provenant/cloud'],
+};
+
+/**
+ * True when the `@provenant/` at `index` starts a reference `pkg` may make: a
+ * whole string literal (quoted on both sides, nothing concatenated after it, no
+ * `..` segment) naming a package in MAY_NAME or a path inside one. Anything
+ * looser would let `'@provenant/cloud/' + '../core'` walk around FORBIDDEN.
+ */
+function namesAllowedPackage(src, index, pkg) {
+  const quote = src[index - 1];
+  if (quote !== "'" && quote !== '"' && quote !== '`') return false;
+  const close = src.indexOf(quote, index);
+  if (close === -1) return false;
+  const spec = src.slice(index, close);
+  if (!/^@provenant\/[\w-]+(\/[\w.-]+)*$/.test(spec) || spec.split('/').includes('..')) return false;
+  if (/^\s*\+/.test(src.slice(close + 1))) return false;
+  return (MAY_NAME[pkg] ?? []).some((name) => spec === name || spec.startsWith(name + '/'));
+}
 
 /** Modules that would let the verifier phone home. It must work fully offline. */
 const OFFLINE_FORBIDDEN = [
@@ -117,7 +144,7 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
     if (forbidden.length > 0) {
       for (const m of src.matchAll(/@provenant\//g)) {
         const tail = src.slice(m.index, m.index + 40);
-        if (!tail.startsWith(`@provenant/${pkg}`)) {
+        if (!tail.startsWith(`@provenant/${pkg}`) && !namesAllowedPackage(src, m.index, pkg)) {
           violations.push(
             `${rel}: '${pkg}' must not reference the '@provenant/' scope (found "${tail.split(/['"\`\s]/)[0]}"). ` +
               `Splitting a package name across string literals is not an escape hatch.`,
@@ -201,4 +228,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('  Open-core boundaries intact: core !-> cloud, verifier/src !-> core|cloud, site !-> core|verifier|cloud, verifier offline.');
+console.log('  Open-core boundaries intact: core !-> cloud, verifier/src !-> core|cloud, site !-> core|verifier, verifier offline.');
