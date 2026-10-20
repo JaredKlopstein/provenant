@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { PGlite } from '@electric-sql/pglite';
+import { drizzle } from 'drizzle-orm/pglite';
 import { POST } from '../app/api/auth/magic-link/route.js';
 import { GET } from '../app/api/auth/callback/route.js';
 import SignupPage, { metadata } from '../app/signup/page.js';
@@ -16,12 +19,28 @@ import {
   sessionCookie,
   verifyLinkToken,
 } from '../src/auth/session.js';
+import { usedTokenSchema } from '../src/auth/used-tokens.js';
 
 /**
  * Magic-link signup: the send route, the callback, the session cookie and the
- * account id. The email provider's fetch is mocked throughout: nothing here touches
- * the network.
+ * account id. The email provider's fetch is mocked throughout, and the callback's
+ * used-link table is PGlite in process: nothing here touches the network.
  */
+
+const pgHolder = vi.hoisted(() => ({ db: null as unknown }));
+vi.mock('drizzle-orm/neon-serverless', () => ({ drizzle: vi.fn(() => pgHolder.db) }));
+
+let pg: PGlite;
+
+beforeAll(async () => {
+  pg = await PGlite.create();
+  await pg.exec(readFileSync(new URL('../migrations/0000_magic_link_used.sql', import.meta.url), 'utf8'));
+  pgHolder.db = drizzle({ client: pg, schema: usedTokenSchema });
+});
+
+afterAll(async () => {
+  await pg.close();
+});
 
 const SECRET = 'test-session-secret-for-auth-tests-only';
 const OTHER_SECRET = 'test-session-secret-rotated-for-auth-tests';
@@ -51,6 +70,7 @@ beforeEach(() => {
   vi.stubEnv('EMAIL_FROM', EMAIL_FROM);
   vi.stubEnv('SITE_BASE_URL', SITE);
   vi.stubEnv('VERCEL_URL', '');
+  vi.stubEnv('DATABASE_URL', 'postgresql://test-user:test-password@db.site.test/site');
 });
 
 afterEach(() => {
