@@ -24,6 +24,14 @@
  *    payment method saved at annual checkout, and reused after that. The annual
  *    subscription is only ever read, never updated.
  *
+ *  - Stripe bills meter usage only inside a subscription's billing period, and
+ *    an annual subscriber's overage subscription starts when it is created, at
+ *    report time, after the export. So the overage subscription is created or
+ *    confirmed before the event is sent, and the event is timestamped at the
+ *    later of the export and that subscription's start. It is not backdated,
+ *    since Stripe would bill the backdated period. The allowance count and its
+ *    month always come from the export time; only the Stripe timestamp moves.
+ *
  *  - Billing never blocks an export. A Stripe failure, or a database without
  *    0001_overage.sql, is logged redacted and the export goes ahead; the row, if
  *    there is one, stays unreported for the next retry.
@@ -54,7 +62,9 @@ type Ref = string | { id: string } | null | undefined;
 export interface MeterEventParams {
   event_name: string;
   identifier: string;
-  /** Unix seconds: when the bundle was exported, so it bills in that month. */
+  /** Unix seconds: when the bundle was exported, or, for an annual subscriber,
+   *  when their overage subscription started if that is later, so the event
+   *  falls inside a period Stripe bills. */
   timestamp: number;
   payload: { stripe_customer_id: string; value: string };
 }
@@ -73,7 +83,8 @@ export interface OverageStripe {
     };
   };
   subscriptions: {
-    create(params: Record<string, unknown>, options?: StripeRequestOptions): Promise<{ id: string }>;
+    /** start_date is Unix seconds. */
+    create(params: Record<string, unknown>, options?: StripeRequestOptions): Promise<{ id: string; start_date?: number }>;
     retrieve(id: string): Promise<{ id: string; default_payment_method?: Ref }>;
   };
   customers: {
@@ -401,16 +412,22 @@ class Reporter {
     if (!sub) throw new Error('the subscription for this bundle is not recorded');
 
     let billedOn: string;
+    let timestamp = Math.floor(row.exportedAt.getTime() / 1000);
     if (sub.interval === 'month') billedOn = row.stripeSubscriptionId;
-    else if (sub.interval === 'year') billedOn = await this.overageSubscription(db, row.stripeSubscriptionId, sub.stripeCustomerId);
-    else throw new Error(`the subscription has interval "${sub.interval}", which overage cannot bill`);
+    else if (sub.interval === 'year') {
+      const overage = await this.overageSubscription(db, row.stripeSubscriptionId, sub.stripeCustomerId);
+      billedOn = overage.id;
+      // Never before the overage subscription started, or Stripe would not
+      // bill it. A bundle exported after the start keeps its own time.
+      timestamp = Math.max(timestamp, Math.ceil(overage.startedAt.getTime() / 1000));
+    } else throw new Error(`the subscription has interval "${sub.interval}", which overage cannot bill`);
 
     // The bundle id is the identifier on every send, and the idempotency key
     // is derived from it, so a resend inside Stripe's window is the same event.
     await this.stripe.billing.meterEvents.create({
       event_name: this.config.meterEventName!,
       identifier: row.bundleId,
-      timestamp: Math.floor(row.exportedAt.getTime() / 1000),
+      timestamp,
       payload: { stripe_customer_id: sub.stripeCustomerId, value: '1' },
     }, { idempotencyKey: `provenant-overage-${row.bundleId}` });
 
@@ -421,16 +438,17 @@ class Reporter {
     return billedOn;
   }
 
-  /** The annual subscription's monthly overage subscription, created on first
-   *  use. It holds only the metered overage price, charges the payment method
-   *  saved at annual checkout, and leaves the annual subscription untouched. */
-  private async overageSubscription(db: BillingDb, annualId: string, customer: string): Promise<string> {
+  /** The annual subscription's monthly overage subscription and when it
+   *  started, created on first use. It holds only the metered overage price,
+   *  charges the payment method saved at annual checkout, and leaves the annual
+   *  subscription untouched. The stored link's created time is the start. */
+  private async overageSubscription(db: BillingDb, annualId: string, customer: string): Promise<{ id: string; startedAt: Date }> {
     const stored = async () => {
       const [link] = await db
-        .select({ id: billingOverageSubscriptions.overageSubscriptionId })
+        .select({ id: billingOverageSubscriptions.overageSubscriptionId, startedAt: billingOverageSubscriptions.createdAt })
         .from(billingOverageSubscriptions)
         .where(eq(billingOverageSubscriptions.stripeSubscriptionId, annualId));
-      return link?.id ?? null;
+      return link ?? null;
     };
     const existing = await stored();
     if (existing) return existing;
@@ -455,12 +473,15 @@ class Reporter {
       metadata: { provenant_purchase: 'overage_bundle', provenant_annual_subscription: annualId },
     }, { idempotencyKey: `provenant-overage-subscription-${annualId}` });
 
+    // Stripe's start date or, if it sent none, the time it answered: after the
+    // subscription was created either way.
+    const startedAt = created.start_date !== undefined ? new Date(created.start_date * 1000) : this.now();
     await db
       .insert(billingOverageSubscriptions)
-      .values({ stripeSubscriptionId: annualId, overageSubscriptionId: created.id })
+      .values({ stripeSubscriptionId: annualId, overageSubscriptionId: created.id, createdAt: startedAt })
       .onConflictDoNothing();
     // A concurrent creator may have stored first; theirs is the one to use.
-    return (await stored()) ?? created.id;
+    return (await stored()) ?? { id: created.id, startedAt };
   }
 }
 
