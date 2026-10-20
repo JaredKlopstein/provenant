@@ -4,6 +4,9 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { BRAND } from '../packages/site/src/brand.js';
 import HomePage from '../packages/site/app/page.js';
+import HowItWorksPage from '../packages/site/app/how-it-works/page.js';
+import VerifyPage from '../packages/site/app/verify/page.js';
+import SecurityPage from '../packages/site/app/security/page.js';
 
 /**
  * The Next.js site in packages/site. Copy and metadata read from BRAND so the
@@ -24,11 +27,27 @@ const sources = readdirSync(APP, { recursive: true, encoding: 'utf8' })
   .map((f) => ({ file: f, src: readFileSync(join(APP, f), 'utf8') }));
 
 const home = renderToStaticMarkup(HomePage());
+const howItWorks = renderToStaticMarkup(HowItWorksPage());
+const verify = renderToStaticMarkup(VerifyPage());
+const security = renderToStaticMarkup(SecurityPage());
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+const unescape = (html: string) =>
+  html
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 
 describe('site app folder', () => {
-  it('has the layout and the home page', () => {
-    expect(sources.map((s) => s.file).sort()).toEqual(['layout.tsx', 'page.tsx']);
+  it('has the layout, the home page and the how-it-works, verify and security pages', () => {
+    expect(sources.map((s) => s.file).sort()).toEqual([
+      'how-it-works/page.tsx',
+      'layout.tsx',
+      'page.tsx',
+      'security/page.tsx',
+      'verify/page.tsx',
+    ]);
   });
 
   it('never hard-codes the brand name or repository', () => {
@@ -52,9 +71,23 @@ describe('site app folder', () => {
     expect(layout).toContain('<footer>');
   });
 
+  it('links the how-it-works, verify and security pages from the nav', () => {
+    const layout = sources.find((s) => s.file === 'layout.tsx')!.src;
+    for (const href of ['/how-it-works', '/verify', '/security']) {
+      expect(layout).toContain(`href: '${href}'`);
+    }
+  });
+
   it('imports nothing from core, verifier or cloud', () => {
+    // Import specifiers only: the verify page shows repository paths inside its commands.
     for (const { file, src } of sources) {
-      expect(src, file).not.toMatch(/@provenant\/(core|verifier|cloud)|packages\/(core|verifier|cloud)/);
+      const specifiers = [...src.matchAll(/\bfrom\s+['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]/g)].map(
+        (m) => m[1] ?? m[2],
+      );
+      expect(specifiers.length, file).toBeGreaterThan(0);
+      for (const spec of specifiers) {
+        expect(spec, file).not.toMatch(/@provenant\/(core|verifier|cloud)|packages\/(core|verifier|cloud)/);
+      }
     }
   });
 });
@@ -79,8 +112,77 @@ describe('home page', () => {
   });
 });
 
+describe('how-it-works page', () => {
+  const body = text(unescape(howItWorks));
+
+  it('walks record, hash chain, anchor, evidence bundle and offline verify in order', () => {
+    const headings = [...howItWorks.matchAll(/<h2>([^<]+)<\/h2>/g)].map((m) => m[1]);
+    expect(headings.slice(0, 5)).toEqual([
+      '1. Record',
+      '2. Hash chain',
+      '3. Anchor',
+      '4. Evidence bundle',
+      '5. Verify offline',
+    ]);
+  });
+
+  it('states the anchoring cadence the Cloud scheduler enforces', () => {
+    expect(body).toContain('anchored at most every 15 minutes');
+    expect(body).toContain('RFC 3161');
+  });
+
+  it('links to the verify and security pages', () => {
+    expect(howItWorks).toContain('href="/verify"');
+    expect(howItWorks).toContain('href="/security"');
+  });
+});
+
+describe('verify page', () => {
+  const body = text(unescape(verify));
+  const guide = readFileSync(new URL('../docs/getting-started.md', import.meta.url), 'utf8');
+  const guideBlocks = [...guide.matchAll(/```bash\n([\s\S]*?)\n```/g)].map((m) => m[1]!);
+  const pageBlocks = [...verify.matchAll(/<pre><code>([^<]*)<\/code><\/pre>/g)].map((m) => unescape(m[1]!));
+
+  it('says the verifier is free, MIT and never paywalled', () => {
+    expect(body).toContain('Verifying is never paywalled');
+    expect(body).toContain('MIT');
+    expect(body).toContain('no network');
+  });
+
+  it('shows the from-source commands exactly as the getting-started guide has them', () => {
+    const clone = guideBlocks.filter((b) => b.startsWith('git clone '));
+    const verifier = guideBlocks.filter((b) => b.startsWith('node packages/verifier/'));
+    expect(clone).toHaveLength(1);
+    expect(verifier).toHaveLength(2);
+    expect(pageBlocks).toEqual([...clone, ...verifier]);
+  });
+
+  it('links the getting-started guide', () => {
+    expect(verify).toContain(`href="${BRAND.repository}/blob/main/docs/getting-started.md"`);
+  });
+});
+
+describe('security page', () => {
+  const body = text(unescape(security));
+
+  it('names each standard the code implements', () => {
+    const headings = [...security.matchAll(/<h3>([^<]+)<\/h3>/g)].map((m) => m[1]);
+    expect(headings).toEqual(['RFC 8785', 'SHA-256', 'Ed25519', 'RFC 9421', 'RFC 3161']);
+  });
+
+  it('does not present HTTP receipt submission as working', () => {
+    expect(body).toContain('Receipt submission over HTTP is not built yet');
+  });
+
+  it('covers the open-core boundary and the limits of a self-hosted chain', () => {
+    expect(body).toContain('The verifier imports neither Core nor Cloud');
+    expect(body).toContain('A self-hosted chain is self-attested');
+    expect(body).toContain('Detects truncation of the un-anchored tail no no');
+  });
+});
+
 describe('site claims', () => {
-  const all = [home, ...sources.map((s) => s.src)].join('\n');
+  const all = [home, howItWorks, verify, security, ...sources.map((s) => s.src)].join('\n');
 
   it('does not tell readers to install or npx a package', () => {
     expect(all).not.toMatch(/\bnpm\s+(i|install)\b|\bnpx\b|\bpnpm\s+add\b|\byarn\s+add\b/i);
