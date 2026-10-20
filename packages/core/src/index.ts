@@ -24,7 +24,7 @@ export * as dbSchema from './db/schema.js';
 // Query operators from the same drizzle-orm instance as dbSchema. pnpm can give a
 // dependent package its own drizzle-orm instance when its peer set differs, and
 // mixing that instance's operators with these tables stops typechecking.
-export { and, asc, desc, eq, gt, gte, lte, type SQL } from 'drizzle-orm';
+export { and, asc, desc, eq, gt, gte, lte, isNull, type SQL } from 'drizzle-orm';
 export {
   registerAgent, getAgent, requireAgent, listAgents, keyDirectory, type RegisteredAgent,
 } from './agents/store.js';

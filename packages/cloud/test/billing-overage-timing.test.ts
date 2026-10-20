@@ -30,7 +30,7 @@ const MONTHLY = { account: 'urn:provenant:agent:test-monthly', customer: 'cus_te
 const ANNUAL = { account: 'urn:provenant:agent:test-annual', customer: 'cus_test_annual', subscription: 'sub_test_annual', interval: 'year' as const };
 const SAVED_PM = 'pm_test_saved_at_checkout';
 
-const MIGRATIONS = ['0000_billing.sql', '0001_overage.sql']
+const MIGRATIONS = ['0000_billing.sql', '0001_overage.sql', '0002_overage_retry.sql']
   .map((f) => fileURLToPath(new URL(`../migrations/${f}`, import.meta.url)));
 
 const MINUTE = 60_000;
