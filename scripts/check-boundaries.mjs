@@ -26,6 +26,9 @@ const FORBIDDEN = {
   // two implementations drifting apart.
   verifier: ['@provenant/cloud', '@provenant/core'],
   cloud: [],
+  // The marketing site starts with no internal dependencies. A later site issue
+  // that genuinely needs core or cloud loosens this entry deliberately.
+  site: ['@provenant/core', '@provenant/verifier', '@provenant/cloud'],
 };
 
 /** Modules that would let the verifier phone home. It must work fully offline. */
@@ -80,9 +83,11 @@ const violations = [];
 
 for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
   // `bin/` ships too (it is listed in package.json "files"), so it is in scope.
+  // `app/` is the Next.js App Router folder in packages/site; its pages and route
+  // handlers ship just as src/ does.
   // `test/` is out of scope by design: verifier/test/cross-impl.test.ts must
   // import core to prove the two implementations agree.
-  const files = [...walk(join(ROOT, 'packages', pkg, 'src')), ...walk(join(ROOT, 'packages', pkg, 'bin'))];
+  const files = ['src', 'bin', 'app'].flatMap((d) => walk(join(ROOT, 'packages', pkg, d)));
 
   for (const file of files) {
     const raw = readFileSync(file, 'utf8');
@@ -139,8 +144,9 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
         }
       }
       // Relative escapes out of the package are the sneaky way to do the same thing.
-      if (spec.startsWith('.') && /(^|\/)\.\.\/\.\.\/(cloud|core)\//.test(spec)) {
-        const target = spec.includes('/cloud/') ? '@provenant/cloud' : '@provenant/core';
+      const escape = spec.startsWith('.') ? /(^|\/)\.\.\/\.\.\/(cloud|core|verifier)\//.exec(spec) : null;
+      if (escape) {
+        const target = `@provenant/${escape[2]}`;
         if (forbidden.includes(target)) {
           violations.push(`${rel}: '${pkg}' must not reach into '${spec}' (relative escape)`);
         }
@@ -195,4 +201,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('  Open-core boundaries intact: core !-> cloud, verifier/src !-> core|cloud, verifier offline.');
+console.log('  Open-core boundaries intact: core !-> cloud, verifier/src !-> core|cloud, site !-> core|verifier|cloud, verifier offline.');
