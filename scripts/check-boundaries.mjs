@@ -26,9 +26,19 @@ const FORBIDDEN = {
   // two implementations drifting apart.
   verifier: ['@provenant/cloud', '@provenant/core'],
   cloud: [],
-  // The marketing site starts with no internal dependencies. A later site issue
-  // that genuinely needs core or cloud loosens this entry deliberately.
-  site: ['@provenant/core', '@provenant/verifier', '@provenant/cloud'],
+  // The marketing site renders its pricing cards from cloud's pricing module, so
+  // it may import cloud. Core and verifier stay forbidden until a site issue
+  // genuinely needs one and loosens this entry deliberately.
+  site: ['@provenant/core', '@provenant/verifier'],
+};
+
+/**
+ * pkg -> other internal packages it may name under the '@provenant/' scope. The
+ * bare-scope check below rejects every other '@provenant/' reference from a
+ * package with forbidden dependencies, so an allowed import has to be listed.
+ */
+const SCOPE_ALLOWED = {
+  site: ['@provenant/cloud'],
 };
 
 /** Modules that would let the verifier phone home. It must work fully offline. */
@@ -116,8 +126,14 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
      */
     if (forbidden.length > 0) {
       for (const m of src.matchAll(/@provenant\//g)) {
-        const tail = src.slice(m.index, m.index + 40);
-        if (!tail.startsWith(`@provenant/${pkg}`)) {
+        const tail = src.slice(m.index, m.index + 80);
+        const spec = tail.split(/['"`\s]/)[0];
+        // An allowed name counts only whole, never as a prefix of a longer name,
+        // and never with a '..' segment that could climb into a forbidden package.
+        const allowed = (SCOPE_ALLOWED[pkg] ?? []).some(
+          (name) => (spec === name || spec.startsWith(name + '/')) && !spec.split('/').includes('..'),
+        );
+        if (!allowed && !tail.startsWith(`@provenant/${pkg}`)) {
           violations.push(
             `${rel}: '${pkg}' must not reference the '@provenant/' scope (found "${tail.split(/['"\`\s]/)[0]}"). ` +
               `Splitting a package name across string literals is not an escape hatch.`,
@@ -201,4 +217,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('  Open-core boundaries intact: core !-> cloud, verifier/src !-> core|cloud, site !-> core|verifier|cloud, verifier offline.');
+console.log('  Open-core boundaries intact: core !-> cloud, verifier/src !-> core|cloud, site !-> core|verifier, verifier offline.');
