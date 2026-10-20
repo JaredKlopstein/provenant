@@ -34,7 +34,9 @@ let pg: PGlite;
 
 beforeAll(async () => {
   pg = await PGlite.create();
-  await pg.exec(readFileSync(new URL('../migrations/0000_magic_link_used.sql', import.meta.url), 'utf8'));
+  for (const migration of ['0000_magic_link_used.sql', '0001_magic_link_rate.sql']) {
+    await pg.exec(readFileSync(new URL(`../migrations/${migration}`, import.meta.url), 'utf8'));
+  }
   pgHolder.db = drizzle({ client: pg, schema: usedTokenSchema });
 });
 
@@ -54,7 +56,9 @@ const DAY = 24 * 60 * MINUTE;
 let fetchMock: Mock;
 let logged: string[];
 
-beforeEach(() => {
+beforeEach(async () => {
+  // Each test starts with fresh send counts; rate-limit.test.ts covers the limits.
+  await pg.exec('TRUNCATE site_magic_link_rate, site_magic_link_used');
   fetchMock = vi.fn(async () => new Response('{"id":"test-message"}', { status: 200 }));
   vi.stubGlobal('fetch', fetchMock);
   logged = [];
