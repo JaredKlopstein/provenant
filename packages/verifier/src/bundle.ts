@@ -54,7 +54,7 @@ export type FailureKind =
   | 'SCHEMA_INVALID' | 'HASH_MISMATCH' | 'LINK_BROKEN' | 'SIGNATURE_INVALID'
   | 'UNKNOWN_AGENT' | 'SEQUENCE_GAP' | 'GENESIS_INVALID' | 'DUPLICATE_RECORD_ID'
   | 'ANCHOR_HEAD_MISMATCH' | 'ANCHOR_INVALID' | 'ANCHOR_CHAIN_MISMATCH'
-  | 'ANCHOR_TEMPORAL_VIOLATION' | 'BUNDLE_MALFORMED';
+  | 'ANCHOR_COUNT_MISMATCH' | 'ANCHOR_TEMPORAL_VIOLATION' | 'BUNDLE_MALFORMED';
 
 export interface Failure {
   seq: number | null;
@@ -262,7 +262,7 @@ export function verifyBundle(input: unknown, opts: VerifyOptions = {}): BundleVe
   const tolerance = opts.backdateToleranceMs ?? DEFAULT_BACKDATE_TOLERANCE_MS;
 
   for (const anchor of bundle.anchors) {
-    const av = verifyAnchor(anchor, bundle, hashAt, verdict, opts);
+    const av = verifyAnchor(anchor, bundle, hashAt, startsAtGenesis ? sorted : null, verdict, opts);
     verdict.anchors.push(av);
 
     if (av.is_evidence && av.proven_time) {
@@ -317,6 +317,8 @@ function verifyAnchor(
   anchor: BundleAnchor,
   bundle: Bundle,
   hashAt: Map<number, string>,
+  /** The bundle's receipts in seq order when they start at genesis, else null. */
+  fromGenesis: BundleReceipt[] | null,
   verdict: BundleVerdict,
   opts: VerifyOptions,
 ): AnchorVerdict {
@@ -358,6 +360,26 @@ function verifyAnchor(
       seq: anchor.statement.seq, record_id: null, kind: 'ANCHOR_CHAIN_MISMATCH',
       message: `anchor belongs to chain ${anchor.statement.chain_id}, not ${bundle.chain_id}; it may have been replayed from another store`,
     });
+  }
+
+  // receipt_count is the whole chain's count at anchor time, so it can only be
+  // reproduced when this bundle holds everything from genesis up to the anchor.
+  if (fromGenesis) {
+    const counted = fromGenesis.filter((r) => r.seq <= anchor.statement.seq).length;
+    if (anchor.statement.receipt_count !== counted) {
+      verdict.failures.push({
+        seq: anchor.statement.seq, record_id: null, kind: 'ANCHOR_COUNT_MISMATCH',
+        message:
+          `the anchor at seq ${anchor.statement.seq} commits to ${String(anchor.statement.receipt_count)} receipt(s), ` +
+          `but this bundle holds ${counted} receipt(s) from seq 0 through seq ${anchor.statement.seq}`,
+        expected: String(anchor.statement.receipt_count), actual: String(counted),
+      });
+    }
+  } else {
+    verdict.warnings.push(
+      `anchor at seq ${anchor.statement.seq}: receipt_count check skipped, because this bundle does not start at seq 0 ` +
+        `and the chain's full count at anchor time cannot be reproduced from it`,
+    );
   }
 
   // 2. The proof itself.
