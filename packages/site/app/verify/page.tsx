@@ -10,10 +10,9 @@ export const metadata: Metadata = {
 // The checkout directory and the CLI file names carry the name, so they derive
 // from BRAND.repository rather than repeating it.
 const REPO_DIR = BRAND.repository.slice(BRAND.repository.lastIndexOf('/') + 1);
-// A path shown in a shell command, not an import: the site imports nothing from the
-// verifier (test/site-app.test.ts). scripts/check-boundaries.mjs rejects any literal
-// path into another package from site source, so it is joined from its parts.
-const VERIFIER_BIN = ['packages', 'verifier', 'bin'].join('/');
+// Shell path for the from-source command. Written as one literal; the boundaries
+// check allows this exact path on the site and no other path into verifier.
+const VERIFIER_BIN = 'packages/verifier/bin';
 const VERIFY = `node ${VERIFIER_BIN}/${REPO_DIR}-verify.mjs examples/sample-evidence/evidence.json`;
 
 // SHA-256 fingerprint of DigiCert Trusted Root G4, as printed in the getting-started

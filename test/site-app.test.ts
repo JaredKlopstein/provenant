@@ -53,7 +53,9 @@ describe('site app folder', () => {
 
   it('never hard-codes the brand name or repository', () => {
     for (const { file, src } of sources) {
-      expect(src, file).not.toMatch(new RegExp(BRAND.name, 'i'));
+      // The npm scope inside an import specifier is a package name, not brand copy.
+      const copy = src.replace(/\bfrom\s+['"][^'"]+['"]/g, '').replace(/\bimport\s*\(\s*['"][^'"]+['"]/g, '');
+      expect(copy, file).not.toMatch(new RegExp(BRAND.name, 'i'));
       expect(src, file).not.toContain('github.com');
     }
   });
@@ -79,15 +81,18 @@ describe('site app folder', () => {
     }
   });
 
-  it('imports nothing from core, verifier or cloud', () => {
-    // Import specifiers only: the verify page shows repository paths inside its commands.
+  it('imports nothing from core or verifier, and cloud only via its pricing module', () => {
+    // Import specifiers only: the verify page shows a repository path in its commands.
     for (const { file, src } of sources) {
       const specifiers = [...src.matchAll(/\bfrom\s+['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]/g)].map(
         (m) => m[1] ?? m[2],
       );
       expect(specifiers.length, file).toBeGreaterThan(0);
       for (const spec of specifiers) {
-        expect(spec, file).not.toMatch(/@provenant\/(core|verifier|cloud)|packages\/(core|verifier|cloud)/);
+        expect(spec, file).not.toMatch(/@provenant\/(core|verifier)|packages\/(core|verifier|cloud)/);
+        if (spec.startsWith('@provenant/')) {
+          expect(spec, file).toBe('@provenant/cloud/src/pricing');
+        }
       }
     }
   });

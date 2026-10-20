@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { PLANS } from '@provenant/cloud/src/pricing';
 import { BRAND } from '../../src/brand';
 
 export const metadata: Metadata = {
@@ -105,9 +106,10 @@ export default function SecurityPage() {
         </table>
         <p>
           The last row is why Cloud anchors continuously: new receipts are batched and the chain head
-          is anchored at most every 15 minutes, which bounds the window in which a truncation goes
-          undetected. Receipts also describe only what an agent chose to record; they make recorded
-          behaviour tamper-evident, not unrecorded behaviour visible.
+          is anchored at most every {PLANS.cloud.maxAnchorIntervalMinutes} minutes, which bounds the
+          window in which a truncation goes undetected. Receipts also describe only what an agent
+          chose to record; they make recorded behaviour tamper-evident, not unrecorded behaviour
+          visible.
         </p>
         <p>
           <Link href="/verify">Verify a bundle yourself</Link>

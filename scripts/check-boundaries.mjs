@@ -27,9 +27,21 @@ const FORBIDDEN = {
   verifier: ['@provenant/cloud', '@provenant/core'],
   cloud: [],
   // The marketing site renders its pricing page from cloud's pricing module, so
-  // cloud is allowed. Core and verifier stay out; a later site issue that
-  // genuinely needs one loosens this entry deliberately.
+  // cloud is allowed. Core and verifier stay forbidden as imports. The one
+  // exception is ALLOWED_PATHS: the verify page prints a shell path.
   site: ['@provenant/core', '@provenant/verifier'],
+};
+
+/**
+ * Quoted path literals a package may contain even though that path's package is
+ * in FORBIDDEN. Each entry is one complete string: the quote sits immediately
+ * before `packages/`, the closing quote ends the path, nothing is concatenated
+ * with `+`, and there is no `..` segment. The site entry allows only the
+ * verifier binary directory the verify page shows in its from-source command.
+ * It does not allow importing verifier, or any other path into it.
+ */
+const ALLOWED_PATHS = {
+  site: ['packages/verifier/bin'],
 };
 
 /**
@@ -40,6 +52,22 @@ const FORBIDDEN = {
 const MAY_NAME = {
   site: ['@provenant/cloud'],
 };
+
+/**
+ * True when the `packages/<name>/` at `index` is one of pkg's ALLOWED_PATHS,
+ * written as a whole quoted literal. A longer string, a join, or a `..` segment
+ * does not qualify.
+ */
+function allowedPathLiteral(src, index, pkg) {
+  const quote = src[index - 1];
+  if (quote !== "'" && quote !== '"' && quote !== '`') return false;
+  const close = src.indexOf(quote, index);
+  if (close === -1) return false;
+  const spec = src.slice(index, close);
+  if (spec.split('/').includes('..')) return false;
+  if (/^\s*\+/.test(src.slice(close + 1))) return false;
+  return (ALLOWED_PATHS[pkg] ?? []).includes(spec);
+}
 
 /**
  * True when the `@provenant/` at `index` starts a reference `pkg` may make: a
@@ -128,9 +156,11 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
       if (src.includes(bad)) {
         violations.push(`${rel}: '${pkg}' must not reference '${bad}' (found anywhere in source)`);
       }
-      // packages/core/... or /packages/core/dist/... in any string form
-      const pathRe = new RegExp(`packages[\\/]${shortName}[\\/]`);
-      if (pathRe.test(src)) {
+      // packages/core/... or /packages/core/dist/... in any string form.
+      // A hit is allowed only when every occurrence is an exact ALLOWED_PATHS literal.
+      const pathRe = new RegExp(`packages[\\/]${shortName}[\\/]`, 'g');
+      const pathHits = [...src.matchAll(pathRe)];
+      if (pathHits.some((hit) => !allowedPathLiteral(src, hit.index, pkg))) {
         violations.push(`${rel}: '${pkg}' must not reference a path into 'packages/${shortName}/'`);
       }
     }
