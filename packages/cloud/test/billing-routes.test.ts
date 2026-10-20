@@ -7,7 +7,7 @@ import {
 } from '@provenant/core';
 import { createCollector } from '../src/collector/server.js';
 import { createBillingRoutes, type BillingCaller, type BillingRoutesOptions } from '../src/billing/routes.js';
-import { stripeCatalog, type StripeLike } from '../src/billing/stripe.js';
+import { stripeCatalog, type StripeLike, type SubscriptionLister } from '../src/billing/stripe.js';
 import { PRICE_ENV } from '../src/billing/config.js';
 
 /*
@@ -43,7 +43,8 @@ function expectNoSecrets(text: string) {
 function fakeStripe() {
   const checkouts: Array<Record<string, unknown>> = [];
   const portals: Array<Record<string, unknown>> = [];
-  const stripe: StripeLike = {
+  const stripe: StripeLike & SubscriptionLister = {
+    subscriptions: { list: async () => ({ data: [] }) },
     checkout: {
       sessions: {
         async create(params) {
@@ -94,11 +95,14 @@ const post = (path: string, body?: unknown) =>
 
 describe('checkout', () => {
   it.each([
-    ['month', 'cloud_month'],
-    ['year', 'cloud_year'],
-  ] as const)('creates a Cloud subscription session billed per %s with the matching price id', async (interval, key) => {
+    // Monthly overage bills on the subscription itself (#64).
+    ['month', [{ price: PRICES.cloud_month, quantity: 1 }, { price: PRICES.overage_bundle }]],
+    ['year', [{ price: PRICES.cloud_year, quantity: 1 }]],
+  ] as const)('creates a Cloud subscription session billed per %s with the matching price ids', async (interval, lineItems) => {
     const r = routes();
-    const res = await r.checkout(post('/billing/checkout', { plan: 'cloud', interval }));
+    const res = await r.checkout(
+      post('/billing/checkout', { plan: 'cloud', interval, client_reference_id: 'urn:provenant:agent:test-account' }),
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; result: { url: string; mode: string } };
     expect(body.ok).toBe(true);
@@ -107,7 +111,7 @@ describe('checkout', () => {
     expect(r.checkouts).toHaveLength(1);
     expect(r.checkouts[0]).toMatchObject({
       mode: 'subscription',
-      line_items: [{ price: PRICES[key], quantity: 1 }],
+      line_items: lineItems,
       success_url: URLS.successUrl,
       cancel_url: URLS.cancelUrl,
     });
@@ -261,7 +265,9 @@ describe('redaction', () => {
     r.stripe.checkout.sessions.create = async () => {
       throw leaky();
     };
-    const res = await r.checkout(post('/billing/checkout', { plan: 'cloud', interval: 'month' }));
+    const res = await r.checkout(
+      post('/billing/checkout', { plan: 'cloud', interval: 'month', client_reference_id: 'urn:provenant:agent:test-account' }),
+    );
     expect(res.status).toBe(502);
     const text = await res.text();
     expect(text).toMatch(/Nothing was charged/);

@@ -23,24 +23,40 @@
  *    link. A conflicting one changes nothing and logs one warning, without
  *    either id.
  *
+ *  - A customer never keeps two active subscriptions carrying the metered
+ *    overage price: meter events are scoped to the customer, so Stripe would
+ *    bill every bundle on both. Checkout refuses a second one (routes.ts), but
+ *    two checkouts opened at once can both pass that check. So on
+ *    checkout.session.completed and customer.subscription.created / .updated
+ *    the customer's active subscriptions are listed again, and each newer one
+ *    carrying the metered price has its paid latest-invoice charge refunded in
+ *    full and is cancelled with no proration, and one alert is logged. Only an
+ *    active subscription is acted on, a refund is made only when the charge
+ *    has none (idempotency key: the charge id), and the claim is keyed on the
+ *    cancelled subscription id, so a replay does all three at most once.
+ *
  *  - DATABASE_URL comes from the environment through the billing config, and
  *    the Neon connection opens on the first verified event. Nothing here runs
  *    a migration.
  *
  * Logs never carry the payload, the signature header, the webhook secret,
  * DATABASE_URL or a Stripe or account id: every line is redacted against the
- * config and against the ids in the event being handled.
+ * config and against the ids in the event being handled. The one exception is
+ * the duplicate-subscription alert, which names the customer and the
+ * subscriptions so the owner can act on it, and nothing else: no price id,
+ * key or card data.
  */
 import Stripe from 'stripe';
 import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { PLANS, type PlanId } from '../pricing.js';
-import { loadBillingConfig, redact, type BillingConfig, type BillingMode } from './config.js';
+import { loadBillingConfig, createStripeClient, redact, type BillingConfig, type BillingMode } from './config.js';
 import { billingSchema } from './schema.js';
 import {
-  applyEventOnce, linkCustomer, saveSubscription, updateSubscription, creditBundle,
+  applyEventOnce, linkCustomer, saveSubscription, updateSubscription, creditBundle, claimDuplicateCancel,
   type BillingDb, type BillingTx, type LinkResult,
 } from './store.js';
+import { activeSubscriptions, carriesPrice, type SubscriptionLister, type SubscriptionSummary } from './stripe.js';
 import type { BillingHandler } from './routes.js';
 
 /** Where the collector mounts the webhook. */
@@ -49,6 +65,7 @@ export const BILLING_WEBHOOK_PATH = '/billing/webhook';
 /** The events this webhook applies. Anything else is acknowledged and ignored. */
 export const BILLING_WEBHOOK_EVENTS = [
   'checkout.session.completed',
+  'customer.subscription.created',
   'customer.subscription.updated',
   'customer.subscription.deleted',
   'invoice.paid',
@@ -60,10 +77,37 @@ export interface BillingWebhookLog {
   error(line: string): void;
 }
 
+type Ref = string | { id: string } | null | undefined;
+
+/** The slice of Stripe the duplicate-metered guard uses. Injected; tests pass a fake. */
+export interface DuplicateGuardStripe {
+  subscriptions: SubscriptionLister['subscriptions'] & {
+    cancel(id: string, params: Record<string, unknown>): Promise<{ id: string; status: string }>;
+  };
+  invoices: {
+    retrieve(id: string, params: Record<string, unknown>): Promise<{
+      id: string;
+      payments?: {
+        data: Array<{
+          status: string;
+          payment: { charge?: Ref; payment_intent?: string | { id: string; latest_charge?: Ref } | null };
+        }>;
+      } | null;
+    }>;
+  };
+  refunds: {
+    list(params: Record<string, unknown>): Promise<{ data: Array<{ id: string }> }>;
+    create(params: Record<string, unknown>, options: { idempotencyKey: string }): Promise<{ id: string }>;
+  };
+}
+
 export interface BillingWebhookOptions {
   /** Defaults to process.env. Read once, when the webhook is created. Needs
-   *  STRIPE_WEBHOOK_SECRET and DATABASE_URL. */
+   *  STRIPE_WEBHOOK_SECRET, DATABASE_URL, and, for the duplicate-metered
+   *  guard, STRIPE_SECRET_KEY and STRIPE_PRICE_BUNDLE_OVERAGE. */
   env?: Record<string, string | undefined>;
+  /** Defaults to a real Stripe client for the loaded config. Tests inject a fake. */
+  stripe?: DuplicateGuardStripe;
   /** Opens the database for DATABASE_URL. Called once, on the first verified
    *  event. Defaults to the Neon serverless driver; tests pass PGlite. */
   connect?: (databaseUrl: string) => BillingDb | Promise<BillingDb>;
@@ -81,15 +125,34 @@ const MAX_BODY_BYTES = 1024 * 1024;
 const REDACTED = '[redacted]';
 /** Stripe object ids, by prefix. Logged lines never carry one. */
 const STRIPE_ID = /\b(cus|sub|si|cs|pi|in|il|ii|ch|evt|price|prod|pm|seti|src|card)_[A-Za-z0-9]+/g;
+/** The same, less the customer and subscription ids the alert names. */
+const ALERT_REDACTED_ID = /\b(si|cs|pi|in|il|ii|ch|evt|price|prod|pm|seti|src|card)_[A-Za-z0-9]+/g;
+
+/** What the duplicate-metered guard needs. */
+interface Guard {
+  stripe: DuplicateGuardStripe;
+  overagePriceId: string;
+  alert(line: string): void;
+}
 
 /**
- * Loads the webhook secret and DATABASE_URL from the environment and builds the
- * handler. Throws, naming the variables and no values, when either is missing
- * or malformed, so a server that calls this at startup refuses to start.
+ * Loads the webhook secret, DATABASE_URL, the Stripe key and the overage price
+ * id from the environment and builds the handler. Throws, naming the variables
+ * and no values, when any is missing or malformed, so a server that calls this
+ * at startup refuses to start rather than run without the guard.
  */
 export function createBillingWebhook(opts: BillingWebhookOptions = {}): BillingWebhook {
-  const config = loadBillingConfig(opts.env ?? process.env, ['webhook', 'database']);
+  const config = loadBillingConfig(
+    opts.env ?? process.env,
+    ['webhook', 'database', 'stripe', 'prices'],
+    { prices: ['overage_bundle'] },
+  );
   const sink = opts.log ?? { warn: (l: string) => console.warn(l), error: (l: string) => console.error(l) };
+  const guard: Guard = {
+    stripe: opts.stripe ?? (createStripeClient(config) as unknown as DuplicateGuardStripe),
+    overagePriceId: config.prices.overage_bundle!,
+    alert: (line) => sink.error(config.redact(redact(line, [config.prices.overage_bundle!])).replace(ALERT_REDACTED_ID, REDACTED)),
+  };
   const connect = opts.connect ?? ((url: string) => connectNeon(url, (l) => sink.error(scrub(config, l, []))));
 
   let db: Promise<BillingDb> | null = null;
@@ -105,7 +168,7 @@ export function createBillingWebhook(opts: BillingWebhookOptions = {}): BillingW
 
   return {
     mode: config.mode,
-    webhook: (request) => handle(config, sink, database, request),
+    webhook: (request) => handle(config, sink, database, guard, request),
   };
 }
 
@@ -122,6 +185,7 @@ async function handle(
   config: BillingConfig,
   sink: BillingWebhookLog,
   database: () => Promise<BillingDb>,
+  guard: Guard,
   request: Request,
 ): Promise<Response> {
   if (request.method !== 'POST') {
@@ -158,7 +222,7 @@ async function handle(
   }
 
   try {
-    const outcome = await applyEventOnce(await database(), event, (tx) => apply(tx, event, log));
+    const outcome = await applyEventOnce(await database(), event, (tx) => apply(tx, event, log, guard));
     return ok({ type: event.type, handled: true, duplicate: outcome.duplicate });
   } catch (err) {
     if (err instanceof NotYetKnown) {
@@ -177,12 +241,21 @@ const SIGNATURE_FIX =
 /** A subscription event arrived before the event that records the subscription. */
 class NotYetKnown extends Error {}
 
-async function apply(tx: BillingTx, event: Stripe.Event, log: BillingWebhookLog): Promise<void> {
+async function apply(tx: BillingTx, event: Stripe.Event, log: BillingWebhookLog, guard: Guard): Promise<void> {
   switch (event.type) {
-    case 'checkout.session.completed':
-      return checkoutCompleted(tx, event.data.object, log);
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      await checkoutCompleted(tx, session, log);
+      // The session does not list its items; the guard reads them from Stripe.
+      const customer = idOf(session.customer);
+      if (session.mode === 'subscription' && customer) await cancelDuplicateMetered(tx, guard, customer);
+      return;
+    }
+    case 'customer.subscription.created':
+      return guardSubscription(tx, guard, event.data.object);
     case 'customer.subscription.updated':
-      return saveSubscription(tx, subscriptionState(event.data.object), 'upsert');
+      await saveSubscription(tx, subscriptionState(event.data.object), 'upsert');
+      return guardSubscription(tx, guard, event.data.object);
     case 'customer.subscription.deleted':
       return saveSubscription(tx, { ...subscriptionState(event.data.object), status: 'canceled' }, 'upsert');
     case 'invoice.paid': {
@@ -251,6 +324,58 @@ function mismatchWarning(link: 'customer_linked_elsewhere' | 'account_linked_els
     'No link was changed and no customer moved account. Look the checkout session up in the Stripe ' +
     'dashboard if this was not expected.'
   );
+}
+
+/** Runs the guard when an active subscription carrying the metered price appears. */
+async function guardSubscription(tx: BillingTx, guard: Guard, sub: Stripe.Subscription): Promise<void> {
+  const customer = idOf(sub.customer);
+  if (sub.status !== 'active' || !customer || !sub.items.data.some((i) => i.price.id === guard.overagePriceId)) return;
+  await cancelDuplicateMetered(tx, guard, customer);
+}
+
+/**
+ * Keeps the customer's oldest active subscription carrying the metered price.
+ * Each newer one is refunded, then cancelled, then alerted on, once: refund
+ * first, so a failure part way leaves the subscription active and the retry
+ * finishes the job.
+ */
+async function cancelDuplicateMetered(tx: BillingTx, guard: Guard, customer: string): Promise<void> {
+  const metered = (await activeSubscriptions(guard.stripe, customer))
+    .filter((s) => carriesPrice(s, guard.overagePriceId))
+    .sort((a, b) => a.created - b.created || a.id.localeCompare(b.id));
+  const [kept, ...newer] = metered;
+  for (const sub of newer) {
+    if (!(await claimDuplicateCancel(tx, sub.id))) continue;
+    const refunded = await refundLatestCharge(guard.stripe, sub);
+    await guard.stripe.subscriptions.cancel(sub.id, { prorate: false, invoice_now: false });
+    guard.alert(
+      `billing webhook: alert: customer ${customer} had two active subscriptions carrying the metered ` +
+        `overage price, so every overage bundle would bill twice. Cancelled the newer, ${sub.id}, at once ` +
+        `with no proration${refunded ? ', and refunded its paid charge in full' : '; it had no paid charge to refund'}. ` +
+        `Kept ${kept!.id}. Tell the customer; nothing else needs doing.`,
+    );
+  }
+}
+
+/** Refunds, in full, each paid charge on the subscription's latest invoice
+ *  that has no refund yet. True when there was a paid charge. */
+async function refundLatestCharge(stripe: DuplicateGuardStripe, sub: SubscriptionSummary): Promise<boolean> {
+  const invoiceId = idOf(sub.latest_invoice);
+  if (!invoiceId) return false;
+  // Stripe returns an invoice's payments only when asked for them.
+  const invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payments', 'payments.data.payment.payment_intent'] });
+  let paid = false;
+  for (const { status, payment } of invoice.payments?.data ?? []) {
+    if (status !== 'paid') continue;
+    const intent = payment.payment_intent;
+    const charge = idOf(payment.charge) ?? (intent && typeof intent === 'object' ? idOf(intent.latest_charge) : null);
+    if (!charge) throw new Error('a paid invoice payment carries no charge to refund');
+    paid = true;
+    const existing = await stripe.refunds.list({ charge, limit: 1 });
+    if (existing.data.length) continue;
+    await stripe.refunds.create({ charge, reason: 'duplicate' }, { idempotencyKey: charge });
+  }
+  return paid;
 }
 
 function subscriptionState(sub: Stripe.Subscription) {

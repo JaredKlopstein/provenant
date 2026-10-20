@@ -35,6 +35,40 @@ export interface StripeLike {
   };
 }
 
+/** The fields of a Stripe subscription the duplicate-metered checks read. */
+export interface SubscriptionSummary {
+  id: string;
+  status: string;
+  /** Unix seconds. */
+  created: number;
+  metadata?: Record<string, string> | null;
+  items: { data: Array<{ price: { id: string } }> };
+  latest_invoice?: string | { id: string } | null;
+}
+
+/** Listing a customer's subscriptions. Injected like StripeLike. */
+export interface SubscriptionLister {
+  subscriptions: {
+    list(params: Record<string, unknown>): Promise<{ data: SubscriptionSummary[] }>;
+  };
+}
+
+/**
+ * Meter events are scoped to the customer, so Stripe bills them on every
+ * active subscription item that carries the metered price. A customer must
+ * never hold two.
+ */
+export function carriesPrice(sub: SubscriptionSummary, priceId: string): boolean {
+  return sub.items.data.some((item) => item.price.id === priceId);
+}
+
+/** The customer's active subscriptions. One page of 100: a customer holds a
+ *  handful at most. */
+export async function activeSubscriptions(stripe: SubscriptionLister, customer: string): Promise<SubscriptionSummary[]> {
+  const page = await stripe.subscriptions.list({ customer, status: 'active', limit: 100 });
+  return page.data;
+}
+
 export interface Usage {
   /** Distinct agent identities retained inside the plan's retention window.
    *  This is THE billable unit. */
@@ -144,6 +178,11 @@ export interface SubscriptionCheckoutOptions extends CheckoutBase {
   interval: BillingInterval;
   /** Optional Price id for metered extra identities. */
   extraIdentityPriceId?: string;
+  /** The metered overage bundle Price id. Added to a monthly subscription
+   *  only, so the overage reported against it is invoiced; Stripe allows one
+   *  interval per subscription, so annual overage bills on a separate monthly
+   *  subscription instead (overage.ts). */
+  overagePriceId?: string;
 }
 
 /** A single pay-as-you-go evidence bundle, paid once, no subscription. */
@@ -199,6 +238,8 @@ export async function createCheckoutSession(
   }
 
   const lineItems: Array<Record<string, unknown>> = [{ price: opts.priceId, quantity: 1 }];
+  // Metered: Stripe takes no quantity, it bills the meter's count.
+  if (opts.interval === 'month' && opts.overagePriceId) lineItems.push({ price: opts.overagePriceId });
   if (opts.extraIdentityPriceId) lineItems.push({ price: opts.extraIdentityPriceId });
 
   // Annual overage is charged to the card saved here with no further consent

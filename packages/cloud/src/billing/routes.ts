@@ -11,6 +11,15 @@
  *    `client_reference_id` (the Provenant account id) and forwards it to
  *    Stripe, so the webhook can link the new Stripe customer to the account.
  *
+ *  - A Cloud subscription is sold once per customer. Meter events are scoped
+ *    to the Stripe customer, so a second subscription carrying the metered
+ *    overage price would bill the same bundles twice. Before a Cloud session
+ *    is created, the customer linked to `client_reference_id` is looked up
+ *    and its active subscriptions listed; one that is a Cloud subscription or
+ *    carries the overage price gets a 409 pointing to the billing portal.
+ *    Monthly checkout needs `client_reference_id` for that reason. The webhook
+ *    catches two checkouts that race past this check (webhook.ts).
+ *
  *  - The billing portal is for an authenticated caller only. Authentication is
  *    injected: the collector passes its own RFC 9421 check. The customer lookup
  *    is injected too; the webhook-and-persistence work backs it with a store.
@@ -22,7 +31,10 @@
 import { z } from 'zod';
 import { ProvenantError } from '@provenant/core';
 import { PLANS, type PlanId } from '../pricing.js';
-import { createCheckoutSession, createPortalSession, type BillingInterval, type StripeLike } from './stripe.js';
+import {
+  createCheckoutSession, createPortalSession, carriesPrice, activeSubscriptions,
+  type BillingInterval, type StripeLike, type SubscriptionLister, type SubscriptionSummary,
+} from './stripe.js';
 import {
   loadBillingConfig, createStripeClient, redact, PRICE_ENV,
   type BillingConfig, type BillingMode, type CatalogKey,
@@ -58,7 +70,7 @@ export interface BillingRoutesOptions {
   /** Defaults to process.env. Read once, when the routes are created. */
   env?: Record<string, string | undefined>;
   /** Defaults to a real Stripe client for the loaded config. Tests inject a fake. */
-  stripe?: StripeLike;
+  stripe?: StripeLike & SubscriptionLister;
   customers: CustomerLookup;
   authenticate: Authenticate;
   successUrl: string;
@@ -87,8 +99,10 @@ const PRICE_ID = /\bprice_[A-Za-z0-9]+/g;
  * accident.
  */
 export function createBillingRoutes(opts: BillingRoutesOptions): BillingRoutes {
-  const config = loadBillingConfig(opts.env ?? process.env, ['stripe', 'prices']);
-  const stripe = opts.stripe ?? createStripeClient(config);
+  // Without the overage price only monthly checkout is refused, per request:
+  // annual and bundle checkout do not sell it.
+  const config = loadBillingConfig(opts.env ?? process.env, ['stripe', 'prices'], { optionalPrices: ['overage_bundle'] });
+  const stripe = opts.stripe ?? (createStripeClient(config) as unknown as StripeLike & SubscriptionLister);
   const log = opts.log ?? ((line: string) => console.error(line));
   const ctx: Context = { config, stripe, log: (line) => log(scrub(config, line)) };
   return {
@@ -100,7 +114,7 @@ export function createBillingRoutes(opts: BillingRoutesOptions): BillingRoutes {
 
 interface Context {
   config: BillingConfig;
-  stripe: StripeLike;
+  stripe: StripeLike & SubscriptionLister;
   log: (line: string) => void;
 }
 
@@ -112,9 +126,9 @@ const CheckoutRequest = z.strictObject({
 });
 
 const CHECKOUT_EXAMPLES =
-  'POST {"plan":"cloud","interval":"month"} or {"plan":"cloud","interval":"year"} for the Cloud ' +
-  'subscription, or {"kind":"payg_bundle"} for one evidence bundle. Add "client_reference_id" ' +
-  'with your Provenant account id to link the purchase to your account.';
+  'POST {"plan":"cloud","interval":"month","client_reference_id":"<your Provenant account id>"} or ' +
+  '{"plan":"cloud","interval":"year"} for the Cloud subscription, or {"kind":"payg_bundle"} for one ' +
+  'evidence bundle. "client_reference_id" links the purchase to your account; monthly checkout requires it.';
 
 async function checkout(ctx: Context, opts: BillingRoutesOptions, request: Request): Promise<Response> {
   if (request.method !== 'POST') return methodNotAllowed(request.method);
@@ -126,6 +140,22 @@ async function checkout(ctx: Context, opts: BillingRoutesOptions, request: Reque
     const key: CatalogKey = input.kind === 'payg_bundle' ? 'payg_bundle' : `cloud_${input.interval}`;
     const priceId = ctx.config.prices[key];
     if (!priceId) return notConfigured(key);
+    // A monthly plan whose overage cannot bill is not sold.
+    const overagePriceId = ctx.config.prices.overage_bundle;
+    if (input.kind === 'subscription' && input.interval === 'month' && !overagePriceId) {
+      return notConfigured('overage_bundle');
+    }
+
+    if (input.kind === 'subscription' && input.clientReferenceId) {
+      let existing: SubscriptionSummary[];
+      try {
+        existing = await existingSubscriptions(ctx, opts, input.clientReferenceId);
+      } catch (err) {
+        ctx.log(`billing checkout: Stripe refused to list the customer's subscriptions: ${describe(err)}`);
+        return upstream('checkout session');
+      }
+      if (existing.some((sub) => conflicts(ctx.config, sub))) return alreadySubscribed();
+    }
 
     const common = {
       priceId,
@@ -139,7 +169,10 @@ async function checkout(ctx: Context, opts: BillingRoutesOptions, request: Reque
         ctx.stripe,
         input.kind === 'payg_bundle'
           ? { kind: 'payg_bundle', ...common }
-          : { kind: 'subscription', planId: 'cloud', interval: input.interval, ...common },
+          : {
+              kind: 'subscription', planId: 'cloud', interval: input.interval, ...common,
+              ...(input.interval === 'month' ? { overagePriceId } : {}),
+            },
       );
     } catch (err) {
       ctx.log(`billing checkout: Stripe refused to create a session: ${describe(err)}`);
@@ -158,6 +191,26 @@ async function checkout(ctx: Context, opts: BillingRoutesOptions, request: Reque
     ctx.log(`billing checkout: ${describe(err)}`);
     return internal();
   }
+}
+
+/** The active subscriptions of the Stripe customer linked to the account, or
+ *  none when no customer is linked yet. */
+async function existingSubscriptions(ctx: Context, opts: BillingRoutesOptions, accountId: string): Promise<SubscriptionSummary[]> {
+  // The lookup keys on the account id, which is the account's agent id. A
+  // public checkout is not signed, so there is no key id.
+  const customer = await opts.customers.stripeCustomerId({ keyId: '', agentId: accountId });
+  return customer ? activeSubscriptions(ctx.stripe, customer) : [];
+}
+
+/** A Cloud subscription, monthly or annual, or anything carrying the metered
+ *  overage price (an annual customer's separate overage subscription). A new
+ *  Cloud subscription beside either would bill the same overage twice. */
+function conflicts(config: BillingConfig, sub: SubscriptionSummary): boolean {
+  const { cloud_month: month, cloud_year: year, overage_bundle: overage } = config.prices;
+  return (
+    sub.metadata?.provenant_plan === 'cloud' ||
+    [month, year, overage].some((price) => !!price && carriesPrice(sub, price))
+  );
 }
 
 type ParsedCheckout =
@@ -206,6 +259,12 @@ function parseCheckout(body: Uint8Array): ParsedCheckout {
   }
   if (interval !== 'month' && interval !== 'year') {
     throw invalid('interval must be "month" or "year".');
+  }
+  if (interval === 'month' && !ref) {
+    throw invalid(
+      'Monthly Cloud checkout needs client_reference_id, your Provenant account id, so an existing ' +
+        'subscription can be checked first and no overage is billed twice.',
+    );
   }
   return { kind, interval, ...clientReferenceId };
 }
@@ -329,6 +388,23 @@ function notConfigured(key: CatalogKey): Response {
       retryable: false,
       details: { variables: [PRICE_ENV[key]] },
       fix: { note: `The operator must set ${PRICE_ENV[key]}; provenant-cloud billing sync prints its value.` },
+    },
+  });
+}
+
+function alreadySubscribed(): Response {
+  return json(409, {
+    error: {
+      code: 'ALREADY_SUBSCRIBED',
+      message:
+        'This account already has an active Cloud subscription or overage billing, and a second one would ' +
+        'bill the same evidence bundles twice. No checkout session was created. Nothing was charged.',
+      retryable: false,
+      fix: {
+        note:
+          `Change, switch or cancel the existing plan in the billing portal: POST ${BILLING_PATHS.portal}, ` +
+          "signed by the account's agent.",
+      },
     },
   });
 }

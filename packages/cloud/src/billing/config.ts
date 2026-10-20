@@ -45,6 +45,15 @@ export const METER_EVENT_ENV = 'STRIPE_METER_EVENT_NAME';
  *  reporting needs the meter event name as well. */
 export type BillingNeed = 'stripe' | 'webhook' | 'database' | 'prices' | 'meter';
 
+/** Narrows the 'prices' need. */
+export interface BillingConfigOptions {
+  /** The prices to read. Defaults to every one in PRICE_ENV. */
+  prices?: readonly CatalogKey[];
+  /** Of those, the ones that may be left unset. One that is set but
+   *  malformed is still refused. */
+  optionalPrices?: readonly CatalogKey[];
+}
+
 export interface BillingConfig {
   mode: BillingMode;
   stripeSecretKey?: string;
@@ -151,7 +160,11 @@ function configError(problems: string[], variables: string[]): ProvenantError {
  * Reads and validates billing config for the given needs. Throws a
  * ProvenantError naming every missing or malformed variable, and no value.
  */
-export function loadBillingConfig(env: Env = process.env, needs: readonly BillingNeed[] = ['stripe']): BillingConfig {
+export function loadBillingConfig(
+  env: Env = process.env,
+  needs: readonly BillingNeed[] = ['stripe'],
+  opts: BillingConfigOptions = {},
+): BillingConfig {
   const problems: string[] = [];
   const variables: string[] = [];
   const read = <T>(name: string, schema: z.ZodType<T>, value: unknown): T | undefined => {
@@ -183,6 +196,8 @@ export function loadBillingConfig(env: Env = process.env, needs: readonly Billin
   const prices: Partial<Record<CatalogKey, string>> = {};
   if (needs.includes('prices')) {
     for (const [key, name] of Object.entries(PRICE_ENV) as Array<[CatalogKey, string]>) {
+      if (opts.prices && !opts.prices.includes(key)) continue;
+      if (opts.optionalPrices?.includes(key) && !env[name]) continue;
       const v = read(name, schemas.price(name), env[name]);
       if (v) prices[key] = v;
     }
