@@ -422,8 +422,8 @@ describe('configuration and secrets', () => {
 });
 
 describe('checkout page', () => {
-  it('redirects to signup when no one is signed in', async () => {
-    expect(await redirectOf(() => CheckoutPage({ searchParams: Promise.resolve({}) }))).toBe('/signup');
+  it('redirects to signup for checkout when no one is signed in', async () => {
+    expect(await redirectOf(() => CheckoutPage({ searchParams: Promise.resolve({}) }))).toBe('/signup?for=checkout');
   });
 
   it('offers Cloud monthly, Cloud annual and the bundle as form posts, and links Enterprise', async () => {
@@ -474,8 +474,8 @@ describe('welcome page', () => {
     return renderToStaticMarkup(await WelcomePage({ searchParams: Promise.resolve(params) }));
   };
 
-  it('redirects to signup when no one is signed in', async () => {
-    expect(await redirectOf(() => WelcomePage({ searchParams: Promise.resolve({ session_id: 'cs_test_abc' }) }))).toBe('/signup');
+  it('redirects to signup for welcome when no one is signed in', async () => {
+    expect(await redirectOf(() => WelcomePage({ searchParams: Promise.resolve({ session_id: 'cs_test_abc' }) }))).toBe('/signup?for=welcome');
   });
 
   it('shows the from-source commands exactly as the getting-started guide has them', async () => {

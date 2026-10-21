@@ -59,7 +59,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function WelcomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const account = await signedInFromCookie((await headers()).get('cookie'));
-  if (!account) redirect(SIGNUP_PATH);
+  if (!account) redirect(`${SIGNUP_PATH}?for=welcome`);
 
   const { session_id: sessionId } = await searchParams;
   const checkedOut = typeof sessionId === 'string' && CHECKOUT_SESSION_ID.test(sessionId);
