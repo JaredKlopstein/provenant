@@ -140,39 +140,61 @@ const flip = (text: string, at: number) =>
 
 const parts = (token: string) => token.split('.') as [string, string];
 
+/** Configuration names that must never reach a client. */
+const NAMES = ['MAGIC_LINK', 'SESSION_SECRET', 'EMAIL_', 'SITE_BASE_URL', 'VERCEL_URL', 'BRAND', 'DATABASE_URL', 'migrations', '.sql'];
+
+/**
+ * Checks a sign-in-unavailable answer: the given status, a request id, nothing in
+ * any header or the body naming configuration, and the cause logged under the id.
+ */
+async function expectUnavailable(res: Response, status: number, cause: string): Promise<void> {
+  expect(res.status).toBe(status);
+  const requestId = res.headers.get('x-request-id');
+  expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+  const body = await res.text();
+  const everything = [...res.headers].map(([k, v]) => `${k}: ${v}`).join('\n') + '\n' + body;
+  for (const name of NAMES) expect(everything).not.toContain(name);
+  if (status !== 303) {
+    expect(body).toContain('Sign-in is unavailable right now.');
+    expect(body).toContain(requestId);
+  }
+  expect(logged.find((line) => line.includes(requestId!))).toContain(cause);
+}
+
 describe('launch guard', () => {
   it.each([undefined, '', '0', 'true', 'yes'])('MAGIC_LINK_ENABLED=%j: 503 and nothing sent', async (value) => {
     if (value === undefined) delete process.env.MAGIC_LINK_ENABLED;
     else vi.stubEnv('MAGIC_LINK_ENABLED', value);
     const res = await sendJson({ email: 'ada@example.com' });
-    expect(res.status).toBe(503);
-    const { error } = await res.json();
+    const { error, requestId } = await res.clone().json();
     expect(error.code).toBe('SIGNUP_UNAVAILABLE');
-    expect(error.fix.note).toContain('MAGIC_LINK_ENABLED=1');
+    expect(error.retryable).toBe(false);
+    expect(requestId).toBe(res.headers.get('x-request-id'));
+    expect(error.fix.note).toContain(requestId);
+    await expectUnavailable(res, 503, 'MAGIC_LINK_ENABLED');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('redirects a form post back with signup=unavailable', async () => {
+  it('redirects a form post back with signup=unavailable and a logged request id', async () => {
     vi.stubEnv('MAGIC_LINK_ENABLED', '');
     const res = await sendForm({ email: 'ada@example.com' });
-    expect(res.status).toBe(303);
     expect(res.headers.get('location')).toBe('/signup?signup=unavailable');
+    await expectUnavailable(res, 303, 'MAGIC_LINK_ENABLED');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
 describe('configuration', () => {
-  it.each(AUTH_ENV)('with %s unset, both routes answer 503 and nothing is sent', async (name) => {
+  it.each(AUTH_ENV)('with %s unset, both routes answer a generic 503 and nothing is sent', async (name) => {
     const token = await createLinkToken('ada@example.com', SECRET);
     vi.stubEnv(name, '');
 
-    const send = await sendJson({ email: 'ada@example.com' });
-    expect(send.status).toBe(503);
-    expect((await send.json()).error.fix.note).toContain(name);
+    await expectUnavailable(await sendJson({ email: 'ada@example.com' }), 503, `missing ${name}`);
+    await expectUnavailable(await sendForm({ email: 'ada@example.com' }), 303, `missing ${name}`);
 
     const click = await callback({ token });
-    expect(click.status).toBe(503);
     expect(click.headers.get('set-cookie')).toBeNull();
+    await expectUnavailable(click, 503, `missing ${name}`);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(logged.join('\n')).toContain(name);
   });
@@ -350,8 +372,8 @@ describe('link base', () => {
   it('refuses with 503 and sends nothing when there is no base', async () => {
     vi.stubEnv('SITE_BASE_URL', '');
     const res = await sendJson({ email: 'ada@example.com' }, { host: 'attacker.example' });
-    expect(res.status).toBe(503);
-    expect((await res.json()).error.fix.note).toContain('SITE_BASE_URL');
+    await expectUnavailable(res, 503, 'SITE_BASE_URL');
+    await expectUnavailable(await sendForm({ email: 'ada@example.com' }), 303, 'SITE_BASE_URL');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
