@@ -8,7 +8,7 @@
  * carry the URL.
  */
 import { BRAND } from '../brand';
-import { CALLBACK_PATH, LINK_TTL_SECONDS, SESSION_SECRET_ENV, sessionSecret } from './session';
+import { CONFIRM_PATH, LINK_TTL_SECONDS, SESSION_SECRET_ENV, sessionSecret } from './session';
 
 export const MAGIC_LINK_PATH = '/api/auth/magic-link';
 export const SIGNUP_PATH = '/signup';
@@ -82,9 +82,13 @@ export function linkBase(): string | null {
   return vercel ? hostOrigin(vercel) : null;
 }
 
-/** The base, the fixed callback path and the token. Nothing else goes in the link. */
+/**
+ * The base, the fixed confirm-page path and the token. Nothing else goes in the
+ * link. Opening it only shows a "Sign in" button, so a mail scanner that fetches
+ * every link cannot use it up.
+ */
 export function magicLink(base: string, token: string): string {
-  const url = new URL(CALLBACK_PATH, base);
+  const url = new URL(CONFIRM_PATH, base);
   url.searchParams.set('token', token);
   return url.toString();
 }

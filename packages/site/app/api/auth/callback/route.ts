@@ -1,38 +1,57 @@
 /**
- * Magic-link callback: the link in the sign-in email lands here.
+ * Magic-link callback.
  *
- * A genuine, unexpired token that has not been used before creates the identity
- * (the account id is the hash of the email it was signed for), sets a 7-day
- * session cookie and redirects to the checkout page. The destination is fixed: no
- * `next`, `redirect` or other parameter can change it. A bad or expired token goes
- * back to the signup page to ask again, before the database is touched. A link
- * that was already used is refused, so each link signs in once.
+ * GET never signs anyone in and never uses up a link: mail scanners and link
+ * previewers fetch every URL they see. An old-style link that lands here with GET
+ * is sent on to the confirm page, which shows a "Sign in" button.
+ *
+ * POST is that button. It must come from this site (the CSRF check in
+ * src/auth/confirm.ts). A genuine, unexpired token that has not been used before
+ * creates the identity (the account id is the hash of the email it was signed
+ * for), sets a 7-day session cookie and redirects to the checkout page. The
+ * destination is fixed: no `next`, `redirect` or other parameter can change it. A
+ * bad, expired or already-used token goes back to the signup page with the same
+ * generic message, so the response never says which.
  *
  * The token is never logged. Responses are no-store so no cache keeps the link.
  */
 import { AUTH_ENV, SIGNUP_PATH, authConfig } from '../../../../src/auth/email';
-import { CHECKOUT_PATH, accountIdFor, sessionCookie, verifyLinkToken } from '../../../../src/auth/session';
+import { fromThisSite } from '../../../../src/auth/confirm';
+import { CHECKOUT_PATH, CONFIRM_PATH, accountIdFor, sessionCookie, verifyLinkToken } from '../../../../src/auth/session';
 import { DATABASE_URL_ENV, markTokenUsed, usedTokenDb } from '../../../../src/auth/used-tokens';
 
 const NO_STORE = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } as const;
 const MIGRATION = 'packages/site/migrations/0000_magic_link_used.sql';
+const MAX_BODY_BYTES = 4 * 1024;
+const LINK_NOT_VALID = `${SIGNUP_PATH}?signup=expired`;
 
 const text = (status: number, body: string) =>
   new Response(`${body}\n`, { status, headers: { ...NO_STORE, 'content-type': 'text/plain; charset=utf-8' } });
 
+const seeOther = (location: string, headers: Record<string, string> = {}) =>
+  new Response(null, { status: 303, headers: { ...NO_STORE, location, ...headers } });
+
+/** Forwards to the confirm page. Reads nothing and writes nothing. */
 export async function GET(request: Request): Promise<Response> {
+  const token = new URL(request.url).searchParams.get('token');
+  if (!token) return seeOther(LINK_NOT_VALID);
+  return seeOther(`${CONFIRM_PATH}?${new URLSearchParams({ token })}`);
+}
+
+export async function POST(request: Request): Promise<Response> {
   const config = authConfig();
   const db = usedTokenDb();
   if (!config || !db) {
     const missing = [...(config ? [] : AUTH_ENV), ...(db ? [] : [DATABASE_URL_ENV])];
     return text(503, `Sign-in is not configured on this server yet. The site operator must set ${missing.join(', ')}.`);
   }
-
-  const token = new URL(request.url).searchParams.get('token');
-  const claims = token ? await verifyLinkToken(token, config.secret) : null;
-  if (!claims) {
-    return new Response(null, { status: 303, headers: { ...NO_STORE, location: `${SIGNUP_PATH}?signup=expired` } });
+  if (!fromThisSite(request)) {
+    return text(403, 'This sign-in did not come from the sign-in page, so no one was signed in. Open the link from your email again.');
   }
+
+  const token = await readToken(request);
+  const claims = token ? await verifyLinkToken(token, config.secret) : null;
+  if (!claims) return seeOther(LINK_NOT_VALID);
 
   let firstUse: boolean;
   try {
@@ -43,12 +62,18 @@ export async function GET(request: Request): Promise<Response> {
     const fix = code === '42P01' ? ` The site operator must apply ${MIGRATION}.` : '';
     return text(503, `Sign-in is unavailable right now. No session was created.${fix}`);
   }
-  if (!firstUse) {
-    return text(409, `This sign-in link was already used. Each link works once. Ask for a new one at ${SIGNUP_PATH}.`);
-  }
+  if (!firstUse) return seeOther(LINK_NOT_VALID);
 
   const cookie = await sessionCookie(await accountIdFor(claims.email), config.secret);
-  return new Response(null, { status: 303, headers: { ...NO_STORE, location: CHECKOUT_PATH, 'set-cookie': cookie } });
+  return seeOther(CHECKOUT_PATH, { 'set-cookie': cookie });
+}
+
+/** The form's `token` field, or null when the body is not a small form post. */
+async function readToken(request: Request): Promise<string | null> {
+  if (!(request.headers.get('content-type') ?? '').startsWith('application/x-www-form-urlencoded')) return null;
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return null;
+  return new URLSearchParams(raw).get('token');
 }
 
 /** The Postgres SQLSTATE of a failed query, if any. drizzle wraps the driver's error in `cause`. */

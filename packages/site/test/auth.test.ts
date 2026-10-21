@@ -5,13 +5,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { POST } from '../app/api/auth/magic-link/route.js';
-import { GET } from '../app/api/auth/callback/route.js';
+import { POST as POST_CALLBACK } from '../app/api/auth/callback/route.js';
 import SignupPage, { metadata } from '../app/signup/page.js';
 import { BRAND } from '../src/brand.js';
 import { AUTH_ENV, MAGIC_LINK_PATH, linkBase } from '../src/auth/email.js';
 import {
   CALLBACK_PATH,
   CHECKOUT_PATH,
+  CONFIRM_PATH,
   SESSION_COOKIE,
   accountIdFor,
   createLinkToken,
@@ -102,12 +103,15 @@ const sendForm = (fields: Record<string, string>) =>
     }),
   );
 
-/** Clicks a link: the callback URL with the given query parameters. */
-const callback = (params: Record<string, string>) => {
-  const url = new URL(CALLBACK_PATH, 'http://site.test');
-  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
-  return GET(new Request(url));
-};
+/** Presses the confirm page's "Sign in" button: a same-origin form POST of these fields. */
+const callback = (fields: Record<string, string>) =>
+  POST_CALLBACK(
+    new Request(new URL(CALLBACK_PATH, SITE), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', origin: SITE },
+      body: new URLSearchParams(fields).toString(),
+    }),
+  );
 
 const withCookie = (setCookie: string) =>
   new Request('http://site.test/checkout', { headers: { cookie: setCookie.split(';')[0] ?? '' } });
@@ -307,11 +311,11 @@ describe('the email', () => {
     expect(text.replace(sentLink().toString(), '')).not.toMatch(/www\.|\.(com|test|dev|io)\b/);
   });
 
-  it('links to the base plus the fixed callback path, carrying only the token', async () => {
+  it('links to the base plus the fixed confirm-page path, carrying only the token', async () => {
     await sendJson({ email: 'ada@example.com' });
     const link = sentLink();
     expect(link.origin).toBe(SITE);
-    expect(link.pathname).toBe(CALLBACK_PATH);
+    expect(link.pathname).toBe(CONFIRM_PATH);
     expect([...link.searchParams.keys()]).toEqual(['token']);
     expect(link.hash).toBe('');
   });
