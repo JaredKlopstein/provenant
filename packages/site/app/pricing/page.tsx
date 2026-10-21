@@ -71,11 +71,13 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
               ))}
             </ul>
             {card.id === 'cloud' && billing === 'annual' && <p role="note">{annualOverageDisclosure()}</p>}
-            {card.id === 'cloud' && <WaitlistForm />}
-            {card.id === 'enterprise' && (
-              <p>
-                <Link href="/enterprise">Contact the team</Link>
-              </p>
+            <p>
+              <Link href={card.cta.href}>{card.cta.label}</Link>
+            </p>
+            {card.id === 'cloud' && (
+              <div id="waitlist">
+                <WaitlistForm />
+              </div>
             )}
           </article>
         ))}

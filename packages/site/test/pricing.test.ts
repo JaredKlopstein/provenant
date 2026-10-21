@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
+import RootLayout from '../app/layout.js';
+import HomePage from '../app/page.js';
 import PricingPage, { metadata } from '../app/pricing/page.js';
 import { BRAND } from '../src/brand.js';
-import { OFF_SALE_PLANS, cloudTerms, priceCards } from '../src/plans.js';
+import { ACCOUNT_PATH, CHECKOUT_PAGE_PATH } from '../src/checkout.js';
+import { OFF_SALE_PLANS, WAITLIST_HREF, cardCta, cloudTerms, priceCards } from '../src/plans.js';
 import { OVERAGE_BUNDLE_PRICE_USD, PAYG_BUNDLE_PRICE_USD, PLANS } from '../../cloud/src/pricing.js';
 import { createCheckoutSession, type StripeLike } from '../../cloud/src/billing/stripe.js';
 
@@ -29,6 +32,16 @@ function cards(html: string) {
     html: body!,
   }));
 }
+
+/** Every link's href, in markup order. */
+const hrefs = (html: string) => [...html.matchAll(/<a\b[^>]*\bhref="([^"]*)"/g)].map((m) => unescape(m[1]!));
+
+/** The text and href of each link, in markup order. */
+const links = (html: string) =>
+  [...html.matchAll(/<a\b[^>]*\bhref="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map(([, href, label]) => ({
+    label: unescape(label!),
+    href: unescape(href!),
+  }));
 
 const card = (html: string, id: string) => {
   const found = cards(html).find((c) => c.id === id);
@@ -142,10 +155,11 @@ describe('Cloud in early access (#95)', () => {
     }
   });
 
-  it('has no checkout button, form or link on the Cloud card, only the waitlist form (#129)', async () => {
+  it('has no checkout button, form or link on the Cloud card, only the waitlist link and form (#129)', async () => {
     for (const billing of [undefined, 'annual']) {
       const c = card(await render(billing), 'cloud');
-      expect(c.html).not.toMatch(/<a\b|\/api\/checkout/);
+      expect(hrefs(c.html)).toEqual(['/pricing#waitlist']);
+      expect(c.html).not.toMatch(/\/checkout/);
       expect(c.html.match(/<form\b[^>]*>/g)).toEqual(['<form aria-label="Cloud early access waitlist">']);
       expect(c.html.match(/<button\b/g)).toHaveLength(1);
     }
@@ -159,6 +173,91 @@ describe('Cloud in early access (#95)', () => {
   it('does not describe Cloud as a subscription you can buy now', async () => {
     expect(metadata.description).toMatch(/Cloud is in early access/);
     expect(await render()).not.toMatch(/Cloud is a subscription/);
+  });
+});
+
+describe('calls to action (#94)', () => {
+  /** An internal href resolves when app/ has a page for its path. */
+  const resolves = (href: string) => {
+    const path = new URL(href, 'https://site.test').pathname;
+    return existsSync(new URL(`../app${path === '/' ? '' : path}/page.tsx`, import.meta.url));
+  };
+  const getStarted = `${BRAND.repository}/blob/main/docs/getting-started.md`;
+
+  it('gives each pricing card exactly one button, to its intended route', async () => {
+    for (const billing of [undefined, 'annual']) {
+      const html = await render(billing);
+      const ctas = Object.fromEntries(
+        cards(html).map((c) => [c.id, links(c.html).filter((l) => l.label !== 'Monthly' && l.label !== 'Annual')]),
+      );
+      expect(ctas).toEqual({
+        core: [{ label: 'Start free', href: getStarted }],
+        bundle: [{ label: 'Buy a bundle', href: '/checkout' }],
+        cloud: [{ label: 'Join the waitlist', href: '/pricing#waitlist' }],
+        enterprise: [{ label: 'Contact the team', href: '/enterprise' }],
+      });
+      for (const c of cards(html)) {
+        for (const href of hrefs(c.html)) if (href.startsWith('/')) expect(resolves(href), href).toBe(true);
+      }
+    }
+  });
+
+  it('points the Bundle button straight at /checkout', async () => {
+    expect(resolves(CHECKOUT_PAGE_PATH)).toBe(true);
+    expect(priceCards('monthly').find((c) => c.id === 'bundle')!.cta.href).toBe(CHECKOUT_PAGE_PATH);
+    expect(hrefs(card(await render(), 'bundle').html)).toEqual([CHECKOUT_PAGE_PATH]);
+  });
+
+  it('points the Cloud button at /pricing#waitlist and never at checkout, monthly or annual', async () => {
+    for (const billing of ['monthly', 'annual'] as const) {
+      const cta = priceCards(billing).find((c) => c.id === 'cloud')!.cta;
+      expect(cta).toEqual({ label: 'Join the waitlist', href: '/pricing#waitlist' });
+      const html = card(await render(billing), 'cloud').html;
+      expect(hrefs(html)).toEqual(['/pricing#waitlist']);
+      // The annual disclosure says "this checkout" in prose; no link or form may go there.
+      expect(html).not.toMatch(/(?:href|action)="[^"]*(?:checkout|billing=|interval=)/);
+      expect(html).not.toMatch(/name="(?:plan|interval|kind)"/);
+    }
+  });
+
+  it('gives any off-sale card the waitlist button, never a checkout link', () => {
+    for (const id of ['core', 'bundle', 'cloud', 'enterprise'] as const) {
+      expect(cardCta(id, true)).toEqual({ label: 'Join the waitlist', href: WAITLIST_HREF });
+    }
+    for (const c of [...priceCards('monthly'), ...priceCards('annual')]) {
+      if (c.offSale) expect(c.cta.href).toBe(WAITLIST_HREF);
+      else expect(c.cta.href).not.toBe(WAITLIST_HREF);
+    }
+  });
+
+  it('renders the waitlist form inside an element with id="waitlist"', async () => {
+    for (const billing of [undefined, 'annual']) {
+      const html = await render(billing);
+      expect(html.match(/\bid="waitlist"/g)).toHaveLength(1);
+      expect(html).toMatch(/<div id="waitlist"><form aria-label="Cloud early access waitlist"/);
+    }
+  });
+
+  it('gives the home hero a primary and a secondary call to action', () => {
+    const hero = /<section><h1>[\s\S]*?<\/section>/.exec(renderToStaticMarkup(HomePage()))?.[0] ?? '';
+    expect(links(hero)).toEqual([
+      { label: 'Start free', href: getStarted },
+      { label: 'See pricing', href: '/pricing' },
+    ]);
+    expect(resolves('/pricing')).toBe(true);
+  });
+
+  it('has one static Account link to /account in the header', () => {
+    const html = renderToStaticMarkup(RootLayout({ children: null }));
+    const header = /<header\b[\s\S]*?<\/header>/.exec(html)?.[0] ?? '';
+    expect(links(header).filter((l) => l.label === 'Account')).toEqual([{ label: 'Account', href: ACCOUNT_PATH }]);
+    expect(resolves(ACCOUNT_PATH)).toBe(true);
+  });
+
+  it('keeps the root layout static: no cookies, headers or session lookup', () => {
+    const src = readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8').replace(/\/\/.*$|\/\*[\s\S]*?\*\//gm, '');
+    expect(src).not.toMatch(/next\/headers|cookies\(|headers\(|auth\/|signedIn|session/i);
+    expect(src).not.toMatch(/\bdynamic\b|force-dynamic/);
   });
 });
 
