@@ -17,6 +17,9 @@ const NAV = [
   { href: '/verify', label: 'Verify' },
   { href: '/security', label: 'Security' },
   { href: '/enterprise', label: 'Enterprise' },
+  // A static link: /account itself redirects a signed-out visitor to sign up, so
+  // the layout never reads the session and every page stays statically rendered.
+  { href: '/account', label: 'Account' },
 ] as const;
 
 export default function RootLayout({ children }: { children: ReactNode }) {

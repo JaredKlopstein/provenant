@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { BRAND } from '../src/brand';
+import { GETTING_STARTED_URL } from '../src/plans';
 
 const PROOF_POINTS = [
   {
@@ -24,6 +26,14 @@ export default function HomePage() {
           Signed, hash-chained receipts for every consequential agent action, anchored to a public
           timestamp authority, verifiable offline by anyone.
         </p>
+        <ul aria-label="Get started">
+          <li>
+            <a href={GETTING_STARTED_URL}>Start free</a>
+          </li>
+          <li>
+            <Link href="/pricing">See pricing</Link>
+          </li>
+        </ul>
       </section>
       <section aria-label="Proof points">
         <ul>
@@ -41,7 +51,7 @@ export default function HomePage() {
             <a href={BRAND.repository}>Source on GitHub</a>
           </li>
           <li>
-            <a href={`${BRAND.repository}/blob/main/docs/getting-started.md`}>Getting started (GitHub)</a>
+            <a href={GETTING_STARTED_URL}>Getting started (GitHub)</a>
           </li>
         </ul>
       </section>

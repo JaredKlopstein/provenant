@@ -29,13 +29,46 @@ export const OFF_SALE_PLANS: ReadonlySet<string> = new Set(['cloud']);
 
 export const EARLY_ACCESS_LABEL = 'Early access';
 
+/** The getting-started guide, on GitHub until the site has its own docs. */
+export const GETTING_STARTED_URL = `${BRAND.repository}/blob/main/docs/getting-started.md`;
+
+/** Where an off-sale card's button goes: the waitlist form on the pricing page. */
+export const WAITLIST_HREF = '/pricing#waitlist';
+
+export interface CallToAction {
+  readonly label: string;
+  readonly href: string;
+}
+
+export type CardId = 'core' | 'bundle' | 'cloud' | 'enterprise';
+
 export interface PriceCard {
-  readonly id: 'core' | 'bundle' | 'cloud' | 'enterprise';
+  readonly id: CardId;
   readonly title: string;
   readonly price: string;
   readonly terms: readonly string[];
   /** Off-sale cards: their terms are planned features, and they have no checkout. */
   readonly offSale?: boolean;
+  /** The card's one button. Off-sale cards always get the waitlist, never checkout. */
+  readonly cta: CallToAction;
+}
+
+const ON_SALE_CTAS: Record<CardId, CallToAction> = {
+  core: { label: 'Start free', href: GETTING_STARTED_URL },
+  bundle: { label: 'Buy a bundle', href: '/checkout' },
+  cloud: { label: 'Buy Cloud', href: '/checkout' },
+  enterprise: { label: 'Contact the team', href: '/enterprise' },
+};
+
+const WAITLIST_CTA: CallToAction = { label: 'Join the waitlist', href: WAITLIST_HREF };
+
+/** A card's button, from its off-sale flag first and its id second. */
+export function cardCta(id: CardId, offSale: boolean): CallToAction {
+  return offSale ? WAITLIST_CTA : ON_SALE_CTAS[id];
+}
+
+function withCta(card: Omit<PriceCard, 'cta'>): PriceCard {
+  return { ...card, cta: cardCta(card.id, card.offSale === true) };
 }
 
 const usd = (amount: number) => `$${amount}`;
@@ -84,7 +117,7 @@ export function annualOverageDisclosure(plan: Plan = PLANS.cloud): string {
 
 export function priceCards(billing: Billing): PriceCard[] {
   const { free, cloud, enterprise } = PLANS;
-  return [
+  const cards: Omit<PriceCard, 'cta'>[] = [
     {
       id: 'core',
       // PLANS.free.name carries the product name, which the site takes from BRAND.
@@ -123,4 +156,5 @@ export function priceCards(billing: Billing): PriceCard[] {
       ],
     },
   ];
+  return cards.map(withCta);
 }

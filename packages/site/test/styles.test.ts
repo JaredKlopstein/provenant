@@ -118,7 +118,7 @@ describe('global stylesheet', () => {
 describe('site header', () => {
   const html = renderToStaticMarkup(RootLayout({ children: null }));
 
-  it('renders the six nav links next to a menu button that controls them', () => {
+  it('renders the seven nav links next to a menu button that controls them', () => {
     const nav = /<nav aria-label="Main"[^>]*>([\s\S]*?)<\/nav>/.exec(html)?.[1] ?? '';
     const button = /<button\b[^>]*>Menu<\/button>/.exec(nav)?.[0] ?? '';
     expect(button).toContain('type="button"');
@@ -132,6 +132,7 @@ describe('site header', () => {
       '/verify',
       '/security',
       '/enterprise',
+      '/account',
     ]);
   });
 
