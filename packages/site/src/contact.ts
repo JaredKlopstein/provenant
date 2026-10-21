@@ -13,5 +13,5 @@ export type FleetSize = (typeof FLEET_SIZES)[number];
 export const HONEYPOT_FIELD = 'website';
 
 /** After a form post the route redirects to `/enterprise?contact=<outcome>`. */
-export const CONTACT_OUTCOMES = ['sent', 'invalid', 'unavailable', 'failed'] as const;
+export const CONTACT_OUTCOMES = ['sent', 'invalid', 'unavailable', 'failed', 'rate_limited'] as const;
 export type ContactOutcome = (typeof CONTACT_OUTCOMES)[number];

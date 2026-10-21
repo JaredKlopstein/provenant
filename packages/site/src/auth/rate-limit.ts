@@ -14,6 +14,10 @@
  * client's own x-forwarded-for is never read. Without either, every request falls
  * into one shared "ip:unknown" bucket and the email limit still applies.
  *
+ * The Enterprise contact route counts in the same table and windows, under its
+ * own "contact-ip:" buckets: 5 forwards per IP per window. Requests without a
+ * trusted IP share one "contact-ip:unknown" bucket.
+ *
  * The table is created by migrations/0001_magic_link_rate.sql, which the owner
  * applies by hand. Nothing here runs a migration.
  */
@@ -26,6 +30,8 @@ export const EMAIL_LIMIT = 3;
 export const IP_LIMIT = 20;
 export const WINDOW_MS = 15 * 60 * 1000;
 export const UNKNOWN_IP_BUCKET = 'ip:unknown';
+export const CONTACT_IP_LIMIT = 5;
+export const UNKNOWN_CONTACT_IP_BUCKET = 'contact-ip:unknown';
 /** Set by Vercel's edge, in order of preference. A client cannot forge them there. */
 const TRUSTED_IP_HEADERS = ['x-vercel-forwarded-for', 'x-real-ip'] as const;
 
@@ -63,6 +69,21 @@ export async function allowSend<TSchema extends Record<string, unknown>>(
   const emailCount = await increment(db, `email:${sha256(normalizeEmail(email))}`, windowStart);
   const ipCount = await increment(db, ip ? `ip:${sha256(ip)}` : UNKNOWN_IP_BUCKET, windowStart);
   return emailCount <= EMAIL_LIMIT && ipCount <= IP_LIMIT;
+}
+
+/**
+ * Counts one Enterprise contact forward for this IP, and says whether it is
+ * within the contact limit. Same windows, table and pruning as `allowSend`.
+ */
+export async function allowContact<TSchema extends Record<string, unknown>>(
+  db: PgDatabase<PgQueryResultHKT, TSchema>,
+  ip: string | null,
+  now: Date = new Date(),
+): Promise<boolean> {
+  const windowStart = new Date(Math.floor(now.getTime() / WINDOW_MS) * WINDOW_MS);
+  await db.delete(siteMagicLinkRate).where(lt(siteMagicLinkRate.windowStart, windowStart));
+  const count = await increment(db, ip ? `contact-ip:${sha256(ip)}` : UNKNOWN_CONTACT_IP_BUCKET, windowStart);
+  return count <= CONTACT_IP_LIMIT;
 }
 
 async function increment<TSchema extends Record<string, unknown>>(

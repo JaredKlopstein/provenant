@@ -20,8 +20,9 @@ const TERMS = [
 const OUTCOME_MESSAGES: Record<ContactOutcome, string> = {
   sent: `Thanks. The ${BRAND.name} team has your message and will reply to the email you gave.`,
   invalid: 'Some details were missing or not valid, so nothing was sent. Check each field and send it again.',
-  unavailable: `The contact form is not configured yet, so nothing was sent. Reach the team through ${BRAND.repository} for now.`,
+  unavailable: `The contact form is unavailable right now, so nothing was sent. Try again in a few minutes, or reach the team through ${BRAND.repository}.`,
   failed: 'Your message could not be delivered, so nothing was sent. Try again shortly.',
+  rate_limited: 'Several messages were sent from here in a short time, so this one was not sent. Please try again in a few minutes.',
 };
 
 // Kept off screen rather than display:none, which some bots skip. People never reach it.
