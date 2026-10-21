@@ -55,6 +55,7 @@ describe('site app folder', () => {
       'not-found.tsx',
       'page.tsx',
       'pricing/page.tsx',
+      'pricing/waitlist-form.tsx',
       'security/page.tsx',
       'signin/page.tsx',
       'signup/page.tsx',

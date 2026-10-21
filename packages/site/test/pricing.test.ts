@@ -142,10 +142,12 @@ describe('Cloud in early access (#95)', () => {
     }
   });
 
-  it('has no checkout button, form or link on the Cloud card', async () => {
+  it('has no checkout button, form or link on the Cloud card, only the waitlist form (#129)', async () => {
     for (const billing of [undefined, 'annual']) {
       const c = card(await render(billing), 'cloud');
-      expect(c.html).not.toMatch(/<form\b|<button\b|<a\b|\/api\/checkout/);
+      expect(c.html).not.toMatch(/<a\b|\/api\/checkout/);
+      expect(c.html.match(/<form\b[^>]*>/g)).toEqual(['<form aria-label="Cloud early access waitlist">']);
+      expect(c.html.match(/<button\b/g)).toHaveLength(1);
     }
   });
 

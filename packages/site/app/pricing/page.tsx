@@ -9,6 +9,7 @@ import {
   priceCards,
   type Billing,
 } from '../../src/plans';
+import { WaitlistForm } from './waitlist-form';
 
 export const metadata: Metadata = {
   title: `Pricing: ${BRAND.name}`,
@@ -70,6 +71,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
               ))}
             </ul>
             {card.id === 'cloud' && billing === 'annual' && <p role="note">{annualOverageDisclosure()}</p>}
+            {card.id === 'cloud' && <WaitlistForm />}
             {card.id === 'enterprise' && (
               <p>
                 <Link href="/enterprise">Contact the team</Link>
