@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BRAND } from '../../src/brand';
+import { PROOF_TABLE } from '../../src/proof-table';
 
 export const metadata: Metadata = {
   title: `Security: ${BRAND.name}`,
@@ -28,13 +29,6 @@ const STANDARDS = [
     name: 'RFC 3161',
     body: 'Trusted timestamps from an authority the operator does not control anchor the chain head on Cloud. The verifier checks the full token offline and reports whether the authority is in your trust list separately from whether the token is sound, because a bundle can embed a self-signed root.',
   },
-] as const;
-
-const PROOF_TABLE = [
-  { property: 'Detects casual tampering', local: 'yes', anchored: 'yes' },
-  { property: 'Detects a full rebuild by the operator', local: 'no', anchored: 'yes' },
-  { property: 'Detects backdating after the anchor', local: 'no', anchored: 'yes' },
-  { property: 'Detects truncation of the un-anchored tail', local: 'no', anchored: 'no' },
 ] as const;
 
 export default function SecurityPage() {

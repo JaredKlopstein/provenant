@@ -16,7 +16,7 @@ import SecurityPage from '../packages/site/app/security/page.js';
 
 const APP = new URL('../packages/site/app/', import.meta.url).pathname;
 const SUB_HEADLINE =
-  'Signed, hash-chained receipts for every consequential agent action, anchored to a public timestamp authority, verifiable offline by anyone.';
+  'Every consequential action gets a signed, hash-chained receipt, timestamped by an authority you don’t control. Anyone can verify the record offline, without trusting you.';
 
 // react-dom is a dependency of the site, not of the workspace root.
 const siteRequire = createRequire(new URL('../packages/site/package.json', import.meta.url));
@@ -108,14 +108,15 @@ describe('site app folder', () => {
 });
 
 describe('home page', () => {
-  it('leads with the tagline and the sub-headline', () => {
-    expect(home).toContain(`<h1>${BRAND.tagline}</h1>`);
+  it('leads with the outcome-led headline and the sub-headline', () => {
+    expect(home).toContain('<h1>Prove what your AI agents did.</h1>');
     expect(text(home)).toContain(SUB_HEADLINE);
   });
 
   it('shows the three proof points', () => {
     const body = text(home);
-    expect(home.match(/<h2>/g)).toHaveLength(3);
+    const proofPoints = /<section aria-label="Proof points">[\s\S]*?<\/section>/.exec(home)?.[0] ?? '';
+    expect(proofPoints.match(/<h2>/g)).toHaveLength(3);
     for (const term of ['RFC 8785', 'SHA-256', 'Ed25519', 'RFC 3161', 'offline verifier']) {
       expect(body).toContain(term);
     }
