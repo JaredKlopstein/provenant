@@ -14,6 +14,9 @@
  * generic message, so the response never says which.
  *
  * The token is never logged. Responses are no-store so no cache keeps the link.
+ * When sign-in cannot run (missing configuration or the used-link table) the
+ * answer is generic: the cause goes only to the log, under the request id the
+ * response carries.
  */
 import { AUTH_ENV, SIGNUP_PATH, authConfig } from '../../../../src/auth/email';
 import { fromThisSite } from '../../../../src/auth/confirm';
@@ -25,8 +28,20 @@ const MIGRATION = 'packages/site/migrations/0000_magic_link_used.sql';
 const MAX_BODY_BYTES = 4 * 1024;
 const LINK_NOT_VALID = `${SIGNUP_PATH}?signup=expired`;
 
-const text = (status: number, body: string) =>
-  new Response(`${body}\n`, { status, headers: { ...NO_STORE, 'content-type': 'text/plain; charset=utf-8' } });
+const text = (status: number, body: string, headers: Record<string, string> = {}) =>
+  new Response(`${body}\n`, {
+    status,
+    headers: { ...headers, ...NO_STORE, 'content-type': 'text/plain; charset=utf-8' },
+  });
+
+/** A 503 that names nothing; `cause` is logged under the request id the response carries. */
+function unavailable(cause: string): Response {
+  const requestId = crypto.randomUUID();
+  console.error(`auth: request ${requestId}: ${cause}`);
+  return text(503, `Sign-in is unavailable right now. No session was created. Request id: ${requestId}.`, {
+    'x-request-id': requestId,
+  });
+}
 
 const seeOther = (location: string, headers: Record<string, string> = {}) =>
   new Response(null, { status: 303, headers: { ...NO_STORE, location, ...headers } });
@@ -42,8 +57,7 @@ export async function POST(request: Request): Promise<Response> {
   const config = authConfig();
   const db = usedTokenDb();
   if (!config || !db) {
-    const missing = [...(config ? [] : AUTH_ENV), ...(db ? [] : [DATABASE_URL_ENV])];
-    return text(503, `Sign-in is not configured on this server yet. The site operator must set ${missing.join(', ')}.`);
+    return unavailable(`not configured; ${[...(config ? [] : [authCause()]), ...(db ? [] : [`missing ${DATABASE_URL_ENV}`])].join('; ')}`);
   }
   if (!fromThisSite(request)) {
     return text(403, 'This sign-in did not come from the sign-in page, so no one was signed in. Open the link from your email again.');
@@ -58,14 +72,19 @@ export async function POST(request: Request): Promise<Response> {
     firstUse = await markTokenUsed(db, claims.jti, new Date(claims.exp * 1000));
   } catch (err) {
     const code = errorCode(err);
-    console.error(`auth: could not record the used sign-in link (${code ?? 'no error code'})`);
-    const fix = code === '42P01' ? ` The site operator must apply ${MIGRATION}.` : '';
-    return text(503, `Sign-in is unavailable right now. No session was created.${fix}`);
+    const fix = code === '42P01' ? `; apply ${MIGRATION}` : '';
+    return unavailable(`could not record the used sign-in link (${code ?? 'no error code'})${fix}`);
   }
   if (!firstUse) return seeOther(LINK_NOT_VALID);
 
   const cookie = await sessionCookie(await accountIdFor(claims.email), config.secret);
   return seeOther(CHECKOUT_PATH, { 'set-cookie': cookie });
+}
+
+/** For the log only: which auth variables are unset, or that one is set but invalid. */
+function authCause(): string {
+  const unset = AUTH_ENV.filter((name) => !process.env[name]?.trim());
+  return unset.length ? `missing ${unset.join(', ')}` : `an invalid value in one of ${AUTH_ENV.join(', ')}`;
 }
 
 /** The form's `token` field, or null when the body is not a small form post. */

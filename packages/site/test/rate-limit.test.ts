@@ -97,6 +97,26 @@ const answer = async (res: Response) => ({
 
 const VERCEL_IP = (ip: string) => ({ 'x-vercel-forwarded-for': ip });
 
+/**
+ * Checks a send's sign-in-unavailable answer: the given status, a request id, no
+ * header or body naming configuration, and the cause logged under the id.
+ */
+async function expectUnavailable(res: Response, status: number, cause: string): Promise<void> {
+  expect(res.status).toBe(status);
+  const requestId = res.headers.get('x-request-id');
+  expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+  const body = await res.text();
+  if (status !== 303) {
+    const json = JSON.parse(body);
+    expect(json.error.message).toContain('Sign-in is unavailable right now.');
+    expect(json.requestId).toBe(requestId);
+  }
+  const everything = [...res.headers].map(([k, v]) => `${k}: ${v}`).join('\n') + '\n' + body;
+  for (const name of ['MAGIC_LINK', 'DATABASE_URL', 'migrations', '.sql']) expect(everything).not.toContain(name);
+  const logged = vi.mocked(console.error).mock.calls.map((args) => args.map(String).join(' '));
+  expect(logged.find((line) => line.includes(requestId!))).toContain(cause);
+}
+
 describe('migration', () => {
   it('applies cleanly to a fresh Postgres and matches the drizzle table column for column', async () => {
     const fresh = await PGlite.create();
@@ -249,20 +269,19 @@ describe('send route', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('answers 503 and sends nothing when DATABASE_URL is unset, even with the flag on', async () => {
+  it('answers a generic 503 and sends nothing when DATABASE_URL is unset, even with the flag on', async () => {
     vi.stubEnv('DATABASE_URL', '');
-    const res = await send('ada@example.com');
-    expect(res.status).toBe(503);
-    expect((await res.json()).error.fix.note).toContain('DATABASE_URL');
+    await expectUnavailable(await send('ada@example.com'), 503, 'DATABASE_URL');
+    await expectUnavailable(await sendForm('ada@example.com'), 303, 'DATABASE_URL');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('answers 503 and sends nothing when the rate table is missing', async () => {
+  it('answers a generic 503 and sends nothing when the rate table is missing, logging the migration', async () => {
     await pg.exec('ALTER TABLE site_magic_link_rate RENAME TO site_magic_link_rate_moved');
     try {
-      const res = await send('ada@example.com');
-      expect(res.status).toBe(503);
-      expect((await res.json()).error.fix.note).toContain('0001_magic_link_rate.sql');
+      await expectUnavailable(await send('ada@example.com'), 503, '42P01');
+      await expectUnavailable(await send('ada@example.com'), 503, '0001_magic_link_rate.sql');
+      await expectUnavailable(await sendForm('ada@example.com'), 303, '0001_magic_link_rate.sql');
       expect(fetchMock).not.toHaveBeenCalled();
     } finally {
       await pg.exec('ALTER TABLE site_magic_link_rate_moved RENAME TO site_magic_link_rate');

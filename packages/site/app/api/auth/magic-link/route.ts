@@ -15,6 +15,9 @@
  *
  * Like the contact route, it accepts the page's native form post (answered with a
  * 303 back to the page) and JSON (answered with JSON, every error carrying its fix).
+ * A 503 is generic and names no variable or migration: the cause goes only to the
+ * log, under the request id the response carries (x-request-id, and requestId in
+ * JSON).
  */
 import {
   AUTH_ENV,
@@ -48,31 +51,30 @@ interface ErrorBody {
 
 export async function POST(request: Request): Promise<Response> {
   const form = isForm(request);
-  const reply = (status: number, outcome: SignupOutcome, body: object) =>
+  const reply = (status: number, outcome: SignupOutcome, body: object, headers: Record<string, string> = {}) =>
     form
-      ? new Response(null, { status: 303, headers: { location: `${SIGNUP_PATH}?signup=${outcome}` } })
-      : json(status, body);
+      ? new Response(null, { status: 303, headers: { ...headers, location: `${SIGNUP_PATH}?signup=${outcome}` } })
+      : json(status, body, headers);
   const fail = (status: number, outcome: SignupOutcome, error: ErrorBody) => reply(status, outcome, { error });
-  const unavailable = (note: string) =>
-    fail(503, 'unavailable', {
+  const unavailable = (cause: string) => {
+    const requestId = crypto.randomUUID();
+    console.error(`auth: request ${requestId}: ${cause}`);
+    const error: ErrorBody = {
       code: 'SIGNUP_UNAVAILABLE',
-      message: `Email sign-up is not available on this server yet. ${NOTHING_SENT}`,
+      message: `Sign-in is unavailable right now. ${NOTHING_SENT}`,
       retryable: false,
-      fix: { note },
-    });
+      fix: { note: `The site operator must finish the server configuration. Quote request id ${requestId}.` },
+    };
+    return reply(503, 'unavailable', { error, requestId }, { 'x-request-id': requestId });
+  };
 
-  if (!magicLinkEnabled()) {
-    return unavailable(`The site operator turns sending on with ${MAGIC_LINK_FLAG_ENV}=1 once send rate limiting is in place.`);
-  }
+  if (!magicLinkEnabled()) return unavailable(`sending is off; ${MAGIC_LINK_FLAG_ENV} is not 1`);
   const config = authConfig();
-  if (!config) return unavailable(`The site operator must set ${AUTH_ENV.join(', ')}.`);
+  if (!config) return unavailable(`not configured; ${authCause()}`);
   const base = linkBase();
-  if (!base) {
-    console.error('auth: no link base; set BRAND.domain, SITE_BASE_URL or VERCEL_URL');
-    return unavailable('The site operator must set a link base: BRAND.domain, SITE_BASE_URL or VERCEL_URL.');
-  }
+  if (!base) return unavailable('no link base; set BRAND.domain, SITE_BASE_URL or VERCEL_URL');
   const db = usedTokenDb();
-  if (!db) return unavailable(`The site operator must set ${DATABASE_URL_ENV}; the send rate limit is kept there.`);
+  if (!db) return unavailable(`${DATABASE_URL_ENV} is not set; the send rate limit is kept there`);
 
   const raw = await request.text();
   const tooLarge = new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES;
@@ -91,12 +93,8 @@ export async function POST(request: Request): Promise<Response> {
     allowed = await allowSend(db, email, clientIp(request.headers));
   } catch (err) {
     const code = errorCode(err);
-    console.error(`auth: could not count the send against its rate limit (${code ?? 'no error code'})`);
-    return unavailable(
-      code === '42P01'
-        ? `The site operator must apply ${RATE_MIGRATION}.`
-        : 'The send rate limit could not be checked. Retry shortly.',
-    );
+    const fix = code === '42P01' ? `; apply ${RATE_MIGRATION}` : '';
+    return unavailable(`could not count the send against its rate limit (${code ?? 'no error code'})${fix}`);
   }
   // Over a limit: the same answer as a send, and nothing sent.
   if (!allowed) return reply(200, 'sent', { ok: true, message: SENT });
@@ -111,6 +109,12 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
   return reply(200, 'sent', { ok: true, message: SENT });
+}
+
+/** For the log only: which auth variables are unset, or that one is set but invalid. */
+function authCause(): string {
+  const unset = AUTH_ENV.filter((name) => !process.env[name]?.trim());
+  return unset.length ? `missing ${unset.join(', ')}` : `an invalid value in one of ${AUTH_ENV.join(', ')}`;
 }
 
 function isForm(request: Request): boolean {
@@ -140,9 +144,9 @@ function errorCode(err: unknown): string | null {
   return null;
 }
 
-function json(status: number, body: unknown): Response {
+function json(status: number, body: unknown, extra: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body, null, 2), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+    headers: { ...extra, 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
   });
 }

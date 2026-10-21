@@ -74,6 +74,24 @@ const rows = async () =>
 
 const jti = (n: number) => n.toString(16).padStart(32, '0');
 
+/**
+ * Checks the callback's sign-in-unavailable answer: 503, a request id, no header
+ * or body naming configuration, and the cause logged under the id.
+ */
+async function expectUnavailable(res: Response, cause: string): Promise<void> {
+  expect(res.status).toBe(503);
+  const requestId = res.headers.get('x-request-id');
+  expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+  const body = await res.clone().text();
+  expect(body).toContain('Sign-in is unavailable right now.');
+  expect(body).toContain(requestId);
+  const everything = [...res.headers].map(([k, v]) => `${k}: ${v}`).join('\n') + '\n' + body;
+  for (const name of [DATABASE_URL_ENV, 'SESSION_SECRET', 'EMAIL_', 'migrations', '.sql']) {
+    expect(everything).not.toContain(name);
+  }
+  expect(logged.find((line) => line.includes(requestId!))).toContain(cause);
+}
+
 /** Presses the confirm page's "Sign in" button: a same-origin form POST of the token. */
 const click = (token: string) =>
   POST(
@@ -223,25 +241,23 @@ describe('callback', () => {
     expect(await rows()).toEqual([]);
   });
 
-  it('answers 503 and signs no one in when DATABASE_URL is unset, naming the variable', async () => {
+  it('answers a generic 503 and signs no one in when DATABASE_URL is unset, logging the variable', async () => {
     vi.stubEnv(DATABASE_URL_ENV, '');
     const res = await click(await createLinkToken('ada@example.com', SECRET));
-    expect(res.status).toBe(503);
     expect(res.headers.get('set-cookie')).toBeNull();
-    expect(await res.text()).toContain(DATABASE_URL_ENV);
+    await expectUnavailable(res, `missing ${DATABASE_URL_ENV}`);
     expect(await rows()).toEqual([]);
   });
 
-  it('answers 503 with no cookie when the table is missing, logging only the error code', async () => {
+  it('answers a generic 503 with no cookie when the table is missing, logging the code and migration', async () => {
     await pg.exec('ALTER TABLE site_magic_link_used RENAME TO site_magic_link_used_moved');
     try {
       const token = await createLinkToken('ada@example.com', SECRET);
       const res = await click(token);
-      expect(res.status).toBe(503);
       expect(res.headers.get('set-cookie')).toBeNull();
-      expect(await res.text()).toContain('0000_magic_link_used.sql');
+      await expectUnavailable(res, '42P01');
+      await expectUnavailable(res, '0000_magic_link_used.sql');
       const log = logged.join('\n');
-      expect(log).toContain('42P01');
       expect(log).not.toContain(token);
       expect(log).not.toContain(DATABASE_URL);
     } finally {
