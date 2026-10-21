@@ -5,5 +5,11 @@
       "path": "/api/cron/overage-retry",
       "schedule": "0 6 * * *"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/billing/webhook",
+      "destination": "/api/billing/webhook"
+    }
   ]
 }
