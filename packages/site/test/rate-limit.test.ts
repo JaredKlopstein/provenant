@@ -7,9 +7,12 @@ import { getTableConfig } from 'drizzle-orm/pg-core';
 import { POST } from '../app/api/auth/magic-link/route.js';
 import { MAGIC_LINK_PATH } from '../src/auth/email.js';
 import {
+  CONTACT_IP_LIMIT,
   EMAIL_LIMIT,
   IP_LIMIT,
+  UNKNOWN_CONTACT_IP_BUCKET,
   UNKNOWN_IP_BUCKET,
+  allowContact,
   allowSend,
   clientIp,
   siteMagicLinkRate,
@@ -214,6 +217,46 @@ describe('allowSend', () => {
     const dump = JSON.stringify((await pg.query('SELECT * FROM site_magic_link_rate')).rows);
     expect(dump).not.toContain('ada@example.com');
     expect(dump).not.toContain('203.0.113.7');
+  });
+});
+
+describe('allowContact', () => {
+  it(`allows ${CONTACT_IP_LIMIT} contact forwards per IP per window and refuses the next`, async () => {
+    const results = [];
+    for (let i = 0; i < CONTACT_IP_LIMIT + 1; i++) results.push(await allowContact(db, '203.0.113.7', T0));
+    expect(results).toEqual([...Array(CONTACT_IP_LIMIT).fill(true), false]);
+    expect(await allowContact(db, '198.51.100.1', T0)).toBe(true);
+  });
+
+  it('starts a fresh count in the next window', async () => {
+    for (let i = 0; i < CONTACT_IP_LIMIT; i++) await allowContact(db, '203.0.113.7', at(1));
+    expect(await allowContact(db, '203.0.113.7', at(14))).toBe(false);
+    expect(await allowContact(db, '203.0.113.7', at(15))).toBe(true);
+  });
+
+  it('pools requests without a trusted IP into one shared contact bucket', async () => {
+    for (let i = 0; i < CONTACT_IP_LIMIT; i++) expect(await allowContact(db, null, T0)).toBe(true);
+    expect(await allowContact(db, null, T0)).toBe(false);
+    expect((await rows()).map((r) => r.bucket)).toEqual([UNKNOWN_CONTACT_IP_BUCKET]);
+  });
+
+  it('keeps its buckets apart from the magic-link IP bucket and stores only the SHA-256', async () => {
+    for (let i = 0; i < CONTACT_IP_LIMIT + 1; i++) await allowContact(db, '203.0.113.7', T0);
+    expect(await allowSend(db, 'ada@example.com', '203.0.113.7', T0)).toBe(true);
+    const buckets = (await rows()).map((r) => r.bucket).sort();
+    expect(buckets).toEqual(
+      [`contact-ip:${sha256('203.0.113.7')}`, `email:${sha256('ada@example.com')}`, `ip:${sha256('203.0.113.7')}`].sort(),
+    );
+    expect(JSON.stringify((await pg.query('SELECT * FROM site_magic_link_rate')).rows)).not.toContain('203.0.113.7');
+  });
+
+  it('throws when the store is down, so the caller can fail closed', async () => {
+    await pg.exec('ALTER TABLE site_magic_link_rate RENAME TO site_magic_link_rate_moved');
+    try {
+      await expect(allowContact(db, '203.0.113.7', T0)).rejects.toThrow();
+    } finally {
+      await pg.exec('ALTER TABLE site_magic_link_rate_moved RENAME TO site_magic_link_rate');
+    }
   });
 });
 

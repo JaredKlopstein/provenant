@@ -1,15 +1,26 @@
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { PGlite } from '@electric-sql/pglite';
+import { drizzle } from 'drizzle-orm/pglite';
 import { POST } from '../app/api/contact/route.js';
 import EnterprisePage, { metadata } from '../app/enterprise/page.js';
+import { CONTACT_IP_LIMIT, UNKNOWN_CONTACT_IP_BUCKET } from '../src/auth/rate-limit.js';
+import { usedTokenSchema } from '../src/auth/used-tokens.js';
 import { BRAND } from '../src/brand.js';
 import { FLEET_SIZES, HONEYPOT_FIELD } from '../src/contact.js';
 
 /**
  * The enterprise contact route forwards one submission to CONTACT_FORWARD_URL.
- * fetch is mocked throughout: nothing here touches the network.
+ * fetch is mocked throughout: nothing here touches the network. The rate limit's
+ * Postgres is PGlite, in process, behind the Neon driver's drizzle().
  */
 
+const pgHolder = vi.hoisted(() => ({ db: null as unknown }));
+vi.mock('drizzle-orm/neon-serverless', () => ({ drizzle: vi.fn(() => pgHolder.db) }));
+
+const RATE_MIGRATION = new URL('../migrations/0001_magic_link_rate.sql', import.meta.url);
+const DATABASE_URL = ['postgresql:', '', 'test-user:test-password@db.site.test', 'site'].join('/');
 const FORWARD_URL = 'https://forward.example.test/enterprise-leads';
 const VALID = {
   name: 'Ada Lovelace',
@@ -19,10 +30,21 @@ const VALID = {
   need: 'Contracted retention for receipts from our support agents.',
 };
 
+let pg: PGlite;
 let fetchMock: Mock;
 let logged: string[];
 
-beforeEach(() => {
+beforeAll(async () => {
+  pg = await PGlite.create();
+  await pg.exec(readFileSync(RATE_MIGRATION, 'utf8'));
+  pgHolder.db = drizzle({ client: pg, schema: usedTokenSchema });
+});
+afterAll(async () => {
+  await pg.close();
+});
+
+beforeEach(async () => {
+  await pg.exec('TRUNCATE site_magic_link_rate');
   fetchMock = vi.fn(async () => new Response('ok', { status: 200 }));
   vi.stubGlobal('fetch', fetchMock);
   logged = [];
@@ -32,6 +54,7 @@ beforeEach(() => {
     });
   }
   vi.stubEnv('CONTACT_FORWARD_URL', FORWARD_URL);
+  vi.stubEnv('DATABASE_URL', DATABASE_URL);
 });
 
 afterEach(() => {
@@ -40,20 +63,20 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const postJson = (body: unknown) =>
+const postJson = (body: unknown, headers: Record<string, string> = {}) =>
   POST(
     new Request('http://site.test/api/contact', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...headers },
       body: typeof body === 'string' ? body : JSON.stringify(body),
     }),
   );
 
-const postForm = (fields: Record<string, string>) =>
+const postForm = (fields: Record<string, string>, headers: Record<string, string> = {}) =>
   POST(
     new Request('http://site.test/api/contact', {
       method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      headers: { 'content-type': 'application/x-www-form-urlencoded', ...headers },
       body: new URLSearchParams(fields).toString(),
     }),
   );
@@ -246,6 +269,105 @@ describe('CONTACT_FORWARD_URL unset', () => {
   });
 });
 
+describe('rate limit', () => {
+  const VERCEL_IP = (ip: string) => ({ 'x-vercel-forwarded-for': ip });
+  const buckets = async () =>
+    (await pg.query<{ bucket: string; count: number }>('SELECT bucket, count FROM site_magic_link_rate')).rows;
+  /** The response body and headers only, without the log. */
+  const answered = async (res: Response) => [await res.clone().text(), JSON.stringify([...res.headers])].join('\n');
+
+  it(`forwards ${CONTACT_IP_LIMIT} submissions from one IP in a window and refuses the next with 429`, async () => {
+    for (let i = 0; i < CONTACT_IP_LIMIT; i++) {
+      expect((await postJson(VALID, VERCEL_IP('203.0.113.7'))).status).toBe(200);
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(CONTACT_IP_LIMIT);
+
+    const res = await postJson(VALID, VERCEL_IP('203.0.113.7'));
+    expect(res.status).toBe(429);
+    const { error } = await res.json();
+    expect(error).toMatchObject({ code: 'RATE_LIMITED', retryable: true });
+    expect(error.message).toContain('Nothing was sent.');
+    expect(error.fix.note).toBe('Please try again in a few minutes.');
+    expect(fetchMock).toHaveBeenCalledTimes(CONTACT_IP_LIMIT);
+  });
+
+  it('redirects an over-limit form post back with contact=rate_limited and forwards nothing', async () => {
+    for (let i = 0; i < CONTACT_IP_LIMIT; i++) await postForm(VALID, VERCEL_IP('203.0.113.7'));
+    const res = await postForm(VALID, VERCEL_IP('203.0.113.7'));
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toBe('/enterprise?contact=rate_limited');
+    expect(fetchMock).toHaveBeenCalledTimes(CONTACT_IP_LIMIT);
+  });
+
+  it('counts each IP separately', async () => {
+    for (let i = 0; i < CONTACT_IP_LIMIT; i++) await postJson(VALID, VERCEL_IP('203.0.113.7'));
+    expect((await postJson(VALID, VERCEL_IP('198.51.100.1'))).status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(CONTACT_IP_LIMIT + 1);
+  });
+
+  it('does not let a spoofed x-forwarded-for reset the IP bucket', async () => {
+    for (let i = 0; i <= CONTACT_IP_LIMIT; i++) {
+      await postJson(VALID, { ...VERCEL_IP('203.0.113.7'), 'x-forwarded-for': `192.0.2.${i}` });
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(CONTACT_IP_LIMIT);
+  });
+
+  it('pools requests without a trusted IP header into one shared bucket', async () => {
+    for (let i = 0; i <= CONTACT_IP_LIMIT; i++) await postJson(VALID, { 'x-forwarded-for': `192.0.2.${i}` });
+    expect(fetchMock).toHaveBeenCalledTimes(CONTACT_IP_LIMIT);
+    expect((await buckets()).map((r) => r.bucket)).toEqual([UNKNOWN_CONTACT_IP_BUCKET]);
+  });
+
+  it('does not count honeypot or invalid submissions against the bucket', async () => {
+    for (let i = 0; i < CONTACT_IP_LIMIT * 2; i++) {
+      await postJson({ ...VALID, [HONEYPOT_FIELD]: 'filled' }, VERCEL_IP('203.0.113.7'));
+      await postJson({ ...VALID, email: 'not-an-email' }, VERCEL_IP('203.0.113.7'));
+    }
+    expect(await buckets()).toEqual([]);
+    expect((await postJson(VALID, VERCEL_IP('203.0.113.7'))).status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed with a generic retryable 503 when DATABASE_URL is unset', async () => {
+    vi.stubEnv('DATABASE_URL', '');
+    const res = await postJson(VALID);
+    expect(res.status).toBe(503);
+    const requestId = res.headers.get('x-request-id');
+    const body = await res.clone().json();
+    expect(body.requestId).toBe(requestId);
+    expect(body.error).toMatchObject({ code: 'CONTACT_UNAVAILABLE', retryable: true });
+    expect(body.error.message).toContain("We couldn't take your message right now. Please try again in a few minutes.");
+    expect(await answered(res)).not.toContain('DATABASE_URL');
+    expect(logged.some((line) => line.includes(String(requestId)) && line.includes('DATABASE_URL'))).toBe(true);
+
+    const formRes = await postForm(VALID);
+    expect(formRes.status).toBe(303);
+    expect(formRes.headers.get('location')).toBe('/enterprise?contact=unavailable');
+    expect(await answered(formRes)).not.toContain('DATABASE_URL');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('fails closed with a generic retryable 503 when the limiter store errors', async () => {
+    await pg.exec('ALTER TABLE site_magic_link_rate RENAME TO site_magic_link_rate_moved');
+    try {
+      const res = await postJson(VALID);
+      expect(res.status).toBe(503);
+      const requestId = res.headers.get('x-request-id');
+      expect((await res.clone().json()).error).toMatchObject({ code: 'CONTACT_UNAVAILABLE', retryable: true });
+      expect(logged.some((line) => line.includes(String(requestId)) && line.includes('42P01'))).toBe(true);
+      for (const name of ['DATABASE_URL', 'site_magic_link_rate', 'migrations']) {
+        expect(await answered(res)).not.toContain(name);
+      }
+
+      const formRes = await postForm(VALID);
+      expect(formRes.headers.get('location')).toBe('/enterprise?contact=unavailable');
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      await pg.exec('ALTER TABLE site_magic_link_rate_moved RENAME TO site_magic_link_rate');
+    }
+  });
+});
+
 describe('forward failure', () => {
   it('returns 502 when the target rejects, without echoing or logging the URL', async () => {
     fetchMock.mockResolvedValueOnce(new Response(`bad request to ${FORWARD_URL}`, { status: 400 }));
@@ -315,7 +437,8 @@ describe('enterprise page', () => {
 
   it('shows the outcome a form post redirected back with, and nothing for an unknown one', async () => {
     expect(await render('sent')).toContain(`<p role="status">Thanks. The ${BRAND.name} team has your message`);
-    expect(await render('unavailable')).toContain('not configured yet, so nothing was sent');
+    expect(await render('unavailable')).toContain('unavailable right now, so nothing was sent. Try again in a few minutes');
+    expect(await render('rate_limited')).toContain('Please try again in a few minutes.');
     expect(await render('<script>')).not.toContain('role="status"');
     expect(await render()).not.toContain('role="status"');
   });

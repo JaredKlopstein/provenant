@@ -10,7 +10,16 @@
  * The forward URL is a secret of the owner's: it is never logged, never returned,
  * and never interpolated into an error. fetch's own error messages can contain the
  * URL, so failures are logged by error name only.
+ *
+ * Each valid submission counts against a per-IP limit kept in the site database
+ * (DATABASE_URL) before it is forwarded; over the limit the answer is 429 and
+ * nothing is forwarded. The limit fails closed: without DATABASE_URL, or when the
+ * count fails, nothing is forwarded and the answer is a generic retryable 503
+ * whose cause goes only to the log, under the request id the response carries.
  */
+import { allowContact, clientIp } from '../../../src/auth/rate-limit';
+// The site's auth database (DATABASE_URL), where the rate limit is kept.
+import { DATABASE_URL_ENV, usedTokenDb } from '../../../src/auth/used-tokens';
 import { BRAND } from '../../../src/brand';
 import { FLEET_SIZES, HONEYPOT_FIELD, type ContactOutcome, type FleetSize } from '../../../src/contact';
 
@@ -97,6 +106,23 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
+  const db = usedTokenDb();
+  if (!db) return limiterDown(form, `${DATABASE_URL_ENV} is not set; the contact rate limit is kept there`);
+  let allowed: boolean;
+  try {
+    allowed = await allowContact(db, clientIp(request.headers));
+  } catch (err) {
+    return limiterDown(form, `could not count the submission against its rate limit (${errorCode(err) ?? 'no error code'})`);
+  }
+  if (!allowed) {
+    return fail(429, 'rate_limited', {
+      code: 'RATE_LIMITED',
+      message: `Too many messages from here in a short time. ${NOTHING_SENT}`,
+      retryable: true,
+      fix: { note: 'Please try again in a few minutes.' },
+    });
+  }
+
   try {
     const res = await fetch(target, {
       method: 'POST',
@@ -124,6 +150,33 @@ function forwardFailed(fail: (status: number, outcome: ContactOutcome, error: Er
     retryable: true,
     fix: { note: 'Retry shortly. If it keeps failing, the operator can find the reason in the server log.' },
   });
+}
+
+/**
+ * The rate limiter cannot count: forward nothing and answer a generic, retryable
+ * 503. The cause, which may name a variable, goes only to the log.
+ */
+function limiterDown(form: boolean, cause: string): Response {
+  const requestId = crypto.randomUUID();
+  console.error(`contact: request ${requestId}: ${cause}`);
+  const headers = { 'x-request-id': requestId };
+  if (form) return redirect('/enterprise?contact=unavailable', headers);
+  const error: ErrorBody = {
+    code: 'CONTACT_UNAVAILABLE',
+    message: `We couldn't take your message right now. Please try again in a few minutes. ${NOTHING_SENT}`,
+    retryable: true,
+    fix: { note: `If it keeps failing, reach the ${BRAND.name} team through ${BRAND.repository}. Quote request id ${requestId}.` },
+  };
+  return json(503, { error, requestId }, headers);
+}
+
+/** The Postgres SQLSTATE of a failed query, if any. drizzle wraps the driver's error in `cause`. */
+function errorCode(err: unknown): string | null {
+  for (let e: unknown = err, depth = 0; e && typeof e === 'object' && depth < 3; e = (e as { cause?: unknown }).cause, depth++) {
+    const code = (e as { code?: unknown }).code;
+    if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) return code;
+  }
+  return null;
 }
 
 /**
