@@ -178,28 +178,48 @@ describe('honeypot', () => {
 });
 
 describe('CONTACT_FORWARD_URL unset', () => {
-  it('returns 503 with a clear message and forwards nothing', async () => {
+  /** The response body and headers only, without the log. */
+  const answered = async (res: Response) => [await res.clone().text(), JSON.stringify([...res.headers])].join('\n');
+
+  /** The request id the response carries, after checking the log names the variable under it. */
+  const requestIdLogged = (res: Response) => {
+    const requestId = res.headers.get('x-request-id');
+    expect(requestId).toBeTruthy();
+    expect(logged.some((line) => line.includes(String(requestId)) && line.includes('CONTACT_FORWARD_URL'))).toBe(true);
+    return requestId;
+  };
+
+  it('returns a generic 503 with a request id and forwards nothing', async () => {
     vi.stubEnv('CONTACT_FORWARD_URL', '');
     const res = await postJson(VALID);
     expect(res.status).toBe(503);
-    const { error } = await res.json();
-    expect(error.code).toBe('CONTACT_UNAVAILABLE');
-    expect(error.message).toBe('Enterprise contact is not configured on this server yet. Nothing was sent.');
-    expect(error.fix.note).toContain('CONTACT_FORWARD_URL');
+    const requestId = requestIdLogged(res);
+    const body = await res.clone().json();
+    expect(body.requestId).toBe(requestId);
+    expect(body.error.code).toBe('CONTACT_UNAVAILABLE');
+    expect(body.error.message).toBe('Enterprise contact is not configured on this server yet. Nothing was sent.');
+    expect(body.error.fix.note).toContain(BRAND.repository);
+    expect(body.error.fix.note).toContain(String(requestId));
+    expect(await answered(res)).not.toContain('CONTACT_FORWARD_URL');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('treats a missing variable the same as an empty one', async () => {
     delete process.env.CONTACT_FORWARD_URL;
-    expect((await postJson(VALID)).status).toBe(503);
+    const res = await postJson(VALID);
+    expect(res.status).toBe(503);
+    requestIdLogged(res);
+    expect(await answered(res)).not.toContain('CONTACT_FORWARD_URL');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('redirects a form post back with contact=unavailable', async () => {
-    vi.stubEnv('CONTACT_FORWARD_URL', '');
+  it('redirects a form post back with contact=unavailable and a request id', async () => {
+    delete process.env.CONTACT_FORWARD_URL;
     const res = await postForm(VALID);
     expect(res.status).toBe(303);
     expect(res.headers.get('location')).toBe('/enterprise?contact=unavailable');
+    requestIdLogged(res);
+    expect(await answered(res)).not.toContain('CONTACT_FORWARD_URL');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -208,8 +228,21 @@ describe('CONTACT_FORWARD_URL unset', () => {
     const res = await postJson(VALID);
     expect(res.status).toBe(503);
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(logged.join('\n')).toContain('CONTACT_FORWARD_URL');
+    const requestId = requestIdLogged(res);
+    expect(logged.join('\n')).toContain('not an http(s) URL');
+    expect((await res.clone().json()).requestId).toBe(requestId);
+    expect(await answered(res)).not.toContain('CONTACT_FORWARD_URL');
     expect(await exposed(res)).not.toContain('forward.example.test');
+  });
+
+  it('answers a form post the same way when the value is not an http(s) URL', async () => {
+    vi.stubEnv('CONTACT_FORWARD_URL', 'javascript:alert(1)');
+    const res = await postForm(VALID);
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toBe('/enterprise?contact=unavailable');
+    requestIdLogged(res);
+    expect(await answered(res)).not.toContain('CONTACT_FORWARD_URL');
+    expect(await exposed(res)).not.toContain('alert');
   });
 });
 
