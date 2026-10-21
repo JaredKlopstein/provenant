@@ -40,7 +40,7 @@ const unescape = (html: string) =>
     .replace(/&amp;/g, '&');
 
 describe('site app folder', () => {
-  it('has the layout, the home, pricing, how-it-works, verify, security, enterprise, signup, sign-in confirm, checkout, welcome and account pages, and the contact, auth, checkout and portal routes', () => {
+  it('has the layout, the home, pricing, how-it-works, verify, security, enterprise, signup, sign-in confirm, checkout, welcome, account and not-found pages, and the contact, auth, checkout and portal routes', () => {
     expect(sources.map((s) => s.file).sort()).toEqual([
       'account/page.tsx',
       'api/account/portal/route.ts',
@@ -52,6 +52,7 @@ describe('site app folder', () => {
       'enterprise/page.tsx',
       'how-it-works/page.tsx',
       'layout.tsx',
+      'not-found.tsx',
       'page.tsx',
       'pricing/page.tsx',
       'security/page.tsx',
