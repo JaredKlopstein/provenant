@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { BRAND } from '../../src/brand';
 import { MAGIC_LINK_PATH, MAX_EMAIL_LENGTH, SIGNUP_OUTCOMES, type SignupOutcome } from '../../src/auth/email';
+import { parseDestination } from '../../src/auth/session';
 
 export const metadata: Metadata = {
   title: `Sign up: ${BRAND.name}`,
@@ -21,8 +22,10 @@ const OUTCOME_MESSAGES: Record<SignupOutcome, string> = {
 type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const { signup } = await searchParams;
+  const { signup, for: destination } = await searchParams;
   const outcome = SIGNUP_OUTCOMES.find((o) => o === signup);
+  // ?for=account and the like ride along as a destination key; anything else is dropped.
+  const dest = parseDestination(destination);
 
   return (
     <section>
@@ -33,6 +36,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       </p>
       {outcome && <p role="status">{OUTCOME_MESSAGES[outcome]}</p>}
       <form method="post" action={MAGIC_LINK_PATH}>
+        {dest && <input type="hidden" name="for" value={dest} />}
         <p>
           <label htmlFor="signup-email">Email</label>
           <input
