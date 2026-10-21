@@ -53,6 +53,7 @@ describe('site app folder', () => {
       'how-it-works/page.tsx',
       'layout.tsx',
       'not-found.tsx',
+      'opengraph-image.tsx',
       'page.tsx',
       'pricing/page.tsx',
       'pricing/waitlist-form.tsx',
