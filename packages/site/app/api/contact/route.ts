@@ -42,22 +42,28 @@ interface ErrorBody {
 export async function POST(request: Request): Promise<Response> {
   const form = isForm(request);
   const reply = (status: number, outcome: ContactOutcome, body: object) =>
-    form
-      ? new Response(null, { status: 303, headers: { location: `/enterprise?contact=${outcome}` } })
-      : json(status, body);
+    form ? redirect(`/enterprise?contact=${outcome}`) : json(status, body);
   const fail = (status: number, outcome: ContactOutcome, error: ErrorBody) => reply(status, outcome, { error });
 
-  const target = forwardUrl();
-  if (!target) {
-    return fail(503, 'unavailable', {
+  const forward = forwardUrl();
+  if ('cause' in forward) {
+    // The answer is generic: the cause, which names the variable, goes only to the
+    // log, under the request id the response carries.
+    const requestId = crypto.randomUUID();
+    console.error(`contact: request ${requestId}: ${forward.cause}`);
+    const headers = { 'x-request-id': requestId };
+    if (form) return redirect('/enterprise?contact=unavailable', headers);
+    const error: ErrorBody = {
       code: 'CONTACT_UNAVAILABLE',
       message: `Enterprise contact is not configured on this server yet. ${NOTHING_SENT}`,
       retryable: false,
       fix: {
-        note: `The site operator must set ${FORWARD_ENV}. Until then, reach the ${BRAND.name} team through ${BRAND.repository}.`,
+        note: `Reach the ${BRAND.name} team through ${BRAND.repository}. Quote request id ${requestId}.`,
       },
-    });
+    };
+    return json(503, { error, requestId }, headers);
   }
+  const target = forward.url;
 
   const raw = await request.text();
   if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) {
@@ -120,15 +126,17 @@ function forwardFailed(fail: (status: number, outcome: ContactOutcome, error: Er
   });
 }
 
-/** The configured http(s) forward URL, or null. A malformed value counts as unset. */
-function forwardUrl(): string | null {
+/**
+ * The configured http(s) forward URL, or the cause it is unusable. A malformed
+ * value counts as unset; the cause names the variable, never its value.
+ */
+function forwardUrl(): { url: string } | { cause: string } {
   const value = process.env[FORWARD_ENV]?.trim();
-  if (!value) return null;
+  if (!value) return { cause: `${FORWARD_ENV} is not set` };
   if (!URL.canParse(value) || !/^https?:$/.test(new URL(value).protocol)) {
-    console.error(`contact: ${FORWARD_ENV} is set but is not an http(s) URL`);
-    return null;
+    return { cause: `${FORWARD_ENV} is set but is not an http(s) URL` };
   }
-  return value;
+  return { url: value };
 }
 
 function isForm(request: Request): boolean {
@@ -175,9 +183,13 @@ function validate(fields: Record<string, string>): ContactSubmission | string {
   };
 }
 
-function json(status: number, body: unknown): Response {
+function redirect(location: string, extra: Record<string, string> = {}): Response {
+  return new Response(null, { status: 303, headers: { ...extra, location } });
+}
+
+function json(status: number, body: unknown, extra: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body, null, 2), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
+    headers: { ...extra, 'content-type': 'application/json; charset=utf-8' },
   });
 }
