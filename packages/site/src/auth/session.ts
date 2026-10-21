@@ -22,8 +22,31 @@ export const SESSION_COOKIE = '__Host-session';
 export const CONFIRM_PATH = '/signin';
 /** The confirm page's "Sign in" button POSTs here; only that POST uses up the link. */
 export const CALLBACK_PATH = '/api/auth/callback';
-/** Where the callback always sends a signed-in browser. No caller can change it. */
+/** Where the callback sends a signed-in browser whose link carries no known `dest`. */
 export const CHECKOUT_PATH = '/checkout';
+
+/**
+ * The only places the callback can send a signed-in browser. A link token carries a
+ * key from this table in its signed `dest` claim, never a path or URL, and the
+ * callback looks the path up here. A missing or unknown key means CHECKOUT_PATH.
+ */
+export const DESTINATIONS = {
+  checkout: CHECKOUT_PATH,
+  account: '/account',
+  welcome: '/welcome',
+} as const satisfies Record<string, `/${string}`>;
+export type Destination = keyof typeof DESTINATIONS;
+
+/** The key itself when `value` is one of DESTINATIONS' own keys, otherwise null. */
+export function parseDestination(value: unknown): Destination | null {
+  return typeof value === 'string' && Object.hasOwn(DESTINATIONS, value) ? (value as Destination) : null;
+}
+
+/** The fixed path for a `dest` claim: CHECKOUT_PATH for anything missing or unknown. */
+export function destinationPath(dest: unknown): string {
+  const key = parseDestination(dest);
+  return key ? DESTINATIONS[key] : CHECKOUT_PATH;
+}
 
 const ACCOUNT_ID_PREFIX = 'site-account:v1:';
 const MIN_SECRET_LENGTH = 32;
@@ -39,6 +62,8 @@ export interface LinkClaims {
   exp: number;
   /** Random 128-bit id, so a later change can make each link single-use. */
   jti: string;
+  /** Where to land after sign-in, as a DESTINATIONS key. Links issued before it existed have none. */
+  dest?: Destination;
 }
 
 interface SessionClaims {
@@ -73,10 +98,12 @@ export function sessionSecret(): string | null {
   return value;
 }
 
-/** A token bound to the normalized email, valid for 15 minutes. */
-export async function createLinkToken(email: string, secret: string): Promise<string> {
+/** A token bound to the normalized email, valid for 15 minutes, with an optional destination key. */
+export async function createLinkToken(email: string, secret: string, dest?: Destination): Promise<string> {
   const jti = hex(crypto.getRandomValues(new Uint8Array(16)));
   const claims: LinkClaims = { typ: 'link', email: normalizeEmail(email), exp: nowSeconds() + LINK_TTL_SECONDS, jti };
+  const key = parseDestination(dest);
+  if (key) claims.dest = key;
   return sign(claims, secret);
 }
 
@@ -95,7 +122,11 @@ export async function verifyLinkToken(token: string, secret: string): Promise<Li
   ) {
     return null;
   }
-  return { typ: 'link', email: claims.email, exp: claims.exp as number, jti: claims.jti };
+  const verified: LinkClaims = { typ: 'link', email: claims.email, exp: claims.exp as number, jti: claims.jti };
+  // An unknown dest is dropped, not refused: the link still works and lands on checkout.
+  const dest = parseDestination(claims.dest);
+  if (dest) verified.dest = dest;
+  return verified;
 }
 
 /** The Set-Cookie value for a 7-day session holding the account id and its expiry. */

@@ -13,6 +13,10 @@
  * There is no account lookup: an account is the hash of its email and comes into
  * being when the link is used.
  *
+ * An optional `for` field (a DESTINATIONS key: checkout, account or welcome) is
+ * signed into the link as its `dest` claim and picks where the callback lands.
+ * Any other value is ignored and the link lands on checkout, as one without it.
+ *
  * Like the contact route, it accepts the page's native form post (answered with a
  * 303 back to the page) and JSON (answered with JSON, every error carrying its fix).
  * A 503 is generic and names no variable or migration: the cause goes only to the
@@ -33,7 +37,7 @@ import {
   type SignupOutcome,
 } from '../../../../src/auth/email';
 import { allowSend, clientIp } from '../../../../src/auth/rate-limit';
-import { createLinkToken, normalizeEmail } from '../../../../src/auth/session';
+import { createLinkToken, normalizeEmail, parseDestination } from '../../../../src/auth/session';
 // The site's auth database (DATABASE_URL), shared with the used-link table.
 import { DATABASE_URL_ENV, usedTokenDb } from '../../../../src/auth/used-tokens';
 
@@ -78,7 +82,8 @@ export async function POST(request: Request): Promise<Response> {
 
   const raw = await request.text();
   const tooLarge = new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES;
-  const email = tooLarge ? '' : normalizeEmail(readEmail(request, raw));
+  const fields = tooLarge ? { email: '', for: null } : readFields(request, raw);
+  const email = normalizeEmail(fields.email);
   if (!isEmailAddress(email)) {
     return fail(400, 'invalid', {
       code: 'INVALID_INPUT',
@@ -99,7 +104,7 @@ export async function POST(request: Request): Promise<Response> {
   // Over a limit: the same answer as a send, and nothing sent.
   if (!allowed) return reply(200, 'sent', { ok: true, message: SENT });
 
-  const token = await createLinkToken(email, config.secret);
+  const token = await createLinkToken(email, config.secret, parseDestination(fields.for) ?? undefined);
   if (!(await sendMagicLinkEmail(config, email, magicLink(base, token)))) {
     return fail(502, 'failed', {
       code: 'EMAIL_SEND_FAILED',
@@ -121,18 +126,21 @@ function isForm(request: Request): boolean {
   return (request.headers.get('content-type') ?? '').startsWith('application/x-www-form-urlencoded');
 }
 
-/** The submitted email field, or '' when the body has none. */
-function readEmail(request: Request, raw: string): string {
-  if (isForm(request)) return new URLSearchParams(raw).get('email') ?? '';
+/** The submitted email field ('' when the body has none) and the raw `for` field, if any. */
+function readFields(request: Request, raw: string): { email: string; for: unknown } {
+  if (isForm(request)) {
+    const params = new URLSearchParams(raw);
+    return { email: params.get('email') ?? '', for: params.get('for') };
+  }
   try {
     const body: unknown = JSON.parse(raw);
     if (typeof body === 'object' && body !== null && 'email' in body && typeof body.email === 'string') {
-      return body.email;
+      return { email: body.email, for: 'for' in body ? body.for : null };
     }
   } catch {
     // Falls through to '', which the caller rejects with its fix.
   }
-  return '';
+  return { email: '', for: null };
 }
 
 /** The Postgres SQLSTATE of a failed query, if any. drizzle wraps the driver's error in `cause`. */

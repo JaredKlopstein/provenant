@@ -8,8 +8,10 @@
  * POST is that button. It must come from this site (the CSRF check in
  * src/auth/confirm.ts). A genuine, unexpired token that has not been used before
  * creates the identity (the account id is the hash of the email it was signed
- * for), sets a 7-day session cookie and redirects to the checkout page. The
- * destination is fixed: no `next`, `redirect` or other parameter can change it. A
+ * for), sets a 7-day session cookie and redirects to the path the token's signed
+ * `dest` key names in the fixed DESTINATIONS table (src/auth/session.ts); a
+ * missing or unknown key goes to checkout. Only that verified claim is read: no
+ * `next`, `redirect` or other parameter, header or form field can change it. A
  * bad, expired or already-used token goes back to the signup page with the same
  * generic message, so the response never says which.
  *
@@ -20,7 +22,7 @@
  */
 import { AUTH_ENV, SIGNUP_PATH, authConfig } from '../../../../src/auth/email';
 import { fromThisSite } from '../../../../src/auth/confirm';
-import { CHECKOUT_PATH, CONFIRM_PATH, accountIdFor, sessionCookie, verifyLinkToken } from '../../../../src/auth/session';
+import { CONFIRM_PATH, accountIdFor, destinationPath, sessionCookie, verifyLinkToken } from '../../../../src/auth/session';
 import { DATABASE_URL_ENV, markTokenUsed, usedTokenDb } from '../../../../src/auth/used-tokens';
 
 const NO_STORE = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } as const;
@@ -78,7 +80,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!firstUse) return seeOther(LINK_NOT_VALID);
 
   const cookie = await sessionCookie(await accountIdFor(claims.email), config.secret);
-  return seeOther(CHECKOUT_PATH, { 'set-cookie': cookie });
+  return seeOther(destinationPath(claims.dest), { 'set-cookie': cookie });
 }
 
 /** For the log only: which auth variables are unset, or that one is set but invalid. */

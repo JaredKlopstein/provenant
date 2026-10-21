@@ -1,11 +1,11 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { POST } from '../app/api/auth/magic-link/route.js';
-import { POST as POST_CALLBACK } from '../app/api/auth/callback/route.js';
+import { GET as GET_CALLBACK, POST as POST_CALLBACK } from '../app/api/auth/callback/route.js';
 import SignupPage, { metadata } from '../app/signup/page.js';
 import { BRAND } from '../src/brand.js';
 import { AUTH_ENV, MAGIC_LINK_PATH, linkBase } from '../src/auth/email.js';
@@ -13,6 +13,7 @@ import {
   CALLBACK_PATH,
   CHECKOUT_PATH,
   CONFIRM_PATH,
+  DESTINATIONS,
   SESSION_COOKIE,
   accountIdFor,
   createLinkToken,
@@ -139,6 +140,22 @@ const flip = (text: string, at: number) =>
   text.slice(0, at) + (text[at] === 'A' ? 'B' : 'A') + text.slice(at + 1);
 
 const parts = (token: string) => token.split('.') as [string, string];
+
+/**
+ * A link token with whatever claims a test asks for, genuinely signed with SECRET:
+ * what a holder of the secret (or an old build of the site) could have issued.
+ */
+function signedLink(extra: Record<string, unknown>): string {
+  const claims = {
+    typ: 'link',
+    email: 'ada@example.com',
+    exp: Math.floor(Date.now() / 1000) + 600,
+    jti: randomBytes(16).toString('hex'),
+    ...extra,
+  };
+  const body = Buffer.from(JSON.stringify(claims)).toString('base64url');
+  return `${body}.${createHmac('sha256', SECRET).update(body).digest('base64url')}`;
+}
 
 /** Configuration names that must never reach a client. */
 const NAMES = ['MAGIC_LINK', 'SESSION_SECRET', 'EMAIL_', 'SITE_BASE_URL', 'VERCEL_URL', 'BRAND', 'DATABASE_URL', 'migrations', '.sql'];
@@ -525,6 +542,113 @@ describe('callback', () => {
   });
 });
 
+describe('destination', () => {
+  const landing = async (res: Response) => {
+    expect(res.status).toBe(303);
+    expect(res.headers.get('set-cookie')).toMatch(new RegExp(`^${SESSION_COOKIE}=`));
+    return res.headers.get('location');
+  };
+
+  it('has exactly the checkout, account and welcome paths', () => {
+    expect(DESTINATIONS).toEqual({ checkout: '/checkout', account: '/account', welcome: '/welcome' });
+  });
+
+  it.each([
+    ['account', '/account'],
+    ['welcome', '/welcome'],
+    ['checkout', '/checkout'],
+  ])('a link sent for=%s lands on %s, by form post and by JSON', async (key, path) => {
+    await sendForm({ email: 'ada@example.com', for: key });
+    expect(await landing(await callback({ token: sentToken() }))).toBe(path);
+    await sendJson({ email: 'ada@example.com', for: key });
+    expect(await landing(await callback({ token: sentToken() }))).toBe(path);
+  });
+
+  it('signs the key into the token, so the link itself still carries only the token', async () => {
+    await sendForm({ email: 'ada@example.com', for: 'account' });
+    expect([...sentLink().searchParams.keys()]).toEqual(['token']);
+    expect(await verifyLinkToken(sentToken(), SECRET)).toMatchObject({ dest: 'account' });
+  });
+
+  it.each<unknown>(['https://evil.example', '//evil', '/admin', 'Account', '__proto__', 'toString', '', 42, ['account'], { account: 1 }])(
+    'ignores for=%j and the link lands on checkout',
+    async (value) => {
+      await sendJson({ email: 'ada@example.com', for: value });
+      expect((await verifyLinkToken(sentToken(), SECRET))?.dest).toBeUndefined();
+      expect(await landing(await callback({ token: sentToken() }))).toBe(CHECKOUT_PATH);
+    },
+  );
+
+  it('a token issued without a dest claim (an old link) still lands on checkout', async () => {
+    const old = signedLink({});
+    expect(JSON.parse(Buffer.from(parts(old)[0], 'base64url').toString('utf8'))).not.toHaveProperty('dest');
+    expect(await landing(await callback({ token: old }))).toBe(CHECKOUT_PATH);
+  });
+
+  it('a token with dest=account lands on /account', async () => {
+    expect(await landing(await callback({ token: await createLinkToken('ada@example.com', SECRET, 'account') }))).toBe(
+      '/account',
+    );
+  });
+
+  it.each<unknown>(['//evil', 'https://evil.example', '/admin', '/account', 'constructor', '__proto__', null, 1, ['account']])(
+    'a genuinely signed token with dest=%j lands on checkout, never off-site',
+    async (dest) => {
+      expect(await landing(await callback({ token: signedLink({ dest }) }))).toBe(CHECKOUT_PATH);
+    },
+  );
+
+  it.each<Record<string, string>>([
+    { next: 'https://evil.example' },
+    { dest: '//evil' },
+    { dest: 'account' },
+    { for: 'welcome', redirect: '//evil.example', returnTo: '/admin' },
+  ])('ignores request field %j and follows only the signed claim', async (extra) => {
+    expect(await landing(await callback({ token: signedLink({}), ...extra }))).toBe(CHECKOUT_PATH);
+    expect(await landing(await callback({ token: signedLink({ dest: 'welcome' }), ...extra }))).toBe('/welcome');
+  });
+
+  it('ignores a dest in the query string or a Referer header', async () => {
+    const res = await POST_CALLBACK(
+      new Request(new URL(`${CALLBACK_PATH}?dest=account&next=https://evil.example`, SITE), {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          origin: SITE,
+          referer: `${SITE}/signin?dest=account`,
+        },
+        body: new URLSearchParams({ token: signedLink({}) }).toString(),
+      }),
+    );
+    expect(await landing(res)).toBe(CHECKOUT_PATH);
+  });
+
+  it('GET never signs in or uses up a dest link, and a cross-site POST is still refused', async () => {
+    const token = await createLinkToken('ada@example.com', SECRET, 'account');
+
+    const get = await GET_CALLBACK(new Request(`${new URL(CALLBACK_PATH, SITE)}?${new URLSearchParams({ token })}`));
+    expect(get.status).toBe(303);
+    expect(get.headers.get('set-cookie')).toBeNull();
+    expect(new URL(get.headers.get('location') ?? '', SITE).pathname).toBe(CONFIRM_PATH);
+
+    const crossSite = await POST_CALLBACK(
+      new Request(new URL(CALLBACK_PATH, SITE), {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://evil.example' },
+        body: new URLSearchParams({ token }).toString(),
+      }),
+    );
+    expect(crossSite.status).toBe(403);
+    expect(crossSite.headers.get('set-cookie')).toBeNull();
+
+    // Neither used the link up: the real button press still works, once.
+    expect(await landing(await callback({ token }))).toBe('/account');
+    const again = await callback({ token });
+    expect(again.headers.get('location')).toBe('/signup?signup=expired');
+    expect(again.headers.get('set-cookie')).toBeNull();
+  });
+});
+
 describe('session cookie', () => {
   it('rejects an expired signed exp even when the browser still sends the cookie', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -598,8 +722,18 @@ describe('account id', () => {
 });
 
 describe('signup page', () => {
-  const render = async (signup?: string) =>
-    renderToStaticMarkup(await SignupPage({ searchParams: Promise.resolve(signup ? { signup } : {}) }));
+  const render = async (signup?: string, extra: Record<string, string> = {}) =>
+    renderToStaticMarkup(await SignupPage({ searchParams: Promise.resolve({ ...(signup ? { signup } : {}), ...extra }) }));
+
+  it('passes a known ?for= destination key through the form, and drops anything else', async () => {
+    for (const key of ['checkout', 'account', 'welcome']) {
+      expect(await render(undefined, { for: key })).toContain(`<input type="hidden" name="for" value="${key}"/>`);
+    }
+    for (const value of ['https://evil.example', '//evil', '/account', '__proto__', '']) {
+      expect(await render(undefined, { for: value })).not.toContain('name="for"');
+    }
+    expect(await render()).not.toContain('name="for"');
+  });
 
   it('posts a required email field to the magic-link route', async () => {
     const html = await render();
