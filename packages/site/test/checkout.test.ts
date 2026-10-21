@@ -13,7 +13,7 @@ import { BRAND } from '../src/brand.js';
 import { accountIdFor, sessionCookie } from '../src/auth/session.js';
 import type { BillingDb } from '../src/billing-db.js';
 import { CHECKOUT_API_PATH, createCheckoutRoute, type CheckoutRouteOptions } from '../src/checkout.js';
-import { annualOverageDisclosure } from '../src/plans.js';
+import { OFF_SALE_PLANS, annualOverageDisclosure } from '../src/plans.js';
 
 /**
  * Authenticated checkout (#59). Stripe is an in-memory fake handed to cloud's own
@@ -108,6 +108,8 @@ afterEach(() => {
 
 const route = (opts: CheckoutRouteOptions = {}) =>
   createCheckoutRoute({ stripe: fake.stripe, connect: () => db, log: (line) => logged.push(line), ...opts });
+/** Cloud is off sale (#95); this route puts it back on sale to test cloud's own handler. */
+const cloudOnSale = () => route({ offSale: new Set() });
 
 async function signedInCookie(email = 'ada@example.com'): Promise<string> {
   return (await sessionCookie(await accountIdFor(email), SECRET)).split(';')[0]!;
@@ -192,7 +194,7 @@ describe('the account', () => {
       client_reference_id: 'acct_attacker',
       account_id: 'acct_attacker',
       accountId: 'acct_attacker',
-    });
+    }, {}, cloudOnSale());
     expect(res.status).toBe(200);
     const ref = lastCheckout().client_reference_id;
     expect(ref).toBe(await accountIdFor('ada@example.com'));
@@ -213,7 +215,7 @@ describe("cloud's checkout handler", () => {
       [{ plan: 'cloud', interval: 'year' }, 'subscription'],
       [{ kind: 'payg_bundle' }, 'payment'],
     ] as const) {
-      const res = await postJson(body);
+      const res = await postJson(body, {}, cloudOnSale());
       expect(res.status, JSON.stringify(body)).toBe(200);
       expect((await res.json()).result).toEqual({ url: expect.stringMatching(/^https:\/\/checkout\.stripe\.test\//), mode });
       expect(lastCheckout().mode).toBe(mode);
@@ -233,17 +235,17 @@ describe("cloud's checkout handler", () => {
     fake = fakeStripe([
       { id: u('sub', 'existing'), status: 'active', created: 1, metadata: { provenant_plan: 'cloud' }, items: { data: [{ price: { id: PRICES.cloud_year } }] } },
     ]);
-    const res = await postJson({ plan: 'cloud', interval: 'month' });
+    const res = await postJson({ plan: 'cloud', interval: 'month' }, {}, cloudOnSale());
     expect(res.status).toBe(409);
     expect(fake.listed).toEqual([expect.objectContaining({ customer: CUSTOMER })]);
     expect(fake.checkouts).toEqual([]);
 
-    const form = await postForm({ plan: 'cloud', interval: 'year' });
+    const form = await postForm({ plan: 'cloud', interval: 'year' }, undefined, cloudOnSale());
     expect(form.headers.get('location')).toBe('/checkout?checkout=subscribed');
   });
 
   it('sends a successful form post straight to Stripe', async () => {
-    const res = await postForm({ plan: 'cloud', interval: 'year' });
+    const res = await postForm({ plan: 'cloud', interval: 'year' }, undefined, cloudOnSale());
     expect(res.status).toBe(303);
     expect(res.headers.get('location')).toBe('https://checkout.stripe.test/session-1');
   });
@@ -255,9 +257,9 @@ describe("cloud's checkout handler", () => {
   });
 
   it('carries the annual overage disclosure from cloud on annual checkout only', async () => {
-    await postJson({ plan: 'cloud', interval: 'year' });
+    await postJson({ plan: 'cloud', interval: 'year' }, {}, cloudOnSale());
     expect(JSON.stringify(lastCheckout())).toContain(JSON.stringify(annualOverageDisclosure()).slice(1, -1));
-    await postJson({ plan: 'cloud', interval: 'month' });
+    await postJson({ plan: 'cloud', interval: 'month' }, {}, cloudOnSale());
     expect(JSON.stringify(lastCheckout())).not.toContain(JSON.stringify(annualOverageDisclosure()).slice(1, -1));
   });
 
@@ -267,6 +269,52 @@ describe("cloud's checkout handler", () => {
       expect(res.status, body.slice(0, 20)).toBe(400);
     }
     expect(fake.checkouts).toEqual([]);
+  });
+});
+
+describe('Cloud off sale (#95)', () => {
+  it('is flagged off sale in the plans source', () => {
+    expect(OFF_SALE_PLANS.has('cloud')).toBe(true);
+  });
+
+  it('refuses Cloud monthly and annual as JSON with 403, without calling Stripe', async () => {
+    for (const interval of ['month', 'year']) {
+      const res = await postJson({ plan: 'cloud', interval });
+      expect(res.status, interval).toBe(403);
+      const { error } = await res.json();
+      expect(error.code).toBe('PLAN_NOT_ON_SALE');
+      expect(error.message).toMatch(/early access/);
+      expect(error.fix.note).toContain('payg_bundle');
+    }
+    expect(fake.checkouts).toEqual([]);
+    expect(fake.listed).toEqual([]);
+  });
+
+  it('sends a Cloud form post back to the checkout page as unavailable, without calling Stripe', async () => {
+    for (const interval of ['month', 'year']) {
+      const res = await postForm({ plan: 'cloud', interval });
+      expect(res.status).toBe(303);
+      expect(res.headers.get('location')).toBe('/checkout?checkout=unavailable');
+    }
+    expect(fake.checkouts).toEqual([]);
+  });
+
+  it('refuses Cloud on the deployed route too', async () => {
+    const res = await POST(
+      new Request(`http://site.test${CHECKOUT_API_PATH}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: await signedInCookie() },
+        body: '{"plan":"cloud","interval":"month"}',
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe('PLAN_NOT_ON_SALE');
+  });
+
+  it('still sells the pay-as-you-go bundle', async () => {
+    const res = await postJson({ kind: 'payg_bundle' });
+    expect(res.status).toBe(200);
+    expect(lastCheckout().mode).toBe('payment');
   });
 });
 
