@@ -41,7 +41,7 @@ export default function HomePage() {
             <a href={BRAND.repository}>Source on GitHub</a>
           </li>
           <li>
-            <a href={`${BRAND.repository}/blob/main/docs/getting-started.md`}>Getting started</a>
+            <a href={`${BRAND.repository}/blob/main/docs/getting-started.md`}>Getting started (GitHub)</a>
           </li>
         </ul>
       </section>

@@ -267,6 +267,10 @@ describe('enterprise page', () => {
     expect(html).toMatch(/aria-hidden="true" style="position:absolute;left:-10000px/);
   });
 
+  it('says when the team will reply', async () => {
+    expect(await render()).toContain('We reply within two business days.');
+  });
+
   it('shows no dollar figure', async () => {
     expect(await render()).not.toMatch(/\$\s*\d|USD|per month|\/mo\b/i);
   });
