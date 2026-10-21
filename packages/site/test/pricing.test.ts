@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import PricingPage, { metadata } from '../app/pricing/page.js';
 import { BRAND } from '../src/brand.js';
-import { cloudTerms } from '../src/plans.js';
+import { OFF_SALE_PLANS, cloudTerms, priceCards } from '../src/plans.js';
 import { OVERAGE_BUNDLE_PRICE_USD, PAYG_BUNDLE_PRICE_USD, PLANS } from '../../cloud/src/pricing.js';
 import { createCheckoutSession, type StripeLike } from '../../cloud/src/billing/stripe.js';
 
@@ -129,6 +129,34 @@ describe('pricing cards', () => {
 
   it('refuses to render a Cloud card with a term missing from PLANS', () => {
     expect(() => cloudTerms({ ...cloud, retentionDays: null })).toThrow(/retentionDays/);
+  });
+});
+
+describe('Cloud in early access (#95)', () => {
+  it('labels the Cloud card Early access and describes its terms as planned', async () => {
+    for (const billing of [undefined, 'annual']) {
+      const c = card(await render(billing), 'cloud');
+      expect(c.html).toMatch(/<p data-status="early-access"><strong>Early access<\/strong>: not on sale yet\./);
+      expect(c.html).toContain('<h3>Planned, not available yet</h3>');
+      expect(c.html.indexOf('<h3>')).toBeLessThan(c.html.indexOf('<ul>'));
+    }
+  });
+
+  it('has no checkout button, form or link on the Cloud card', async () => {
+    for (const billing of [undefined, 'annual']) {
+      const c = card(await render(billing), 'cloud');
+      expect(c.html).not.toMatch(/<form\b|<button\b|<a\b|\/api\/checkout/);
+    }
+  });
+
+  it('flags Cloud, and only Cloud, off sale in the plans source', () => {
+    expect([...OFF_SALE_PLANS]).toEqual(['cloud']);
+    expect(priceCards('monthly').filter((c) => c.offSale).map((c) => c.id)).toEqual(['cloud']);
+  });
+
+  it('does not describe Cloud as a subscription you can buy now', async () => {
+    expect(metadata.description).toMatch(/Cloud is in early access/);
+    expect(await render()).not.toMatch(/Cloud is a subscription/);
   });
 });
 

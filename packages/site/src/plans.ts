@@ -20,11 +20,22 @@ export const BILLINGS = ['monthly', 'annual'] as const satisfies readonly Billin
 /** The query parameter the page's toggle sets: `/pricing?billing=annual`. */
 export const BILLING_PARAM = 'billing';
 
+/**
+ * Plans checkout refuses and the pricing page shows as Early access. Cloud stays
+ * off sale until the hosted collector and continuous anchoring are live: a buyer
+ * would otherwise pay for a service they cannot use yet.
+ */
+export const OFF_SALE_PLANS: ReadonlySet<string> = new Set(['cloud']);
+
+export const EARLY_ACCESS_LABEL = 'Early access';
+
 export interface PriceCard {
   readonly id: 'core' | 'bundle' | 'cloud' | 'enterprise';
   readonly title: string;
   readonly price: string;
   readonly terms: readonly string[];
+  /** Off-sale cards: their terms are planned features, and they have no checkout. */
+  readonly offSale?: boolean;
 }
 
 const usd = (amount: number) => `$${amount}`;
@@ -98,6 +109,7 @@ export function priceCards(billing: Billing): PriceCard[] {
       title: cloud.name,
       price: cloudPrice(cloud, billing),
       terms: cloudTerms(cloud),
+      offSale: OFF_SALE_PLANS.has(cloud.id),
     },
     {
       id: 'enterprise',

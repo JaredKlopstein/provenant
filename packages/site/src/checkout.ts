@@ -22,6 +22,7 @@ import type { StripeLike, SubscriptionLister } from '@provenant/cloud/dist/billi
 import { SIGNUP_PATH, linkBase } from './auth/email';
 import { getSignedInAccount } from './auth/session';
 import { BILLING_DATABASE_ENV, billingDb, type ConnectBillingDb } from './billing-db';
+import { OFF_SALE_PLANS } from './plans';
 
 export const CHECKOUT_PAGE_PATH = '/checkout';
 export const CHECKOUT_API_PATH = '/api/checkout';
@@ -46,6 +47,8 @@ export interface CheckoutRouteOptions {
   connect?: ConnectBillingDb;
   /** Receives each failure line, already redacted by cloud. Defaults to console.error. */
   log?: (line: string) => void;
+  /** Plans refused before cloud's handler sees them. Defaults to OFF_SALE_PLANS. */
+  offSale?: ReadonlySet<string>;
 }
 
 interface ErrorBody {
@@ -58,6 +61,7 @@ interface ErrorBody {
 /** The deployed route passes nothing and reads process.env on each request. */
 export function createCheckoutRoute(opts: CheckoutRouteOptions = {}): (request: Request) => Promise<Response> {
   const log = opts.log ?? ((line: string) => console.error(line));
+  const offSale = opts.offSale ?? OFF_SALE_PLANS;
   return async (request) => {
     const form = isForm(request);
     const fail = (status: number, outcome: CheckoutOutcome, error: ErrorBody) =>
@@ -108,6 +112,14 @@ export function createCheckoutRoute(opts: CheckoutRouteOptions = {}): (request: 
         message: `The request body is not a JSON object or form of at most ${MAX_BODY_BYTES} bytes. ${NOTHING_CREATED}`,
         retryable: false,
         fix: { note: 'Send {"plan":"cloud","interval":"month"}, {"plan":"cloud","interval":"year"} or {"kind":"payg_bundle"}.' },
+      });
+    }
+    if (fields.plan !== undefined && offSale.has(fields.plan)) {
+      return fail(403, 'unavailable', {
+        code: 'PLAN_NOT_ON_SALE',
+        message: `The ${fields.plan} plan is in early access and not on sale yet. ${NOTHING_CREATED}`,
+        retryable: false,
+        fix: { note: 'Buy a single evidence bundle with {"kind":"payg_bundle"}, or see /pricing for what Cloud will include.' },
       });
     }
 
