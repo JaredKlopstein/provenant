@@ -5,7 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { getTableConfig } from 'drizzle-orm/pg-core';
-import { GET } from '../app/api/auth/callback/route.js';
+import { POST } from '../app/api/auth/callback/route.js';
 import { CALLBACK_PATH, CHECKOUT_PATH, SESSION_COOKIE, createLinkToken } from '../src/auth/session.js';
 import {
   DATABASE_URL_ENV,
@@ -28,6 +28,7 @@ vi.mock('drizzle-orm/neon-serverless', () => ({ drizzle: vi.fn(() => pgHolder.db
 const MIGRATION = new URL('../migrations/0000_magic_link_used.sql', import.meta.url).pathname;
 const SITE = new URL('..', import.meta.url).pathname;
 const SECRET = 'test-session-secret-for-used-token-tests';
+const SITE_ORIGIN = 'https://site.example.test';
 const DATABASE_URL = ['postgresql:', '', 'test-user:test-password@db.site.test', 'site'].join('/');
 const MINUTE = 60_000;
 const T0 = new Date('2026-10-20T12:00:00Z');
@@ -59,6 +60,8 @@ beforeEach(async () => {
   vi.stubEnv('EMAIL_API_KEY', 'test-email-api-key');
   vi.stubEnv('EMAIL_FROM', 'signin@example.test');
   vi.stubEnv(DATABASE_URL_ENV, DATABASE_URL);
+  vi.stubEnv('SITE_BASE_URL', SITE_ORIGIN);
+  vi.stubEnv('VERCEL_URL', '');
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -71,11 +74,15 @@ const rows = async () =>
 
 const jti = (n: number) => n.toString(16).padStart(32, '0');
 
-const click = (token: string) => {
-  const url = new URL(CALLBACK_PATH, 'http://site.test');
-  url.searchParams.set('token', token);
-  return GET(new Request(url));
-};
+/** Presses the confirm page's "Sign in" button: a same-origin form POST of the token. */
+const click = (token: string) =>
+  POST(
+    new Request(new URL(CALLBACK_PATH, SITE_ORIGIN), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', origin: SITE_ORIGIN },
+      body: new URLSearchParams({ token }).toString(),
+    }),
+  );
 
 describe('migration', () => {
   it('applies cleanly to a fresh Postgres and matches the drizzle table column for column', async () => {
@@ -180,22 +187,22 @@ describe('callback', () => {
     expect(await rows()).toHaveLength(1);
   });
 
-  it('refuses a second use with a clear "already used" response and no cookie', async () => {
+  it('refuses a second use with the generic "not valid" outcome and no cookie (#89)', async () => {
     const token = await createLinkToken('ada@example.com', SECRET);
     expect((await click(token)).headers.get('set-cookie')).not.toBeNull();
 
     const replay = await click(token);
-    expect(replay.status).toBe(409);
+    expect(replay.status).toBe(303);
+    expect(replay.headers.get('location')).toBe('/signup?signup=expired');
     expect(replay.headers.get('set-cookie')).toBeNull();
     expect(replay.headers.get('cache-control')).toBe('no-store');
-    expect(await replay.text()).toMatch(/already used/i);
   });
 
   it('gives exactly one session when the same link is clicked concurrently', async () => {
     const token = await createLinkToken('ada@example.com', SECRET);
     const responses = await Promise.all(Array.from({ length: 5 }, () => click(token)));
     expect(responses.filter((r) => r.headers.get('set-cookie') !== null)).toHaveLength(1);
-    expect(responses.filter((r) => r.status === 409)).toHaveLength(4);
+    expect(responses.filter((r) => r.headers.get('location') === '/signup?signup=expired')).toHaveLength(4);
   });
 
   it('refuses a bad signature or an expired link before any database write', async () => {

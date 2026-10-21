@@ -18,6 +18,9 @@ export const LINK_TTL_SECONDS = 15 * 60;
 export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 /** `__Host-` makes the browser insist on Secure, Path=/ and no Domain attribute. */
 export const SESSION_COOKIE = '__Host-session';
+/** Where the emailed link lands: a confirm page. A GET there never uses up the link. */
+export const CONFIRM_PATH = '/signin';
+/** The confirm page's "Sign in" button POSTs here; only that POST uses up the link. */
 export const CALLBACK_PATH = '/api/auth/callback';
 /** Where the callback always sends a signed-in browser. No caller can change it. */
 export const CHECKOUT_PATH = '/checkout';

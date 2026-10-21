@@ -16,7 +16,7 @@
  * applies by hand. Nothing here runs a migration. DATABASE_URL is never logged.
  */
 import { Pool } from '@neondatabase/serverless';
-import { lt } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { pgTable, text, timestamp, type PgDatabase, type PgQueryResultHKT } from 'drizzle-orm/pg-core';
 
@@ -47,6 +47,20 @@ export async function markTokenUsed(db: UsedTokenDb, jti: string, expiresAt: Dat
     .onConflictDoNothing({ target: siteMagicLinkUsed.jti })
     .returning({ jti: siteMagicLinkUsed.jti });
   return claimed.length === 1;
+}
+
+/**
+ * Whether a link has already been used. Read-only: the confirm page calls it on
+ * every GET, so a scanner opening the link changes nothing. Only `markTokenUsed`,
+ * on the confirm page's POST, claims a link.
+ */
+export async function isTokenUsed(db: UsedTokenDb, jti: string): Promise<boolean> {
+  const rows = await db
+    .select({ jti: siteMagicLinkUsed.jti })
+    .from(siteMagicLinkUsed)
+    .where(eq(siteMagicLinkUsed.jti, jti))
+    .limit(1);
+  return rows.length === 1;
 }
 
 let opened: { url: string; db: UsedTokenDb } | null = null;
