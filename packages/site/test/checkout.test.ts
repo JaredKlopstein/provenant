@@ -123,8 +123,8 @@ async function postJson(body: unknown, headers: Record<string, string> = {}, han
   );
 }
 
-async function postForm(fields: Record<string, string>, cookie?: string) {
-  return route()(
+async function postForm(fields: Record<string, string>, cookie?: string, handler = route()) {
+  return handler(
     new Request(`http://site.test${CHECKOUT_API_PATH}`, {
       method: 'POST',
       headers: {
@@ -301,7 +301,7 @@ describe('return URLs', () => {
     vi.stubEnv('SITE_BASE_URL', '');
     const res = await postJson({ kind: 'payg_bundle' }, { host: 'attacker.example' });
     expect(res.status).toBe(500);
-    expect((await res.json()).error.fix.note).toContain('SITE_BASE_URL');
+    expect((await res.json()).error.code).toBe('CHECKOUT_UNAVAILABLE');
     expect(fake.checkouts).toEqual([]);
   });
 
@@ -313,22 +313,48 @@ describe('return URLs', () => {
 });
 
 describe('configuration and secrets', () => {
-  it('answers 503 naming DATABASE_URL when it is unset, and creates no session', async () => {
-    vi.stubEnv('DATABASE_URL', '');
-    const res = await postJson({ kind: 'payg_bundle' });
-    expect(res.status).toBe(503);
-    expect((await res.json()).error.fix.note).toContain('DATABASE_URL');
-    expect(fake.checkouts).toEqual([]);
-  });
+  const noStripe = () => createCheckoutRoute({ connect: () => db, log: (l) => logged.push(l) });
+  const MISSING = [
+    { name: 'no base URL', unset: 'SITE_BASE_URL', status: 500, code: 'CHECKOUT_UNAVAILABLE', handler: route, cause: 'SITE_BASE_URL' },
+    { name: 'no DATABASE_URL', unset: 'DATABASE_URL', status: 503, code: 'CHECKOUT_UNAVAILABLE', handler: route, cause: 'DATABASE_URL' },
+    { name: 'no Stripe key', unset: 'STRIPE_SECRET_KEY', status: 503, code: 'BILLING_NOT_CONFIGURED', handler: noStripe, cause: 'STRIPE_SECRET_KEY' },
+  ] as const;
+  const NAMES = ['SITE_BASE_URL', 'VERCEL_URL', 'BRAND', 'DATABASE_URL', 'STRIPE', 'PROVENANT_', 'migration', ...Object.values(PRICE_ENV)];
 
-  it('answers 503 naming the missing Stripe variables, never their values', async () => {
-    vi.stubEnv('STRIPE_SECRET_KEY', '');
-    const res = await postJson({ kind: 'payg_bundle' }, {}, createCheckoutRoute({ connect: () => db, log: (l) => logged.push(l) }));
-    expect(res.status).toBe(503);
-    const body = JSON.stringify(await res.json());
-    expect(body).toContain('STRIPE_SECRET_KEY');
-    for (const secret of SECRETS) expect(body).not.toContain(secret);
-  });
+  /** Every header and the body, as one string to search. */
+  async function everything(res: Response): Promise<string> {
+    return [...res.headers].map(([k, v]) => `${k}: ${v}`).join('\n') + '\n' + (await res.text());
+  }
+
+  for (const c of MISSING) {
+    it(`${c.name}: JSON keeps its status and code, names nothing, and carries a logged request id`, async () => {
+      vi.stubEnv(c.unset, '');
+      const res = await postJson({ kind: 'payg_bundle' }, {}, c.handler());
+      expect(res.status).toBe(c.status);
+      const requestId = res.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+      const text = await everything(res.clone());
+      for (const name of [...NAMES, ...SECRETS]) expect(text).not.toContain(name);
+      const body = await res.json();
+      expect(body.error.code).toBe(c.code);
+      expect(body.requestId).toBe(requestId);
+      expect(logged.find((l) => l.includes(requestId!))).toContain(c.cause);
+      expect(fake.checkouts).toEqual([]);
+    });
+
+    it(`${c.name}: a form post goes back with checkout=unavailable and a logged request id`, async () => {
+      vi.stubEnv(c.unset, '');
+      const res = await postForm({ kind: 'payg_bundle' }, undefined, c.handler());
+      expect(res.status).toBe(303);
+      expect(res.headers.get('location')).toBe('/checkout?checkout=unavailable');
+      const requestId = res.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+      const text = await everything(res);
+      for (const name of [...NAMES, ...SECRETS]) expect(text).not.toContain(name);
+      expect(logged.find((l) => l.includes(requestId!))).toContain(c.cause);
+      expect(fake.checkouts).toEqual([]);
+    });
+  }
 
   it('stays in test mode: a live key without PROVENANT_BILLING_MODE=live is refused', async () => {
     vi.stubEnv('STRIPE_SECRET_KEY', LIVE_KEY);

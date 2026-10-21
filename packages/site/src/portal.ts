@@ -68,24 +68,29 @@ export function createPortalRoute(opts: PortalRouteOptions = {}): (request: Requ
       });
     }
 
+    // A missing-config answer is generic: the cause, which names variables, goes
+    // only to the log, under the request id the response carries.
+    const unavailable = (status: number, code: string, cause: string) => {
+      const requestId = crypto.randomUUID();
+      log(`billing portal: request ${requestId}: ${cause}`);
+      const headers = { 'x-request-id': requestId };
+      if (form) return redirect(`${ACCOUNT_PATH}?billing=unavailable`, headers);
+      const error: ErrorBody = {
+        code,
+        message: `The billing portal is not available on this server right now. ${NOTHING_CREATED}`,
+        retryable: false,
+        fix: { note: `The site operator must finish the server configuration. Quote request id ${requestId}.` },
+      };
+      return json(status, { error, requestId }, headers);
+    };
+
     const base = linkBase();
     if (!base) {
-      log('billing portal: no link base; set BRAND.domain, SITE_BASE_URL or VERCEL_URL');
-      return fail(500, 'unavailable', {
-        code: 'PORTAL_UNAVAILABLE',
-        message: `The billing portal has no base URL to send the customer back to. ${NOTHING_CREATED}`,
-        retryable: false,
-        fix: { note: 'The site operator must set a base URL: BRAND.domain, SITE_BASE_URL or VERCEL_URL.' },
-      });
+      return unavailable(500, 'PORTAL_UNAVAILABLE', 'no link base; set BRAND.domain, SITE_BASE_URL or VERCEL_URL');
     }
     const db = billingDb(opts.connect);
     if (!db) {
-      return fail(503, 'unavailable', {
-        code: 'PORTAL_UNAVAILABLE',
-        message: `The billing portal is not configured on this server yet. ${NOTHING_CREATED}`,
-        retryable: false,
-        fix: { note: `The site operator must set ${BILLING_DATABASE_ENV} to the billing database.` },
-      });
+      return unavailable(503, 'PORTAL_UNAVAILABLE', `${BILLING_DATABASE_ENV} is not set`);
     }
 
     let portal: (request: Request) => Promise<Response>;
@@ -101,15 +106,8 @@ export function createPortalRoute(opts: PortalRouteOptions = {}): (request: Requ
         log,
       }).portal;
     } catch (err) {
-      // Cloud's config error names the missing variables and never their values.
-      const message = err instanceof Error ? err.message : String(err);
-      log(`billing portal: ${message}`);
-      return fail(503, 'unavailable', {
-        code: 'BILLING_NOT_CONFIGURED',
-        message: `The billing portal is not configured on this server yet. ${NOTHING_CREATED}`,
-        retryable: false,
-        fix: { note: `The site operator must fix the billing configuration: ${message}` },
-      });
+      // Cloud's config error names the missing variables, so it is logged, never returned.
+      return unavailable(503, 'BILLING_NOT_CONFIGURED', err instanceof Error ? err.message : String(err));
     }
 
     const res = await portal(request);
@@ -141,8 +139,8 @@ function isForm(request: Request): boolean {
   return (request.headers.get('content-type') ?? '').startsWith('application/x-www-form-urlencoded');
 }
 
-function redirect(location: string): Response {
-  return new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
+function redirect(location: string, extra: Record<string, string> = {}): Response {
+  return new Response(null, { status: 303, headers: { ...extra, location, 'cache-control': 'no-store' } });
 }
 
 function withNoStore(res: Response): Response {
@@ -151,9 +149,9 @@ function withNoStore(res: Response): Response {
   return new Response(res.body, { status: res.status, headers });
 }
 
-function json(status: number, body: unknown): Response {
+function json(status: number, body: unknown, extra: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body, null, 2), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+    headers: { ...extra, 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
   });
 }

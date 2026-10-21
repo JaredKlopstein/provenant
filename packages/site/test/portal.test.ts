@@ -133,8 +133,8 @@ async function postJson(
   );
 }
 
-async function postForm(email: string | null = 'ada@example.com') {
-  return route()(
+async function postForm(email: string | null = 'ada@example.com', handler = route()) {
+  return handler(
     new Request(`http://site.test${PORTAL_API_PATH}`, {
       method: 'POST',
       headers: {
@@ -262,7 +262,7 @@ describe('return URL', () => {
     vi.stubEnv('SITE_BASE_URL', '');
     const res = await postJson({}, { headers: { host: 'attacker.example' } });
     expect(res.status).toBe(500);
-    expect((await res.json()).error.fix.note).toContain('SITE_BASE_URL');
+    expect((await res.json()).error.code).toBe('PORTAL_UNAVAILABLE');
     expect(fake.portals).toEqual([]);
   });
 
@@ -273,22 +273,48 @@ describe('return URL', () => {
 });
 
 describe('configuration and secrets', () => {
-  it('answers 503 naming DATABASE_URL when it is unset, and calls no one', async () => {
-    vi.stubEnv('DATABASE_URL', '');
-    const res = await postJson();
-    expect(res.status).toBe(503);
-    expect((await res.json()).error.fix.note).toContain('DATABASE_URL');
-    expect(fake.portals).toEqual([]);
-  });
+  const noStripe = () => createPortalRoute({ connect: () => db, log: (l) => logged.push(l) });
+  const MISSING = [
+    { name: 'no base URL', unset: 'SITE_BASE_URL', status: 500, code: 'PORTAL_UNAVAILABLE', handler: route, cause: 'SITE_BASE_URL' },
+    { name: 'no DATABASE_URL', unset: 'DATABASE_URL', status: 503, code: 'PORTAL_UNAVAILABLE', handler: route, cause: 'DATABASE_URL' },
+    { name: 'no Stripe key', unset: 'STRIPE_SECRET_KEY', status: 503, code: 'BILLING_NOT_CONFIGURED', handler: noStripe, cause: 'STRIPE_SECRET_KEY' },
+  ] as const;
+  const NAMES = ['SITE_BASE_URL', 'VERCEL_URL', 'BRAND', 'DATABASE_URL', 'STRIPE', 'PROVENANT_', 'migration', ...Object.values(PRICE_ENV)];
 
-  it('answers 503 naming the missing Stripe key, never its value', async () => {
-    vi.stubEnv('STRIPE_SECRET_KEY', '');
-    const res = await postJson({}, { handler: createPortalRoute({ connect: () => db, log: (l) => logged.push(l) }) });
-    expect(res.status).toBe(503);
-    const body = JSON.stringify(await res.json());
-    expect(body).toContain('STRIPE_SECRET_KEY');
-    for (const secret of SECRETS) expect(body).not.toContain(secret);
-  });
+  /** Every header and the body, as one string to search. */
+  async function everything(res: Response): Promise<string> {
+    return [...res.headers].map(([k, v]) => `${k}: ${v}`).join('\n') + '\n' + (await res.text());
+  }
+
+  for (const c of MISSING) {
+    it(`${c.name}: JSON keeps its status and code, names nothing, and carries a logged request id`, async () => {
+      vi.stubEnv(c.unset, '');
+      const res = await postJson({}, { handler: c.handler() });
+      expect(res.status).toBe(c.status);
+      const requestId = res.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+      const text = await everything(res.clone());
+      for (const name of [...NAMES, ...SECRETS]) expect(text).not.toContain(name);
+      const body = await res.json();
+      expect(body.error.code).toBe(c.code);
+      expect(body.requestId).toBe(requestId);
+      expect(logged.find((l) => l.includes(requestId!))).toContain(c.cause);
+      expect(fake.portals).toEqual([]);
+    });
+
+    it(`${c.name}: a form post goes back with billing=unavailable and a logged request id`, async () => {
+      vi.stubEnv(c.unset, '');
+      const res = await postForm('ada@example.com', c.handler());
+      expect(res.status).toBe(303);
+      expect(res.headers.get('location')).toBe('/account?billing=unavailable');
+      const requestId = res.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+      const text = await everything(res);
+      for (const name of [...NAMES, ...SECRETS]) expect(text).not.toContain(name);
+      expect(logged.find((l) => l.includes(requestId!))).toContain(c.cause);
+      expect(fake.portals).toEqual([]);
+    });
+  }
 
   it('stays in test mode: a live key without PROVENANT_BILLING_MODE=live is refused', async () => {
     vi.stubEnv('STRIPE_SECRET_KEY', LIVE_KEY);
