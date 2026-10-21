@@ -23,7 +23,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const account = await signedInFromCookie((await headers()).get('cookie'));
-  if (!account) redirect(SIGNUP_PATH);
+  if (!account) redirect(`${SIGNUP_PATH}?for=account`);
 
   const { billing } = await searchParams;
   const outcome = PORTAL_OUTCOMES.find((o) => o === billing);

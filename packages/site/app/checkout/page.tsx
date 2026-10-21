@@ -35,7 +35,7 @@ const OPTIONS = [
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const account = await signedInFromCookie((await headers()).get('cookie'));
-  if (!account) redirect(SIGNUP_PATH);
+  if (!account) redirect(`${SIGNUP_PATH}?for=checkout`);
 
   const { checkout } = await searchParams;
   const outcome = CHECKOUT_OUTCOMES.find((o) => o === checkout);

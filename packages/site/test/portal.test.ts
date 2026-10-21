@@ -336,8 +336,8 @@ describe('configuration and secrets', () => {
 });
 
 describe('account page', () => {
-  it('redirects to signup when no one is signed in', async () => {
-    expect(await redirectOf(() => AccountPage({ searchParams: Promise.resolve({}) }))).toBe('/signup');
+  it('redirects to signup for account when no one is signed in', async () => {
+    expect(await redirectOf(() => AccountPage({ searchParams: Promise.resolve({}) }))).toBe('/signup?for=account');
   });
 
   it('has one "Manage billing" form posting to the portal route, and no account field', async () => {
