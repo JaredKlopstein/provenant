@@ -40,7 +40,7 @@ export default async function EnterprisePage({ searchParams }: { searchParams: P
         <p>
           For teams running agent fleets whose terms do not fit the Cloud plan. Enterprise is agreed
           by contract, not bought through checkout, and it has no listed price. Tell us what you
-          need and we will reply by email.
+          need below. We reply within two business days.
         </p>
         <ul>
           {TERMS.map((term) => (
