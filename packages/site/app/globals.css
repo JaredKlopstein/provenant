@@ -1,0 +1,474 @@
+/*
+ * The site's one global stylesheet, loaded by app/layout.tsx. Plain CSS with no
+ * runtime dependency. Pages carry no class names: rules target the elements and
+ * the aria-labels the pages already render, so page markup and its tests stay put.
+ *
+ * Dark mode is deferred: everything colour-related reads from the tokens below,
+ * so a later `prefers-color-scheme: dark` block only has to redefine them.
+ */
+
+:root {
+  color-scheme: light;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --color-text: #1b1f24;
+  --color-muted: #57606a;
+  --color-bg: #ffffff;
+  --color-surface: #f6f8fa;
+  --color-border: #d0d7de;
+  --color-accent: #0b57d0;
+  --color-accent-strong: #0842a0;
+  --color-accent-soft: #e8f0fe;
+  --color-on-accent: #ffffff;
+  --color-code-bg: #f3f4f6;
+  --color-focus: #0b57d0;
+
+  --measure: 68ch;
+  --wide: 72rem;
+  --gutter: 1.25rem;
+  --radius: 0.5rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-bg);
+  overflow-wrap: break-word;
+}
+
+img,
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  margin: var(--space-8) 0 var(--space-3);
+}
+
+h1 {
+  font-size: clamp(1.75rem, 1.2rem + 2.5vw, 2.5rem);
+  margin-top: var(--space-6);
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
+h3 {
+  font-size: 1.125rem;
+}
+
+p,
+ul,
+ol {
+  margin: 0 0 var(--space-4);
+}
+
+a {
+  color: var(--color-accent);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  color: var(--color-accent-strong);
+  text-decoration-thickness: 2px;
+}
+
+/* Focus: a thick ring on keyboard focus only, on every focusable element. */
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Code */
+
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+code {
+  background: var(--color-code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+pre {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  line-height: 1.5;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  overflow-wrap: normal;
+}
+
+/* Buttons and form fields */
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button,
+input[type='submit'] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-6);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover,
+input[type='submit']:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+input:not([type='hidden']):not([type='submit']):not([type='checkbox']):not([type='radio']),
+select,
+textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+  border-color: var(--color-focus);
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+form {
+  margin: 0 0 var(--space-4);
+}
+
+/* Header and nav */
+
+.site-header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.site-header-inner {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: var(--space-3) var(--gutter);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-6);
+}
+
+.site-brand {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.site-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav a {
+  display: inline-block;
+  padding: var(--space-2) var(--space-1);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.nav-toggle {
+  display: none;
+  min-height: 2.5rem;
+  padding: var(--space-1) var(--space-4);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.nav-toggle:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+/*
+ * Under 640px the nav collapses behind the menu button. Only once the menu
+ * script has run (data-ready) is the list hidden, so without JavaScript the
+ * links still show.
+ */
+@media (max-width: 640px) {
+  .site-nav[data-ready] .nav-toggle {
+    display: inline-flex;
+  }
+
+  .site-nav[data-ready] ul {
+    display: none;
+  }
+
+  .site-nav[data-ready][data-open] {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .site-nav[data-ready][data-open] .nav-toggle {
+    margin-left: auto;
+  }
+
+  .site-nav[data-ready][data-open] ul {
+    display: flex;
+    flex-direction: column;
+    flex-basis: 100%;
+    gap: 0;
+    padding-top: var(--space-2);
+  }
+
+  .site-nav[data-ready][data-open] a {
+    display: block;
+    padding: var(--space-3) 0;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+/* Content column: wide enough for the pricing grid, prose held to the measure. */
+
+main {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0 var(--gutter) var(--space-12);
+}
+
+main > * {
+  max-width: var(--measure);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+main li {
+  margin-bottom: var(--space-2);
+}
+
+main li > :is(h2, h3):first-child {
+  margin-top: var(--space-6);
+}
+
+/* Home: proof points */
+
+section[aria-label='Proof points'] > ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+section[aria-label='Proof points'] > ul > li {
+  margin: 0;
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+section[aria-label='Proof points'] > ul > li > h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+}
+
+section[aria-label='Proof points'] > ul > li > p:last-child {
+  margin-bottom: 0;
+}
+
+/* Pricing: billing toggle */
+
+nav[aria-label='Billing period'] ul {
+  display: inline-flex;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-1);
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
+nav[aria-label='Billing period'] li {
+  margin: 0;
+}
+
+nav[aria-label='Billing period'] a {
+  display: inline-block;
+  padding: var(--space-1) var(--space-4);
+  border-radius: 999px;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+nav[aria-label='Billing period'] a[aria-current='page'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+
+/* Pricing: card grid, side by side on desktop, stacked on narrow screens. */
+
+main > section[aria-label='Plans'] {
+  max-width: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+  margin-top: var(--space-6);
+}
+
+section[aria-label='Plans'] > article {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+section[aria-label='Plans'] > article > h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+}
+
+section[aria-label='Plans'] > article > h2 + p {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+section[aria-label='Plans'] > article ul {
+  padding-left: 1.1rem;
+  font-size: 0.95rem;
+}
+
+section[aria-label='Plans'] > article > p[role='note'] {
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+/* The recommended plan: Cloud runs the collector and the anchoring for you. */
+section[aria-label='Plans'] > article[data-tier='cloud'] {
+  border: 2px solid var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: 0 0.5rem 1.5rem rgb(11 87 208 / 0.12);
+}
+
+section[aria-label='Plans'] > article[data-tier='cloud']::before {
+  content: 'Recommended';
+  position: absolute;
+  top: 0;
+  left: var(--space-6);
+  transform: translateY(-50%);
+  padding: 0.1rem var(--space-3);
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Footer */
+
+body > footer {
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
+
+body > footer > p {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: var(--space-6) var(--gutter);
+}

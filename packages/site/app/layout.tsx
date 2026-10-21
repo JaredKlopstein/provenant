@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BRAND } from '../src/brand';
+import { NavMenu } from '../src/nav-menu';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: `${BRAND.name}: ${BRAND.tagline}`,
@@ -21,16 +23,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <header>
-          <nav aria-label="Main">
-            <ul>
-              {NAV.map((item) => (
-                <li key={item.href}>
-                  <Link href={item.href}>{item.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+        <header className="site-header">
+          <div className="site-header-inner">
+            <Link href="/" className="site-brand">
+              {BRAND.name}
+            </Link>
+            <NavMenu items={NAV} />
+          </div>
         </header>
         <main>{children}</main>
         <footer>
