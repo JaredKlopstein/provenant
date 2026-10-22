@@ -24,7 +24,7 @@ export default async function SigninPage({ searchParams }: { searchParams: Promi
 
   if (check.status === 'unavailable') {
     return (
-      <section>
+      <section aria-label="Sign in">
         <h1>Sign in</h1>
         <p role="status">Sign-in is not available right now, so no one was signed in. Try the link again shortly.</p>
       </section>
@@ -33,7 +33,7 @@ export default async function SigninPage({ searchParams }: { searchParams: Promi
   if (check.status === 'invalid') redirect(`${SIGNUP_PATH}?signup=expired`);
 
   return (
-    <section>
+    <section aria-label="Sign in">
       <h1>Sign in</h1>
       <p>
         Sign in to {BRAND.name} as <strong>{check.email}</strong>.

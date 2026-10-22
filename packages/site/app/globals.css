@@ -459,6 +459,27 @@ section[aria-label='Plans'] > article[data-tier='cloud']::before {
   text-transform: uppercase;
 }
 
+/* Sign in: the signup form and the confirm page share one layout. */
+
+section[aria-label='Sign in'] p[role='status'] {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--color-accent-soft);
+}
+
+section[aria-label='Sign in'] form {
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+section[aria-label='Sign in'] form > p:last-child {
+  margin-bottom: 0;
+}
+
 /* Footer */
 
 body > footer {

@@ -745,13 +745,13 @@ describe('signup page', () => {
   });
 
   it('takes brand text from BRAND', () => {
-    expect(metadata.title).toBe(`Sign up: ${BRAND.name}`);
+    expect(metadata.title).toBe(`Sign in or create an account: ${BRAND.name}`);
     expect(metadata.description).toContain(BRAND.name);
   });
 
   it('shows the outcome it was redirected back with, and nothing for an unknown one', async () => {
     expect(await render('sent')).toContain('<p role="status">If that address can receive email');
-    expect(await render('expired')).toContain('not valid or has expired');
+    expect(await render('expired')).toContain('no longer valid');
     expect(await render('unavailable')).toContain('not open yet');
     expect(await render('<script>')).not.toContain('role="status"');
     expect(await render()).not.toContain('role="status"');
