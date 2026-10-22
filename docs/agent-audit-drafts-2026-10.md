@@ -101,17 +101,25 @@ should **reference** it by id, not absorb its fields.
 - **No conformance to any of these drafts** is claimed. None is adopted, and
   they disagree with each other.
 
-## Decisions for the owner (open)
+## Decisions
 
-#41 asks for two decisions. They are product decisions, so they are recorded here
-as open, each with a recommendation.
+#41 asked for two decisions. The owner made both on 2026-10-22, taking the
+recommendations below, and closed #41:
+
+1. **Refused calls get a receipt**, as a documented convention: record them with
+   `outcome: denied` (the getting-started guide says so). No schema change. Finer
+   verdicts are deferred.
+2. **`principal`, a delegation-receipt id and a policy hash wait for a later
+   Phase 3 profile.** They are not fields now.
+
+The reasoning behind each:
 
 1. **Do denied and rejected tool calls get a receipt?**
    - The action capsule draft requires a record for every verdict.
      NIST/NSA/CISA Practice 5 (16 Oct 2026) asks for rejected actions and tool
      calls to be preserved, though it's scoped to frontier training and
      evaluation.
-   - **Recommendation:** in scope as a documented convention, with no schema
+   - **Decided:** in scope as a documented convention, with no schema
      change. `outcome: denied` already exists, so the getting-started guide and
      `discover` should say that a refused consequential action is recorded with
      it.
@@ -119,7 +127,7 @@ as open, each with a recommendation.
      working group settles the vocabulary.
 2. **Are `principal`, a delegation-receipt id and a policy hash optional
    extension fields now, or a later profile?**
-   - **Recommendation:** a later profile, built with Phase 3 (contracts and
+   - **Decided:** a later profile, built with Phase 3 (contracts and
      approvals), where `approval_id` and `contract_id` are already reserved.
    - Adding them now would build Phase 3 vocabulary ahead of Phase 3.
      AAT's "principal not recorded" rule means a missing principal doesn't fail
