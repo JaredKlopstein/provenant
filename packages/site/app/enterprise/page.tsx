@@ -25,6 +25,12 @@ const OUTCOME_MESSAGES: Record<ContactOutcome, string> = {
   rate_limited: 'Several messages were sent from here in a short time, so this one was not sent. Please try again in a few minutes.',
 };
 
+// "invalid" is about what was typed, and the route does not say which field, so every
+// visible field is marked invalid and described by the message. The other outcomes
+// are not the fields' fault.
+const FIELD_ERRORS: readonly ContactOutcome[] = ['invalid'];
+const OUTCOME_ID = 'contact-outcome';
+
 // Kept off screen rather than display:none, which some bots skip. People never reach it.
 const HONEYPOT_STYLE = { position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' } as const;
 
@@ -33,6 +39,8 @@ type SearchParams = Record<string, string | string[] | undefined>;
 export default async function EnterprisePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const { contact } = await searchParams;
   const outcome = CONTACT_OUTCOMES.find((o) => o === contact);
+  const fieldError = !!outcome && FIELD_ERRORS.includes(outcome);
+  const errorProps = fieldError ? ({ 'aria-invalid': true, 'aria-describedby': OUTCOME_ID } as const) : {};
 
   return (
     <>
@@ -55,15 +63,27 @@ export default async function EnterprisePage({ searchParams }: { searchParams: P
       </section>
       <section aria-label="Contact">
         <h2>Contact the team</h2>
-        {outcome && <p role="status">{OUTCOME_MESSAGES[outcome]}</p>}
+        {outcome && (
+          <p id={fieldError ? OUTCOME_ID : undefined} role="status">
+            {OUTCOME_MESSAGES[outcome]}
+          </p>
+        )}
         <form method="post" action={CONTACT_PATH}>
           <p>
             <label htmlFor="contact-name">Name</label>
-            <input id="contact-name" name="name" type="text" required maxLength={200} autoComplete="name" />
+            <input id="contact-name" name="name" type="text" required maxLength={200} autoComplete="name" {...errorProps} />
           </p>
           <p>
             <label htmlFor="contact-email">Work email</label>
-            <input id="contact-email" name="email" type="email" required maxLength={254} autoComplete="email" />
+            <input
+              id="contact-email"
+              name="email"
+              type="email"
+              required
+              maxLength={254}
+              autoComplete="email"
+              {...errorProps}
+            />
           </p>
           <p>
             <label htmlFor="contact-company">Company</label>
@@ -74,11 +94,12 @@ export default async function EnterprisePage({ searchParams }: { searchParams: P
               required
               maxLength={200}
               autoComplete="organization"
+              {...errorProps}
             />
           </p>
           <p>
             <label htmlFor="contact-fleet">Agent fleet size</label>
-            <select id="contact-fleet" name="fleetSize" required defaultValue="">
+            <select id="contact-fleet" name="fleetSize" required defaultValue="" {...errorProps}>
               <option value="" disabled>
                 Choose one
               </option>
@@ -91,7 +112,7 @@ export default async function EnterprisePage({ searchParams }: { searchParams: P
           </p>
           <p>
             <label htmlFor="contact-need">What you need</label>
-            <textarea id="contact-need" name="need" required maxLength={5000} rows={6} />
+            <textarea id="contact-need" name="need" required maxLength={5000} rows={6} {...errorProps} />
           </p>
           <div aria-hidden="true" style={HONEYPOT_STYLE}>
             <label htmlFor="contact-website">Leave this field empty</label>

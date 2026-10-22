@@ -15,7 +15,7 @@ type Params = Record<string, string>;
 
 const render = async (params: Params = {}) =>
   renderToStaticMarkup(await SignupPage({ searchParams: Promise.resolve(params) }));
-const main = (html: string) => /<main>([\s\S]*)<\/main>/.exec(html)?.[1] ?? '';
+const main = (html: string) => /<main[^>]*>([\s\S]*)<\/main>/.exec(html)?.[1] ?? '';
 const script = (html: string) => /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '';
 
 const rules = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8')
