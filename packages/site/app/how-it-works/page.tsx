@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { BRAND } from '../../src/brand';
 
 export const metadata: Metadata = {
-  title: `How it works: ${BRAND.name}`,
+  title: 'How it works',
   description: `How ${BRAND.name} turns agent actions into evidence anyone can verify offline.`,
 };
 

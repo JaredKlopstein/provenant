@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import OpengraphImage, { alt, contentType, size } from '../app/opengraph-image.js';
 import { metadata } from '../app/layout.js';
+import { metadata as checkoutMetadata } from '../app/checkout/page.js';
+import { metadata as howItWorksMetadata } from '../app/how-it-works/page.js';
 import { BRAND } from '../src/brand.js';
 
 /**
@@ -84,6 +86,16 @@ describe('page titles (app/layout.tsx)', () => {
     const src = source('layout.tsx');
     expect(src).toContain('template: `%s · ${BRAND.name}`');
     expect(src).not.toContain(`'%s · ${BRAND.name}'`);
+  });
+
+  // #137: pages set only their short name; the layout template supplies the brand.
+  it.each([
+    ['Checkout', checkoutMetadata],
+    ['How it works', howItWorksMetadata],
+  ])('renders the %s page title as "<Name> · brand"', (name, pageMetadata) => {
+    expect(pageMetadata.title).toBe(name);
+    const { template } = metadata.title as { template: string };
+    expect(template.replace('%s', String(pageMetadata.title))).toBe(`${name} · ${BRAND.name}`);
   });
 });
 

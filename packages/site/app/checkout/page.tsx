@@ -8,7 +8,7 @@ import { CHECKOUT_API_PATH, CHECKOUT_OUTCOMES, signedInFromCookie, type Checkout
 import { annualOverageDisclosure, priceCards } from '../../src/plans';
 
 export const metadata: Metadata = {
-  title: `Checkout: ${BRAND.name}`,
+  title: 'Checkout',
   description: `Buy the ${BRAND.name} Cloud plan or a single evidence bundle.`,
 };
 
