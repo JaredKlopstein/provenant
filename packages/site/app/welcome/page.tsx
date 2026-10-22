@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { BRAND } from '../../src/brand';
 import { SIGNUP_PATH } from '../../src/auth/email';
+import { AccountBar } from '../../src/account-bar';
 import { signedInFromCookie } from '../../src/checkout';
 
 export const metadata: Metadata = {
@@ -66,6 +67,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
 
   return (
     <>
+      <AccountBar account={account} />
       <section>
         <h1>Welcome</h1>
         {checkedOut && <p role="status">Thank you. Your checkout with Stripe is complete.</p>}

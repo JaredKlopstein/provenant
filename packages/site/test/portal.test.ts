@@ -343,7 +343,8 @@ describe('account page', () => {
   it('has one "Manage billing" form posting to the portal route, and no account field', async () => {
     pageCookie.value = await cookieFor('ada@example.com');
     const html = renderToStaticMarkup(await AccountPage({ searchParams: Promise.resolve({}) }));
-    const forms = html.match(/<form\b[^>]*>/g) ?? [];
+    // The other form on the page is the account bar's Sign out (#101).
+    const forms = (html.match(/<form\b[^>]*>/g) ?? []).filter((f) => !f.includes('action="/api/auth/sign-out"'));
     expect(forms).toHaveLength(1);
     expect(forms[0]).toContain(`action="${PORTAL_API_PATH}"`);
     expect(forms[0]).toContain('method="post"');

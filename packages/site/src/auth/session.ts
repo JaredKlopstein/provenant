@@ -22,6 +22,8 @@ export const SESSION_COOKIE = '__Host-session';
 export const CONFIRM_PATH = '/signin';
 /** The confirm page's "Sign in" button POSTs here; only that POST uses up the link. */
 export const CALLBACK_PATH = '/api/auth/callback';
+/** Signed-in pages' "Sign out" button POSTs here; a GET signs no one out. */
+export const SIGN_OUT_PATH = '/api/auth/sign-out';
 /** Where the callback sends a signed-in browser whose link carries no known `dest`. */
 export const CHECKOUT_PATH = '/checkout';
 
@@ -70,10 +72,14 @@ interface SessionClaims {
   typ: 'session';
   acct: string;
   exp: number;
+  /** The normalized email signed in with, for "Signed in as". Sessions issued before it existed have none. */
+  email?: string;
 }
 
 export interface SignedInAccount {
   accountId: string;
+  /** Present only when the session carries an email that hashes to `accountId`. */
+  email?: string;
 }
 
 /** Trim and lowercase, nothing more: dots and +tags are part of the address. */
@@ -129,11 +135,20 @@ export async function verifyLinkToken(token: string, secret: string): Promise<Li
   return verified;
 }
 
-/** The Set-Cookie value for a 7-day session holding the account id and its expiry. */
-export async function sessionCookie(accountId: string, secret: string): Promise<string> {
+/**
+ * The Set-Cookie value for a 7-day session holding the account id, its expiry and,
+ * when given, the email it was signed in with (shown as "Signed in as").
+ */
+export async function sessionCookie(accountId: string, secret: string, email?: string): Promise<string> {
   const claims: SessionClaims = { typ: 'session', acct: accountId, exp: nowSeconds() + SESSION_MAX_AGE_SECONDS };
+  if (email !== undefined) claims.email = normalizeEmail(email);
   const value = await sign(claims, secret);
   return `${SESSION_COOKIE}=${value}; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
+}
+
+/** The Set-Cookie value that ends the session: same name and attributes, empty and already expired. */
+export function clearedSessionCookie(): string {
+  return `${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
 }
 
 /**
@@ -150,7 +165,18 @@ export async function getSignedInAccount(request: Request): Promise<SignedInAcco
     return null;
   }
   if (!unexpired(claims.exp)) return null;
-  return { accountId: claims.acct };
+  const account: SignedInAccount = { accountId: claims.acct };
+  // The email is shown, never used to authorise, but it is still only trusted when it
+  // is the address this account id was derived from.
+  if (
+    typeof claims.email === 'string' &&
+    claims.email !== '' &&
+    claims.email === normalizeEmail(claims.email) &&
+    (await accountIdFor(claims.email)) === claims.acct
+  ) {
+    account.email = claims.email;
+  }
+  return account;
 }
 
 async function sign(claims: LinkClaims | SessionClaims, secret: string): Promise<string> {

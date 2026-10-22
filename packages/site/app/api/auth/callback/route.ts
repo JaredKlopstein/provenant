@@ -79,7 +79,7 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (!firstUse) return seeOther(LINK_NOT_VALID);
 
-  const cookie = await sessionCookie(await accountIdFor(claims.email), config.secret);
+  const cookie = await sessionCookie(await accountIdFor(claims.email), config.secret, claims.email);
   return seeOther(destinationPath(claims.dest), { 'set-cookie': cookie });
 }
 

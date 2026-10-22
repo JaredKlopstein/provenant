@@ -4,6 +4,9 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { BRAND } from '../../src/brand';
 import { SIGNUP_PATH } from '../../src/auth/email';
+import { AccountBar } from '../../src/account-bar';
+import { accountPlan, formatDate, type AccountPlan } from '../../src/account-plan';
+import { billingDb } from '../../src/billing-db';
 import { signedInFromCookie } from '../../src/checkout';
 import { PORTAL_API_PATH, PORTAL_OUTCOMES, type PortalOutcome } from '../../src/portal';
 
@@ -19,7 +22,21 @@ const OUTCOME_MESSAGES: Record<PortalOutcome, string> = {
   failed: 'The billing portal could not be opened. Try again shortly.',
 };
 
+const INTERVALS: Record<AccountPlan['interval'], string> = { month: 'monthly', year: 'annual' };
+
 type SearchParams = Record<string, string | string[] | undefined>;
+
+/** The account's current plan, null when none is recorded yet, or 'unavailable' when the database can't be read. */
+async function currentPlan(accountId: string): Promise<AccountPlan | null | 'unavailable'> {
+  const db = billingDb();
+  if (!db) return 'unavailable';
+  try {
+    return await accountPlan(db, accountId);
+  } catch (err) {
+    console.error(`account: could not read the plan (${err instanceof Error ? err.name : 'unknown error'})`);
+    return 'unavailable';
+  }
+}
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const account = await signedInFromCookie((await headers()).get('cookie'));
@@ -27,28 +44,64 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
   const { billing } = await searchParams;
   const outcome = PORTAL_OUTCOMES.find((o) => o === billing);
+  const plan = await currentPlan(account.accountId);
 
   return (
-    <section>
-      <h1>Account</h1>
-      <p>
-        Change or cancel your plan, update your payment method and download invoices in the billing
-        portal, which Stripe runs.
-      </p>
-      {outcome && (
-        <p role="status">
-          {OUTCOME_MESSAGES[outcome]}
-          {outcome === 'none' && (
-            <>
-              {' '}
-              <Link href="/pricing">See pricing</Link>.
-            </>
-          )}
+    <>
+      <AccountBar account={account} />
+      <section>
+        <h1>Account</h1>
+        {account.email && (
+          <p>
+            Email: <strong>{account.email}</strong>
+          </p>
+        )}
+        <h2>Plan</h2>
+        {plan === 'unavailable' ? (
+          <p>Plan details are not available right now. Manage billing still opens the billing portal.</p>
+        ) : plan === null ? (
+          <p>
+            No plan recorded for this account yet. A purchase shows here once Stripe confirms it.{' '}
+            <Link href="/pricing">See pricing</Link>.
+          </p>
+        ) : (
+          <>
+            <p>
+              <strong>
+                {plan.name}, {INTERVALS[plan.interval]}
+              </strong>
+            </p>
+            {plan.status === 'past_due' ? (
+              <p role="status">The latest payment is past due. Update your card in Manage billing.</p>
+            ) : (
+              plan.renewsAt && (
+                <p>
+                  Renews on <time dateTime={plan.renewsAt.toISOString().slice(0, 10)}>{formatDate(plan.renewsAt)}</time>.
+                </p>
+              )
+            )}
+          </>
+        )}
+        <h2>Billing</h2>
+        <p>
+          Change or cancel your plan, update your payment method and download invoices in the billing
+          portal, which Stripe runs.
         </p>
-      )}
-      <form method="post" action={PORTAL_API_PATH}>
-        <button type="submit">Manage billing</button>
-      </form>
-    </section>
+        {outcome && (
+          <p role="status">
+            {OUTCOME_MESSAGES[outcome]}
+            {outcome === 'none' && (
+              <>
+                {' '}
+                <Link href="/pricing">See pricing</Link>.
+              </>
+            )}
+          </p>
+        )}
+        <form method="post" action={PORTAL_API_PATH}>
+          <button type="submit">Manage billing</button>
+        </form>
+      </section>
+    </>
   );
 }

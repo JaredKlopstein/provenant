@@ -506,7 +506,7 @@ describe('callback', () => {
     );
     expect(cookie).not.toMatch(/Domain=/i);
 
-    expect(await getSignedInAccount(withCookie(cookie))).toEqual({ accountId: expectedId('ada@example.com') });
+    expect(await getSignedInAccount(withCookie(cookie))).toEqual({ accountId: expectedId('ada@example.com'), email: 'ada@example.com' });
   });
 
   it.each<Record<string, string>>([
@@ -703,7 +703,7 @@ describe('account id', () => {
       return getSignedInAccount(withCookie(res.headers.get('set-cookie') ?? ''));
     };
     const spaced = await signIn(' A@B.com ');
-    expect(spaced).toEqual({ accountId: expectedId('a@b.com') });
+    expect(spaced).toEqual({ accountId: expectedId('a@b.com'), email: 'a@b.com' });
     expect(await signIn('a@b.com')).toEqual(spaced);
   });
 
