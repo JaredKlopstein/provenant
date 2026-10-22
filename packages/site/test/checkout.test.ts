@@ -426,12 +426,24 @@ describe('checkout page', () => {
     expect(await redirectOf(() => CheckoutPage({ searchParams: Promise.resolve({}) }))).toBe('/signup?for=checkout');
   });
 
+  /** Renders checkout with Cloud on sale, as it will be once the hosted path is live (#101 hides payment while it is not). */
+  async function renderWithCloudOnSale(): Promise<string> {
+    const offSale = OFF_SALE_PLANS as Set<string>;
+    offSale.delete('cloud');
+    try {
+      return renderToStaticMarkup(await CheckoutPage({ searchParams: Promise.resolve({}) }));
+    } finally {
+      offSale.add('cloud');
+    }
+  }
+
   it('offers Cloud monthly, Cloud annual and the bundle as form posts, and links Enterprise', async () => {
     pageCookie.value = await signedInCookie();
-    const html = renderToStaticMarkup(await CheckoutPage({ searchParams: Promise.resolve({}) }));
+    const html = await renderWithCloudOnSale();
     const options = [...html.matchAll(/data-option="([^"]+)"/g)].map((m) => m[1]);
     expect(options).toEqual(['cloud-monthly', 'cloud-annual', 'bundle', 'enterprise']);
-    const forms = html.match(/<form\b[^>]*>/g) ?? [];
+    // The account bar's Sign out form (#101) is not a checkout option.
+    const forms = (html.match(/<form\b[^>]*>/g) ?? []).filter((f) => !f.includes('action="/api/auth/sign-out"'));
     expect(forms).toHaveLength(3);
     for (const form of forms) {
       expect(form).toContain(`action="${CHECKOUT_API_PATH}"`);
@@ -444,10 +456,20 @@ describe('checkout page', () => {
     expect(html).toContain('href="/enterprise"');
   });
 
-  it('shows the annual overage disclosure from cloud, word for word', async () => {
+  it('shows the annual overage disclosure from cloud, word for word, when Cloud is on sale', async () => {
+    pageCookie.value = await signedInCookie();
+    const html = await renderWithCloudOnSale();
+    expect(html.replace(/&#x27;/g, "'")).toContain(annualOverageDisclosure());
+  });
+
+  it('while Cloud is off sale, offers only the bundle for payment and the waitlist for Cloud', async () => {
     pageCookie.value = await signedInCookie();
     const html = renderToStaticMarkup(await CheckoutPage({ searchParams: Promise.resolve({}) }));
-    expect(html.replace(/&#x27;/g, "'")).toContain(annualOverageDisclosure());
+    const forms = (html.match(/<form\b[^>]*>/g) ?? []).filter((f) => !f.includes('action="/api/auth/sign-out"'));
+    expect(forms).toHaveLength(1);
+    expect(html).toContain('name="kind" value="payg_bundle"');
+    expect(html).not.toContain('name="plan" value="cloud"');
+    expect(html.replace(/&#x27;/g, "'")).not.toContain(annualOverageDisclosure());
   });
 
   it('shows the outcome it was sent back with, and nothing for an unknown one', async () => {

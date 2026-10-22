@@ -46,6 +46,7 @@ describe('site app folder', () => {
       'api/account/portal/route.ts',
       'api/auth/callback/route.ts',
       'api/auth/magic-link/route.ts',
+      'api/auth/sign-out/route.ts',
       'api/checkout/route.ts',
       'api/contact/route.ts',
       'checkout/page.tsx',
