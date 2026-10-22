@@ -19,7 +19,7 @@ const SITE = new URL('../', import.meta.url);
 const APP = new URL('../app/', import.meta.url);
 
 const html = renderToStaticMarkup(RootLayout({ children: NotFound() }));
-const main = /<main>([\s\S]*)<\/main>/.exec(html)?.[1] ?? '';
+const main = /<main[^>]*>([\s\S]*)<\/main>/.exec(html)?.[1] ?? '';
 
 /** Every URL a page or route handler answers, from the app folder. */
 const routes = readdirSync(APP, { recursive: true, encoding: 'utf8' })

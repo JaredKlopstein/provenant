@@ -31,6 +31,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
+        {/* The first focusable element on every page: keyboard users can skip the header and nav. */}
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         <header className="site-header">
           <div className="site-header-inner">
             <Link href="/" className="site-brand">
@@ -39,7 +43,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <NavMenu items={NAV} />
           </div>
         </header>
-        <main>{children}</main>
+        <main id="main">{children}</main>
         <footer>
           <p>
             {BRAND.name}: {BRAND.tagline}. <a href={BRAND.repository}>Source on GitHub</a>.

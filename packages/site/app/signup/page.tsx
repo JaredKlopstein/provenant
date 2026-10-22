@@ -31,8 +31,13 @@ const CONTEXT_LINES: Record<Destination, string> = {
 // Outcomes where nothing was sent, so the address the visitor typed is put back.
 const KEEP_EMAIL: readonly SignupOutcome[] = ['invalid', 'unavailable', 'failed'];
 
+// Outcomes about what was typed: the email field is marked invalid and described by
+// the message. The others (unavailable, failed, expired) are not the field's fault.
+const FIELD_ERRORS: readonly SignupOutcome[] = ['invalid'];
+
 const FORM_ID = 'signup-form';
 const EMAIL_ID = 'signup-email';
+const OUTCOME_ID = 'signup-outcome';
 const EMAIL_STORAGE_KEY = 'signup-email';
 
 /**
@@ -52,6 +57,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   const outcome = SIGNUP_OUTCOMES.find((o) => o === signup);
   // ?for=account and the like ride along as a destination key; anything else is dropped.
   const dest = parseDestination(destination);
+  const fieldError = !!outcome && FIELD_ERRORS.includes(outcome);
 
   return (
     <section aria-label="Sign in">
@@ -61,7 +67,11 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         Enter your email and we will send you a sign-in link. Your {BRAND.name} account is created the
         first time you use it. No password.
       </p>
-      {outcome && <p role="status">{OUTCOME_MESSAGES[outcome]}</p>}
+      {outcome && (
+        <p id={fieldError ? OUTCOME_ID : undefined} role="status">
+          {OUTCOME_MESSAGES[outcome]}
+        </p>
+      )}
       <form id={FORM_ID} method="post" action={MAGIC_LINK_PATH}>
         {dest && <input type="hidden" name="for" value={dest} />}
         <p>
@@ -73,6 +83,8 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             required
             maxLength={MAX_EMAIL_LENGTH}
             autoComplete="email"
+            aria-invalid={fieldError || undefined}
+            aria-describedby={fieldError ? OUTCOME_ID : undefined}
           />
         </p>
         <p>
