@@ -5,6 +5,9 @@ import OpengraphImage, { alt, contentType, size } from '../app/opengraph-image.j
 import { metadata } from '../app/layout.js';
 import { metadata as checkoutMetadata } from '../app/checkout/page.js';
 import { metadata as howItWorksMetadata } from '../app/how-it-works/page.js';
+import { metadata as securityMetadata } from '../app/security/page.js';
+import { metadata as signinMetadata } from '../app/signin/page.js';
+import { metadata as verifyMetadata } from '../app/verify/page.js';
 import { BRAND } from '../src/brand.js';
 
 /**
@@ -88,10 +91,13 @@ describe('page titles (app/layout.tsx)', () => {
     expect(src).not.toContain(`'%s · ${BRAND.name}'`);
   });
 
-  // #137: pages set only their short name; the layout template supplies the brand.
+  // #137, #146: pages set only their short name; the layout template supplies the brand.
   it.each([
     ['Checkout', checkoutMetadata],
     ['How it works', howItWorksMetadata],
+    ['Security', securityMetadata],
+    ['Sign in', signinMetadata],
+    ['Verify', verifyMetadata],
   ])('renders the %s page title as "<Name> · brand"', (name, pageMetadata) => {
     expect(pageMetadata.title).toBe(name);
     const { template } = metadata.title as { template: string };
