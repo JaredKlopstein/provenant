@@ -46,6 +46,8 @@ export interface PriceCard {
   readonly id: CardId;
   readonly title: string;
   readonly price: string;
+  /** A line under the price, such as the annual Cloud saving. */
+  readonly priceNote?: string;
   readonly terms: readonly string[];
   /** Off-sale cards: their terms are planned features, and they have no checkout. */
   readonly offSale?: boolean;
@@ -105,14 +107,87 @@ export function cloudTerms(plan: Plan = PLANS.cloud): string[] {
 }
 
 /**
- * Shown under the annual toggle. The same sentence the annual Cloud checkout
- * shows before the customer pays: annual overage bills monthly to the saved card.
+ * The sentence the annual Cloud checkout shows before the customer pays: annual
+ * overage bills monthly to the saved card.
  */
 export function annualOverageDisclosure(plan: Plan = PLANS.cloud): string {
   return (
     `Evidence bundles over the ${plan.includedBundlesPerMonth} included each month are billed ` +
     `monthly, at ${usd(OVERAGE_BUNDLE_PRICE_USD)} per bundle, to the card saved at this checkout.`
   );
+}
+
+/**
+ * The pricing page's wording of the same terms, shown under the annual toggle.
+ * There is no checkout on that page, so it names the card, not "this checkout".
+ */
+export function pricingAnnualOverageDisclosure(plan: Plan = PLANS.cloud): string {
+  return (
+    `Evidence bundles over the ${plan.includedBundlesPerMonth} included each month are charged ` +
+    `monthly, at ${usd(OVERAGE_BUNDLE_PRICE_USD)} per bundle, billed to your card.`
+  );
+}
+
+/**
+ * Months an annual Cloud plan saves against twelve monthly payments:
+ * (12 × monthly − annual) / monthly, from PLANS rather than typed in.
+ */
+export function annualSavingsMonths(plan: Plan = PLANS.cloud): number {
+  const monthly = required(plan.monthlyUsd, 'monthlyUsd');
+  const months = (12 * monthly - required(plan.annualUsd, 'annualUsd')) / monthly;
+  return Number(months.toFixed(1));
+}
+
+/** Shown under the annual Cloud price: "2 months free against 12 monthly payments". */
+export function annualSavingsLine(plan: Plan = PLANS.cloud): string {
+  const months = annualSavingsMonths(plan);
+  return `${months} ${months === 1 ? 'month' : 'months'} free against 12 monthly payments`;
+}
+
+/** What an evidence bundle is, in one line, for the pricing page. */
+export const BUNDLE_DEFINITION =
+  'An evidence bundle is a signed, timestamped export of a chain range that an auditor verifies offline.';
+
+/**
+ * The Core card's terms: the free plan's features without the CLI name, which
+ * PLANS carries in parentheses after a feature.
+ */
+export function coreTerms(plan: Plan = PLANS.free): string[] {
+  const cli = BRAND.name.toLowerCase();
+  return plan.features.map((feature) =>
+    feature.replace(/\s*\(([^)]*)\)/g, (match, inner: string) => (inner.toLowerCase().startsWith(cli) ? '' : match)),
+  );
+}
+
+export interface FaqEntry {
+  readonly question: string;
+  readonly answer: string;
+}
+
+/** The pricing page's questions, answered in terms the cards already use. */
+export function pricingFaq(plan: Plan = PLANS.cloud): FaqEntry[] {
+  return [
+    {
+      question: 'What is a receipt?',
+      answer:
+        'A record of one action an agent took, hash-chained to the receipts before it so a later change shows. ' +
+        'Writing receipts and verifying them is free on every plan.',
+    },
+    {
+      question: 'What is an evidence bundle?',
+      answer: `${BUNDLE_DEFINITION} Your chain head is timestamped by a public RFC 3161 authority.`,
+    },
+    {
+      question: 'What does the receipts/month fair-use cap mean?',
+      answer:
+        `Cloud lists a ${count(required(plan.fairUseReceiptsPerMonth, 'fairUseReceiptsPerMonth'))} receipts/month ` +
+        'fair-use cap. It is not billed: receipts are not charged for. Volume beyond the Cloud fair-use cap is an Enterprise term.',
+    },
+    {
+      question: 'Do I need a subscription to buy an evidence bundle?',
+      answer: `No. The evidence bundle is pay as you go, no subscription, at ${usd(PAYG_BUNDLE_PRICE_USD)} each.`,
+    },
+  ];
 }
 
 export function priceCards(billing: Billing): PriceCard[] {
@@ -123,7 +198,7 @@ export function priceCards(billing: Billing): PriceCard[] {
       // PLANS.free.name carries the product name, which the site takes from BRAND.
       title: `${BRAND.name} Core`,
       price: free.monthlyUsd === 0 ? 'Free' : `${usd(required(free.monthlyUsd, 'monthlyUsd'))}/mo`,
-      terms: free.features,
+      terms: coreTerms(free),
     },
     {
       id: 'bundle',
@@ -133,14 +208,15 @@ export function priceCards(billing: Billing): PriceCard[] {
         'Pay as you go, no subscription',
         'Your chain head timestamped by a public RFC 3161 authority',
         'A self-contained archive an auditor verifies offline',
-        'Human-readable report for the people who will not read JSON',
-        'You cannot anchor retroactively, which is the whole point',
+        'A human-readable report alongside the JSON',
+        'The timestamp proves the chain existed when it was anchored, not earlier',
       ],
     },
     {
       id: 'cloud',
       title: cloud.name,
       price: cloudPrice(cloud, billing),
+      ...(billing === 'annual' ? { priceNote: annualSavingsLine(cloud) } : {}),
       terms: cloudTerms(cloud),
       offSale: OFF_SALE_PLANS.has(cloud.id),
     },
