@@ -56,7 +56,7 @@ describe('home page', () => {
     expect(section).toContain('<h2>Example receipt</h2>');
     expect(section).toMatch(/illustrative example, not a real receipt/);
     expect(section).toContain('Example only.');
-    expect(html.match(/<pre>/g)).toHaveLength(1);
+    expect(html.match(/<pre[ >]/g)).toHaveLength(1);
     const code = unescape(/<code>([\s\S]*?)<\/code>/.exec(section)?.[1] ?? '');
     expect(code).toContain('"action_type": "tool_call"');
     expect(code).toContain('"signature_alg": "ed25519"');

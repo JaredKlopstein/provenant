@@ -158,7 +158,7 @@ describe('verify page', () => {
   const body = text(unescape(verify));
   const guide = readFileSync(new URL('../docs/getting-started.md', import.meta.url), 'utf8');
   const guideBlocks = [...guide.matchAll(/```bash\n([\s\S]*?)\n```/g)].map((m) => m[1]!);
-  const pageBlocks = [...verify.matchAll(/<pre><code>([^<]*)<\/code><\/pre>/g)].map((m) => unescape(m[1]!));
+  const pageBlocks = [...verify.matchAll(/<pre[^>]*><code>([^<]*)<\/code><\/pre>/g)].map((m) => unescape(m[1]!));
 
   it('says the verifier is free, MIT and never paywalled', () => {
     expect(body).toContain('Verifying is never paywalled');
