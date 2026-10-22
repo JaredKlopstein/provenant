@@ -431,7 +431,7 @@ describe('enterprise page', () => {
   });
 
   it('takes brand text from BRAND', async () => {
-    expect(metadata.title).toBe(`Enterprise: ${BRAND.name}`);
+    expect(metadata.title).toBe('Enterprise');
     expect(metadata.description).toContain(BRAND.name);
   });
 

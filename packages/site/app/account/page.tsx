@@ -8,7 +8,7 @@ import { signedInFromCookie } from '../../src/checkout';
 import { PORTAL_API_PATH, PORTAL_OUTCOMES, type PortalOutcome } from '../../src/portal';
 
 export const metadata: Metadata = {
-  title: `Account: ${BRAND.name}`,
+  title: 'Account',
   description: `Manage your ${BRAND.name} plan, payment method and invoices.`,
 };
 

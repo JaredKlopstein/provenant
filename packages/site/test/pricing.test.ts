@@ -337,7 +337,7 @@ describe('site source', () => {
   });
 
   it('takes brand text from BRAND only', () => {
-    expect(metadata.title).toBe(`Pricing: ${BRAND.name}`);
+    expect(metadata.title).toBe('Pricing');
     expect(metadata.description).toContain(BRAND.name);
     for (const { file, src } of files) {
       // The cloud import specifier names the package scope, which is not page copy.

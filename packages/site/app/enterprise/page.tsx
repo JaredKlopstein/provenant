@@ -4,7 +4,7 @@ import { BRAND } from '../../src/brand';
 import { CONTACT_OUTCOMES, CONTACT_PATH, FLEET_SIZES, HONEYPOT_FIELD, type ContactOutcome } from '../../src/contact';
 
 export const metadata: Metadata = {
-  title: `Enterprise: ${BRAND.name}`,
+  title: 'Enterprise',
   description: `Talk to the ${BRAND.name} team about Enterprise: retention, anchoring cadence and volume set by contract.`,
 };
 

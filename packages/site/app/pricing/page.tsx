@@ -12,7 +12,7 @@ import {
 import { WaitlistForm } from './waitlist-form';
 
 export const metadata: Metadata = {
-  title: `Pricing: ${BRAND.name}`,
+  title: 'Pricing',
   description: `${BRAND.name} pricing: Core is free, evidence bundles are priced each, Cloud is in early access, Enterprise is by contract.`,
 };
 
