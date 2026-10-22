@@ -4,9 +4,11 @@ import { BRAND } from '../../src/brand';
 import {
   BILLING_PARAM,
   BILLINGS,
+  BUNDLE_DEFINITION,
   EARLY_ACCESS_LABEL,
-  annualOverageDisclosure,
   priceCards,
+  pricingAnnualOverageDisclosure,
+  pricingFaq,
   type Billing,
 } from '../../src/plans';
 import { WaitlistForm } from './waitlist-form';
@@ -29,16 +31,20 @@ type SearchParams = Record<string, string | string[] | undefined>;
 export default async function PricingPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
   const billing: Billing = params[BILLING_PARAM] === 'annual' ? 'annual' : 'monthly';
+  // A cancelled Stripe checkout returns here with ?checkout=cancelled.
+  const cancelled = params.checkout === 'cancelled';
 
   return (
     <>
       <section>
         <h1>Pricing</h1>
+        {cancelled && <p role="status">Checkout cancelled, nothing was charged.</p>}
         <p>
           Writing receipts and verifying them stays free on every plan. You pay for evidence a third
           party can check: anchored bundles today, and later Cloud to run the collector and anchoring for
           you.
         </p>
+        <p data-definition="evidence-bundle">{BUNDLE_DEFINITION}</p>
         <nav aria-label="Billing period">
           <ul>
             {BILLINGS.map((b) => (
@@ -56,6 +62,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
           <article key={card.id} data-tier={card.id}>
             <h2>{card.title}</h2>
             <p>{card.price}</p>
+            {card.priceNote && <p data-price-note>{card.priceNote}</p>}
             {card.offSale && (
               <>
                 <p data-status="early-access">
@@ -70,7 +77,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
                 <li key={term}>{term}</li>
               ))}
             </ul>
-            {card.id === 'cloud' && billing === 'annual' && <p role="note">{annualOverageDisclosure()}</p>}
+            {card.id === 'cloud' && billing === 'annual' && <p role="note">{pricingAnnualOverageDisclosure()}</p>}
             <p>
               <Link href={card.cta.href}>{card.cta.label}</Link>
             </p>
@@ -81,6 +88,17 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
             )}
           </article>
         ))}
+      </section>
+      <section aria-labelledby="faq">
+        <h2 id="faq">Questions</h2>
+        <dl>
+          {pricingFaq().map((entry) => (
+            <div key={entry.question}>
+              <dt>{entry.question}</dt>
+              <dd>{entry.answer}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
     </>
   );

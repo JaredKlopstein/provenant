@@ -6,7 +6,20 @@ import HomePage from '../app/page.js';
 import PricingPage, { metadata } from '../app/pricing/page.js';
 import { BRAND } from '../src/brand.js';
 import { ACCOUNT_PATH, CHECKOUT_PAGE_PATH } from '../src/checkout.js';
-import { OFF_SALE_PLANS, WAITLIST_HREF, cardCta, cloudTerms, priceCards } from '../src/plans.js';
+import {
+  BUNDLE_DEFINITION,
+  OFF_SALE_PLANS,
+  WAITLIST_HREF,
+  annualOverageDisclosure,
+  annualSavingsLine,
+  annualSavingsMonths,
+  cardCta,
+  cloudTerms,
+  coreTerms,
+  priceCards,
+  pricingAnnualOverageDisclosure,
+  pricingFaq,
+} from '../src/plans.js';
 import { OVERAGE_BUNDLE_PRICE_USD, PAYG_BUNDLE_PRICE_USD, PLANS } from '../../cloud/src/pricing.js';
 import { createCheckoutSession, type StripeLike } from '../../cloud/src/billing/stripe.js';
 
@@ -16,8 +29,10 @@ import { createCheckoutSession, type StripeLike } from '../../cloud/src/billing/
  * than to a second copy of the prices.
  */
 
-const render = async (billing?: string) =>
-  renderToStaticMarkup(await PricingPage({ searchParams: Promise.resolve(billing ? { billing } : {}) }));
+const render = async (billing?: string, extra: Record<string, string> = {}) =>
+  renderToStaticMarkup(
+    await PricingPage({ searchParams: Promise.resolve({ ...(billing ? { billing } : {}), ...extra }) }),
+  );
 
 const unescape = (html: string) =>
   html.replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
@@ -92,11 +107,18 @@ describe('pricing cards', () => {
     }
   });
 
-  it('shows Core as free with the features PLANS lists for it', async () => {
+  it('shows Core as free with the features PLANS lists for it, minus the CLI name (#100)', async () => {
     const core = card(await render(), 'core');
     expect(PLANS.free.monthlyUsd).toBe(0);
     expect(core.price).toBe('Free');
-    expect(core.terms).toEqual(PLANS.free.features);
+    expect(core.terms).toEqual(PLANS.free.features.map((f) => f.replace(/ \(provenant-verify\)$/, '')));
+    expect(core.terms).toContain('Offline evidence-bundle verification');
+    expect(core.html).not.toMatch(/provenant-/i);
+  });
+
+  it('strips only a parenthesised CLI name from the Core terms (#100)', () => {
+    const terms = coreTerms({ ...PLANS.free, features: ['Verify offline (provenant-verify)', 'Batched (at most hourly)'] });
+    expect(terms).toEqual(['Verify offline', 'Batched (at most hourly)']);
   });
 
   it('prices the evidence bundle from PAYG_BUNDLE_PRICE_USD', async () => {
@@ -214,7 +236,7 @@ describe('calls to action (#94)', () => {
       expect(cta).toEqual({ label: 'Join the waitlist', href: '/pricing#waitlist' });
       const html = card(await render(billing), 'cloud').html;
       expect(hrefs(html)).toEqual(['/pricing#waitlist']);
-      // The annual disclosure says "this checkout" in prose; no link or form may go there.
+      // No link or form on the Cloud card may go to checkout.
       expect(html).not.toMatch(/(?:href|action)="[^"]*(?:checkout|billing=|interval=)/);
       expect(html).not.toMatch(/name="(?:plan|interval|kind)"/);
     }
@@ -299,16 +321,97 @@ describe('billing toggle', () => {
     expect(card(await render('weekly'), 'cloud').price).toBe(`$${cloud.monthlyUsd}/mo`);
   });
 
-  it('shows the annual checkout overage disclosure under Annual, word for word', async () => {
+  it('shows the pricing-page overage disclosure under Annual, billed to your card (#100)', async () => {
+    const annualCloud = unescape(card(await render('annual'), 'cloud').html);
+    expect(annualCloud).toContain(`<p role="note">${pricingAnnualOverageDisclosure()}</p>`);
+    expect(pricingAnnualOverageDisclosure()).toBe(
+      `Evidence bundles over the ${cloud.includedBundlesPerMonth} included each month are charged monthly, ` +
+        `at $${OVERAGE_BUNDLE_PRICE_USD} per bundle, billed to your card.`,
+    );
+    expect(annualCloud).not.toContain('this checkout');
+  });
+
+  it('keeps the checkout its own sentence, unchanged (#100)', async () => {
     const disclosure = await checkoutDisclosure();
-    expect(disclosure).toMatch(/billed monthly/);
-    const annualCloud = card(await render('annual'), 'cloud').html;
-    expect(unescape(annualCloud)).toContain(`<p role="note">${disclosure}</p>`);
+    expect(disclosure).toBe(annualOverageDisclosure());
+    expect(disclosure).toBe(
+      `Evidence bundles over the ${cloud.includedBundlesPerMonth} included each month are billed monthly, ` +
+        `at $${OVERAGE_BUNDLE_PRICE_USD} per bundle, to the card saved at this checkout.`,
+    );
   });
 
   it('does not show the disclosure under Monthly', async () => {
     expect(await render()).not.toContain('role="note"');
-    expect(unescape(await render())).not.toContain(await checkoutDisclosure());
+    expect(unescape(await render())).not.toContain(pricingAnnualOverageDisclosure());
+  });
+});
+
+describe('pricing content (#100)', () => {
+  it('defines the evidence bundle in one line on the page', async () => {
+    expect(BUNDLE_DEFINITION).toBe(
+      'An evidence bundle is a signed, timestamped export of a chain range that an auditor verifies offline.',
+    );
+    for (const billing of [undefined, 'annual']) {
+      expect(await render(billing)).toContain(`<p data-definition="evidence-bundle">${BUNDLE_DEFINITION}</p>`);
+    }
+  });
+
+  it('shows "2 months free" under the annual Cloud price, computed from PLANS', async () => {
+    const months = (12 * cloud.monthlyUsd! - cloud.annualUsd!) / cloud.monthlyUsd!;
+    expect(annualSavingsMonths()).toBe(months);
+    expect(annualSavingsLine()).toBe(`${months} months free against 12 monthly payments`);
+    expect(annualSavingsLine()).toMatch(/^2 months free/);
+    const annualCloud = card(await render('annual'), 'cloud').html;
+    expect(annualCloud).toContain(`<p>$${cloud.annualUsd}/yr</p><p data-price-note="true">${annualSavingsLine()}</p>`);
+    expect(await render()).not.toContain('months free');
+  });
+
+  it('computes the saving from the plan it is given', () => {
+    expect(annualSavingsLine({ ...cloud, monthlyUsd: 20, annualUsd: 220 })).toBe('1 month free against 12 monthly payments');
+    expect(annualSavingsMonths({ ...cloud, monthlyUsd: 10, annualUsd: 90 })).toBe(3);
+    expect(() => annualSavingsMonths({ ...cloud, annualUsd: null })).toThrow(/annualUsd/);
+  });
+
+  it('describes the bundle card plainly', async () => {
+    const bundle = card(await render(), 'bundle');
+    expect(bundle.terms).toContain('A human-readable report alongside the JSON');
+    expect(bundle.terms).toContain('The timestamp proves the chain existed when it was anchored, not earlier');
+    expect(bundle.html).not.toMatch(/will not read JSON|whole point/);
+  });
+
+  it('answers the FAQ in terms the cards already use', async () => {
+    const html = unescape(await render());
+    const faq = pricingFaq();
+    expect(faq.map((e) => e.question)).toEqual([
+      'What is a receipt?',
+      'What is an evidence bundle?',
+      'What does the receipts/month fair-use cap mean?',
+      'Do I need a subscription to buy an evidence bundle?',
+    ]);
+    for (const { question, answer } of faq) expect(html).toContain(`<dt>${question}</dt><dd>${answer}</dd>`);
+    expect(faq[1]!.answer).toContain(BUNDLE_DEFINITION);
+    expect(faq[2]!.answer).toContain(`${cloud.fairUseReceiptsPerMonth! / 1_000_000}M receipts/month`);
+    expect(faq[2]!.answer).toMatch(/not billed/);
+    expect(faq[3]!.answer).toContain('pay as you go, no subscription');
+    expect(faq[3]!.answer).toContain(`$${PAYG_BUNDLE_PRICE_USD} each`);
+    // No price in the FAQ other than the ones on the cards.
+    const prices = [...faq.map((e) => e.answer).join(' ').matchAll(/\$\d+/g)].map((m) => m[0]);
+    expect(prices).toEqual([`$${PAYG_BUNDLE_PRICE_USD}`]);
+  });
+
+  it('notes a cancelled checkout, and nothing otherwise', async () => {
+    const note = '<p role="status">Checkout cancelled, nothing was charged.</p>';
+    expect(await render(undefined, { checkout: 'cancelled' })).toContain(note);
+    expect(await render('annual', { checkout: 'cancelled' })).toContain(note);
+    expect(await render()).not.toContain('role="status"');
+    expect(await render(undefined, { checkout: '<script>' })).not.toContain('role="status"');
+  });
+
+  it('gives no card a "Most popular" badge', async () => {
+    for (const billing of [undefined, 'annual']) {
+      const html = await render(billing);
+      expect(html).not.toMatch(/most popular|recommended|data-featured/i);
+    }
   });
 });
 
