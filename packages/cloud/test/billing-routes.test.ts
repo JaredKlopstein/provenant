@@ -180,6 +180,37 @@ describe('checkout', () => {
     const res = await r.checkout(new Request('https://billing.provenant.test/billing/checkout'));
     expect(res.status).toBe(405);
   });
+
+  it('answers a missing price with a generic 503 and a request id, and logs the variable under that id', async () => {
+    const env = billingEnv();
+    delete env[PRICE_ENV.overage_bundle];
+    const r = routes({ env });
+    const res = await r.checkout(
+      post('/billing/checkout', { plan: 'cloud', interval: 'month', client_reference_id: 'urn:provenant:agent:test-account' }),
+    );
+    expect(res.status).toBe(503);
+
+    const text = await res.text();
+    const body = JSON.parse(text) as { error: { code: string; details?: unknown }; requestId: string };
+    expect(body.error.code).toBe('BILLING_UNAVAILABLE');
+    expect(body.error.details).toBeUndefined();
+    const requestId = res.headers.get('x-request-id');
+    expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(body.requestId).toBe(requestId);
+    expect(text).toContain(requestId!);
+
+    // No environment variable name in the body or headers.
+    const headers = [...res.headers].map(([k, v]) => `${k}: ${v}`).join('\n');
+    for (const name of [...Object.values(PRICE_ENV), 'STRIPE_', 'PROVENANT_', 'DATABASE_URL', 'CRON_SECRET']) {
+      expect(text).not.toContain(name);
+      expect(headers).not.toContain(name);
+    }
+    expect(r.checkouts).toHaveLength(0);
+
+    // The cause is in the server log under the same id.
+    const line = r.logs.find((l) => l.includes(requestId!));
+    expect(line).toContain(PRICE_ENV.overage_bundle);
+  });
 });
 
 describe('billing portal', () => {
