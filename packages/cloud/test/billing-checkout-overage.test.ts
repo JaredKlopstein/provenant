@@ -151,10 +151,13 @@ describe('without STRIPE_PRICE_BUNDLE_OVERAGE', () => {
 
     const res = await checkout(r, monthly);
     expect(res.status).toBe(503);
-    const body = (await res.json()) as { error: { code: string; message: string; details: { variables: string[] } } };
+    const text = await res.text();
+    const body = JSON.parse(text) as { error: { code: string; message: string; details?: unknown } };
     expect(body.error.code).toBe('BILLING_UNAVAILABLE');
     expect(body.error.message).toMatch(/not configured.*Nothing was charged/);
-    expect(body.error.details.variables).toEqual(['STRIPE_PRICE_BUNDLE_OVERAGE']);
+    expect(body.error.details).toBeUndefined();
+    expect(text).not.toContain('STRIPE_PRICE_BUNDLE_OVERAGE');
+    expect(r.logs.join('\n')).toContain('STRIPE_PRICE_BUNDLE_OVERAGE');
     expect(r.checkouts).toHaveLength(0);
     expect(r.lists).toHaveLength(0);
 

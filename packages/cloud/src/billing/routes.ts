@@ -31,6 +31,7 @@
 import { z } from 'zod';
 import { ProvenantError } from '@provenant/core';
 import { PLANS, type PlanId } from '../pricing.js';
+import { genericError } from '../errors.js';
 import {
   createCheckoutSession, createPortalSession, carriesPrice, activeSubscriptions,
   type BillingInterval, type StripeLike, type SubscriptionLister, type SubscriptionSummary,
@@ -139,11 +140,11 @@ async function checkout(ctx: Context, opts: BillingRoutesOptions, request: Reque
 
     const key: CatalogKey = input.kind === 'payg_bundle' ? 'payg_bundle' : `cloud_${input.interval}`;
     const priceId = ctx.config.prices[key];
-    if (!priceId) return notConfigured(key);
+    if (!priceId) return notConfigured(ctx, key);
     // A monthly plan whose overage cannot bill is not sold.
     const overagePriceId = ctx.config.prices.overage_bundle;
     if (input.kind === 'subscription' && input.interval === 'month' && !overagePriceId) {
-      return notConfigured('overage_bundle');
+      return notConfigured(ctx, 'overage_bundle');
     }
 
     if (input.kind === 'subscription' && input.clientReferenceId) {
@@ -380,15 +381,15 @@ function tooLarge(): Response {
   });
 }
 
-function notConfigured(key: CatalogKey): Response {
-  return json(503, {
-    error: {
-      code: 'BILLING_UNAVAILABLE',
-      message: 'This purchase is not configured on the server. Nothing was charged.',
-      retryable: false,
-      details: { variables: [PRICE_ENV[key]] },
-      fix: { note: `The operator must set ${PRICE_ENV[key]}; provenant-cloud billing sync prints its value.` },
-    },
+/** The variable name and the fix go to the server log, never to the client. */
+function notConfigured(ctx: Context, key: CatalogKey): Response {
+  return genericError({
+    status: 503,
+    code: 'BILLING_UNAVAILABLE',
+    message: 'This purchase is not configured on the server. Nothing was charged.',
+    retryable: false,
+    cause: `billing checkout: the operator must set ${PRICE_ENV[key]}; provenant-cloud billing sync prints its value.`,
+    log: ctx.log,
   });
 }
 
