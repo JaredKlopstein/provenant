@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import RootLayout from '../app/layout.js';
 import HomePage from '../app/page.js';
+import VerifyPage from '../app/verify/page.js';
 import SignupPage from '../app/signup/page.js';
 import EnterprisePage from '../app/enterprise/page.js';
 import { CONTACT_OUTCOMES } from '../src/contact.js';
@@ -113,6 +114,32 @@ describe('enterprise: the contact fields and their outcome', () => {
   it.each(CONTACT_OUTCOMES.filter((o) => o !== 'invalid'))('"%s" marks no field invalid', async (outcome) => {
     for (const tag of fieldTags(await enterprise(outcome), FIELDS)) {
       expect(tag).not.toMatch(/aria-invalid|aria-describedby/);
+    }
+  });
+});
+
+describe('code blocks', () => {
+  /** Opening tags of every <pre> in the rendered markup. */
+  const preTags = (html: string) => html.match(/<pre\b[^>]*>/g) ?? [];
+
+  it.each([
+    ['home', () => renderToStaticMarkup(HomePage())],
+    ['verify', () => renderToStaticMarkup(VerifyPage())],
+  ])('on %s, each scrolling code block is keyboard-focusable and named', (_, render) => {
+    const tags = preTags(render());
+    expect(tags.length).toBeGreaterThan(0);
+    for (const tag of tags) {
+      expect(attr(tag, 'tabindex'), tag).toBe('0');
+      expect(attr(tag, 'role'), tag).toBe('region');
+      expect(attr(tag, 'aria-label'), tag).toBeTruthy();
+    }
+  });
+
+  it('every page renders code through CodeBlock, so no bare <pre> can skip the keyboard access', () => {
+    const app = new URL('../app/', import.meta.url);
+    const pages = ['page.tsx', 'verify/page.tsx', 'welcome/page.tsx', 'how-it-works/page.tsx', 'security/page.tsx'];
+    for (const page of pages) {
+      expect(readFileSync(new URL(page, app), 'utf8'), page).not.toMatch(/<pre\b/);
     }
   });
 });

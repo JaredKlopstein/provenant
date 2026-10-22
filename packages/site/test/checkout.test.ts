@@ -502,7 +502,7 @@ describe('welcome page', () => {
 
   it('shows the from-source commands exactly as the getting-started guide has them', async () => {
     const html = await render();
-    const blocks = [...html.matchAll(/<pre><code>([^<]*)<\/code><\/pre>/g)].map((m) => unescape(m[1]!));
+    const blocks = [...html.matchAll(/<pre[^>]*><code>([^<]*)<\/code><\/pre>/g)].map((m) => unescape(m[1]!));
     expect(blocks).toEqual(guideBlocks.slice(0, 5));
     expect(blocks[0]).toMatch(/^git clone /);
   });

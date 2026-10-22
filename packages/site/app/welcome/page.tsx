@@ -5,6 +5,7 @@ import { BRAND } from '../../src/brand';
 import { SIGNUP_PATH } from '../../src/auth/email';
 import { AccountBar } from '../../src/account-bar';
 import { signedInFromCookie } from '../../src/checkout';
+import { CodeBlock } from '../../src/code-block';
 
 export const metadata: Metadata = {
   title: 'Welcome',
@@ -82,9 +83,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         <section key={step.title}>
           <h2>{step.title}</h2>
           <p>{step.body}</p>
-          <pre>
-            <code>{step.command}</code>
-          </pre>
+          <CodeBlock label={step.title}>{step.command}</CodeBlock>
         </section>
       ))}
     </>

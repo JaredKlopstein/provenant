@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BRAND } from '../../src/brand';
+import { CodeBlock } from '../../src/code-block';
 
 export const metadata: Metadata = {
   title: 'Verify',
@@ -92,9 +93,7 @@ export default function VerifyPage() {
             <li key={step.title}>
               <h3>{step.title}</h3>
               <p>{step.body}</p>
-              <pre>
-                <code>{step.command}</code>
-              </pre>
+              <CodeBlock label={step.title}>{step.command}</CodeBlock>
             </li>
           ))}
         </ol>

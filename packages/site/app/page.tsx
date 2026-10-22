@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { BRAND } from '../src/brand';
 import { GETTING_STARTED_URL } from '../src/plans';
 import { PROOF_TABLE } from '../src/proof-table';
+import { CodeBlock } from '../src/code-block';
 
 export const metadata: Metadata = {
   description: `${BRAND.name}: tamper-evident receipts for AI agents.`,
@@ -85,9 +86,7 @@ export default function HomePage() {
           placeholders, so it will not verify.
         </p>
         <figure>
-          <pre>
-            <code>{EXAMPLE_RECEIPT}</code>
-          </pre>
+          <CodeBlock label="Example receipt">{EXAMPLE_RECEIPT}</CodeBlock>
           <figcaption>Example only. One receipt for one agent action.</figcaption>
         </figure>
       </section>
