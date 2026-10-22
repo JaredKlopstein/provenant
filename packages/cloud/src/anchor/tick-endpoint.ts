@@ -17,11 +17,14 @@
  * batch already anchored is never anchored again (see scheduler.ts).
  *
  * The response is the tick's result as JSON. It names the anchor it made, if
- * any, but never the proof token, a secret or the environment.
+ * any, but never the proof token, a secret or the environment. When the store
+ * cannot be opened or read, the client gets a generic error and a request id;
+ * the cause, which can name environment variables, goes to the server log.
  */
 import { resolve } from 'node:path';
 import { openDb, dbPath, type AnchorBackend, type Db } from '@provenant/core';
 import { requireCronAuth } from '../cron/auth.js';
+import { genericError } from '../errors.js';
 import { runAnchorTick, type AnchorTickResult } from './scheduler.js';
 import { createTsaBackend, PUBLIC_TSAS } from './tsa.js';
 
@@ -44,6 +47,8 @@ export interface AnchorTickHandlerOptions {
   now?: () => Date;
   /** Injected for retry backoff, so tests run without real waiting. */
   sleep?: (ms: number) => Promise<void>;
+  /** Receives the server-side cause of an error response. Defaults to console.error. */
+  log?: (line: string) => void;
 }
 
 /**
@@ -77,17 +82,16 @@ export function createAnchorTickHandler(opts: AnchorTickHandlerOptions = {}): (r
     try {
       store ??= open(env);
     } catch (err) {
-      return json(503, {
-        error: {
-          code: 'ANCHOR_STORE_NOT_CONFIGURED',
-          message: `The anchor tick could not open its store: ${messageOf(err)} Nothing was anchored.`,
-          retryable: false,
-          fix: {
-            note:
-              'Set PROVENANT_HOME to the receipt store and, optionally, PROVENANT_TSA_URL in the Vercel ' +
-              'project, then redeploy. The next scheduled call anchors whatever is due.',
-          },
-        },
+      // The cause and the fix name environment variables: server log only.
+      return genericError({
+        status: 503,
+        code: 'ANCHOR_STORE_NOT_CONFIGURED',
+        message: 'The anchor tick is not configured on the server. Nothing was anchored.',
+        retryable: false,
+        cause:
+          `anchor tick: could not open the store: ${messageOf(err)} Set PROVENANT_HOME to the receipt store ` +
+          'and, optionally, PROVENANT_TSA_URL in the Vercel project, then redeploy.',
+        log: opts.log,
       });
     }
 
@@ -102,13 +106,13 @@ export function createAnchorTickHandler(opts: AnchorTickHandlerOptions = {}): (r
       });
     } catch (err) {
       // Reading the store failed before any authority call.
-      return json(500, {
-        error: {
-          code: 'ANCHOR_TICK_FAILED',
-          message: `The anchor tick could not read the store: ${messageOf(err)} Nothing was anchored.`,
-          retryable: true,
-          fix: { note: 'Nothing to undo. The next scheduled call tries again; pending receipts stay pending.' },
-        },
+      return genericError({
+        status: 500,
+        code: 'ANCHOR_TICK_FAILED',
+        message: 'The anchor tick could not read the store. Nothing was anchored; the next scheduled call tries again.',
+        retryable: true,
+        cause: `anchor tick: could not read the store: ${messageOf(err)}`,
+        log: opts.log,
       });
     }
 
