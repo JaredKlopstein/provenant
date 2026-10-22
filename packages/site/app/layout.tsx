@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BRAND } from '../src/brand';
+import { LEGAL, PRIVACY_PATH, TERMS_PATH } from '../src/legal';
 import { NavMenu } from '../src/nav-menu';
 import './globals.css';
 
@@ -48,6 +49,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <p>
             {BRAND.name}: {BRAND.tagline}. <a href={BRAND.repository}>Source on GitHub</a>.
           </p>
+          <nav aria-label="Legal">
+            <Link href={TERMS_PATH}>Terms</Link> · <Link href={PRIVACY_PATH}>Privacy</Link> ·{' '}
+            {LEGAL.contactEmail ? (
+              <a href={`mailto:${LEGAL.contactEmail}`}>Contact</a>
+            ) : (
+              <Link href="/enterprise">Contact</Link>
+            )}
+          </nav>
         </footer>
       </body>
     </html>
