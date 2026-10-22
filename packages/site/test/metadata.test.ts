@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import OpengraphImage, { alt, contentType, size } from '../app/opengraph-image.js';
 import { metadata } from '../app/layout.js';
+import { metadata as signupMetadata } from '../app/signup/page.js';
 import { metadata as checkoutMetadata } from '../app/checkout/page.js';
 import { metadata as howItWorksMetadata } from '../app/how-it-works/page.js';
 import { BRAND } from '../src/brand.js';
@@ -80,6 +81,13 @@ describe('page titles (app/layout.tsx)', () => {
   it('keeps the brand and tagline as the default, so the home page title is unchanged', () => {
     expect(metadata.title).toMatchObject({ default: `${BRAND.name}: ${BRAND.tagline}` });
     expect(metadata.description).toBe(`${BRAND.name}: ${BRAND.tagline}.`);
+  });
+
+  // #110: signup keeps #123's wording as its short title.
+  it('renders the signup page title as "Sign in or create an account · brand"', () => {
+    expect(signupMetadata.title).toBe('Sign in or create an account');
+    const { template } = metadata.title as { template: string };
+    expect(template.replace('%s', String(signupMetadata.title))).toBe(`Sign in or create an account · ${BRAND.name}`);
   });
 
   it('builds the template from BRAND rather than a hard-coded name', () => {

@@ -4,7 +4,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import RootLayout from '../app/layout.js';
 import SignupPage, { metadata } from '../app/signup/page.js';
 import SigninPage from '../app/signin/page.js';
-import { BRAND } from '../src/brand.js';
 
 /**
  * #123: the signup page reads "Sign in or create an account", says where a
@@ -25,7 +24,7 @@ const rules = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8
 
 describe('signup page title', () => {
   it('reads "Sign in or create an account" in the title and the heading', async () => {
-    expect(metadata.title).toBe(`Sign in or create an account: ${BRAND.name}`);
+    expect(metadata.title).toBe('Sign in or create an account');
     expect(await render()).toContain('<h1>Sign in or create an account</h1>');
   });
 });
