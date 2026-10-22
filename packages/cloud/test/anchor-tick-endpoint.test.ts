@@ -215,13 +215,61 @@ describe('an authorized tick', () => {
   });
 
   it('returns 503 and runs no tick when the deployed store is not configured', async () => {
-    const handle = createAnchorTickHandler({ env: ENV, now: clock, sleep: noWait });
+    const lines: string[] = [];
+    const handle = createAnchorTickHandler({ env: ENV, now: clock, sleep: noWait, log: (l) => lines.push(l) });
     const res = await handle(post(`Bearer ${TICK_SECRET}`));
     expect(res.status).toBe(503);
     const text = await res.text();
-    expect(JSON.parse(text).error.code).toBe('ANCHOR_STORE_NOT_CONFIGURED');
-    expect(text).toContain('PROVENANT_HOME');
-    expect(text).not.toContain(TICK_SECRET);
+    const body = JSON.parse(text);
+    expect(body.error.code).toBe('ANCHOR_STORE_NOT_CONFIGURED');
+    expect(body.error.retryable).toBe(false);
+    for (const leak of ['PROVENANT_HOME', 'PROVENANT_TSA_URL', 'is not set', TICK_SECRET]) {
+      expect(text).not.toContain(leak);
+    }
+    // Apart from the error code, nothing shaped like an environment variable.
+    expect(text.replace(body.error.code, '')).not.toMatch(/\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b/);
+
+    // The cause, with the variable names, is logged under the id the client sees.
+    expect(body.requestId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(res.headers.get('x-request-id')).toBe(body.requestId);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain(body.requestId);
+    expect(lines[0]).toContain('PROVENANT_HOME is not set');
+    expect(lines[0]).toContain('PROVENANT_TSA_URL');
+  });
+
+  it('returns 500 with no raw store error when reading the store fails', async () => {
+    const raw = 'test-raw-store-failure: SQLITE_CORRUPT at /srv/provenant/receipts.db';
+    const broken = new Proxy({}, {
+      get() {
+        throw new Error(raw);
+      },
+    }) as Db;
+    const { backend, state } = countingAuthority();
+    const lines: string[] = [];
+    const handle = createAnchorTickHandler({
+      env: ENV,
+      store: () => ({ db: broken, backend }),
+      now: clock,
+      sleep: noWait,
+      log: (l) => lines.push(l),
+    });
+
+    const res = await handle(post(`Bearer ${TICK_SECRET}`));
+    expect(res.status).toBe(500);
+    const text = await res.text();
+    const body = JSON.parse(text);
+    expect(body.error.code).toBe('ANCHOR_TICK_FAILED');
+    expect(body.error.retryable).toBe(true);
+    for (const leak of ['test-raw-store-failure', 'SQLITE_CORRUPT', '/srv/provenant', 'PROVENANT_']) {
+      expect(text).not.toContain(leak);
+    }
+    expect(state.calls).toBe(0);
+
+    expect(res.headers.get('x-request-id')).toBe(body.requestId);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain(body.requestId);
+    expect(lines[0]).toContain(raw);
   });
 });
 
