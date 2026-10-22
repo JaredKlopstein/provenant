@@ -1,0 +1,3 @@
+# The cloud project serves API routes and webhooks only; nothing here is for crawlers.
+User-agent: *
+Disallow: /
