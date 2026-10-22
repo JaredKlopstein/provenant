@@ -221,14 +221,23 @@ describe('a missing or invalid signature', () => {
 });
 
 describe('configuration and secrets', () => {
-  it('answers 500 naming a missing variable, never a value, and recovers once it is set', async () => {
+  it('answers a generic 500 with a request id, the variable only in the log, and recovers once it is set', async () => {
     const env: Record<string, string | undefined> = { ...ENV, STRIPE_WEBHOOK_SECRET: undefined };
     const { handler, connect } = route({ env });
     const res = await handler(signed(JSON.stringify(subscriptionEvent('customer.subscription.created', 'active'))));
     expect(res.status).toBe(500);
     const body = await res.text();
-    expect(JSON.parse(body).error.code).toBe('BILLING_NOT_CONFIGURED');
-    expect(body).toContain('STRIPE_WEBHOOK_SECRET');
+    const parsed = JSON.parse(body);
+    expect(parsed.error.code).toBe('BILLING_NOT_CONFIGURED');
+    expect(parsed.error.message).toBe('Billing is not available right now.');
+    expect(parsed.error.fix.note).not.toMatch(/Set the named variables/);
+    const headers = JSON.stringify([...res.headers]);
+    for (const exposed of [body, headers]) expect(exposed).not.toMatch(/STRIPE_|PROVENANT_|DATABASE_URL|CRON_SECRET/);
+    const requestId = res.headers.get('x-request-id');
+    expect(requestId).toBeTruthy();
+    expect(parsed.requestId).toBe(requestId);
+    const line = logged.find((l) => l.includes(requestId!));
+    expect(line).toContain('STRIPE_WEBHOOK_SECRET');
     expect(connect).not.toHaveBeenCalled();
     for (const secret of SECRETS) expect(body).not.toContain(secret);
 
