@@ -216,13 +216,23 @@ describe('the cron route: CRON_SECRET', () => {
     expect(existsSync(fileURLToPath(new URL(`..${entry!.path}.ts`, import.meta.url)))).toBe(true);
   });
 
-  it('with the secret but no billing config: 500 naming the variables, no values, nothing sent', async () => {
+  it('with the secret but no billing config: generic 500 with a request id, the variables only in the log, nothing sent', async () => {
     const res = await createOverageRetryRoute(options({ env: { CRON_SECRET } }))(cronRequest(`Bearer ${CRON_SECRET}`));
     expect(res.status).toBe(500);
     const text = await res.text();
-    expect(text).toMatch(/BILLING_NOT_CONFIGURED/);
-    expect(text).toMatch(/STRIPE_SECRET_KEY/);
+    const body = JSON.parse(text);
+    expect(body.error.code).toBe('BILLING_NOT_CONFIGURED');
+    expect(body.error.message).toBe('Overage retry is not configured.');
+    expect(text).not.toMatch(/Set the named variables/);
+    const headers = JSON.stringify([...res.headers]);
+    for (const exposed of [text, headers]) expect(exposed).not.toMatch(/STRIPE_|PROVENANT_|DATABASE_URL|CRON_SECRET/);
     expect(text).not.toContain(CRON_SECRET);
+    const requestId = res.headers.get('x-request-id');
+    expect(requestId).toBeTruthy();
+    expect(body.requestId).toBe(requestId);
+    const line = logs.find((l) => l.includes(requestId!));
+    expect(line).toMatch(/STRIPE_SECRET_KEY/);
+    expect(line).not.toContain(TEST_KEY);
     expect(fake.meterCalls).toEqual([]);
   });
 });

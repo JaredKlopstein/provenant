@@ -11,9 +11,12 @@
  * unset CRON_SECRET gets a 401 and nothing is read, sent or logged. The route
  * builds its own reporter from the environment (STRIPE_SECRET_KEY, the
  * STRIPE_PRICE_* ids, STRIPE_METER_EVENT_NAME, DATABASE_URL) and never uses the
- * one an export installs.
+ * one an export installs. When that config is missing or malformed, the
+ * response is a generic 500 with a request id; the cause, which names the
+ * variables, goes only to the server log under the same id.
  */
 import { requireCronAuth } from '../../src/cron/auth.js';
+import { genericError } from '../../src/errors.js';
 import {
   createOverageReporter, retryPendingOverage, type OverageReporter, type OverageReporterOptions,
 } from '../../src/billing/overage.js';
@@ -34,16 +37,17 @@ export function createOverageRetryRoute(opts: OverageReporterOptions = {}): (req
     try {
       reporter ??= createOverageReporter({ ...opts, env });
     } catch (err) {
-      // The config error names the missing variables and never their values.
+      // The config error names the missing variables: server log only.
       const message = err instanceof Error ? err.message : String(err);
-      (opts.log ?? ((line: string) => console.error(line)))(`billing overage cron: ${message}`);
-      return json(500, {
-        error: {
-          code: 'BILLING_NOT_CONFIGURED',
-          message: `Overage retry could not start: ${message}`,
-          retryable: false,
-          fix: { note: 'Set the named variables in the Vercel project, redeploy, and the next daily run retries.' },
-        },
+      return genericError({
+        status: 500,
+        code: 'BILLING_NOT_CONFIGURED',
+        message: 'Overage retry is not configured.',
+        retryable: false,
+        cause:
+          `billing overage cron: ${message} Set the named variables in the Vercel project, redeploy, ` +
+          'and the next daily run retries.',
+        log: opts.log,
       });
     }
 
