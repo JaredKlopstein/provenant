@@ -744,8 +744,8 @@ describe('signup page', () => {
     expect(input).toContain('required=""');
   });
 
-  it('takes brand text from BRAND', () => {
-    expect(metadata.title).toBe(`Sign in or create an account: ${BRAND.name}`);
+  it('sets the short title, and takes brand text from BRAND in the description', () => {
+    expect(metadata.title).toBe('Sign in or create an account');
     expect(metadata.description).toContain(BRAND.name);
   });
 

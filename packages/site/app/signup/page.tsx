@@ -6,7 +6,7 @@ import { parseDestination, type Destination } from '../../src/auth/session';
 const TITLE ='Sign in or create an account';
 
 export const metadata: Metadata = {
-  title: `${TITLE}: ${BRAND.name}`,
+  title: TITLE,
   description: `Sign in to ${BRAND.name}, or create your account, with a sign-in link sent to your email.`,
 };
 
