@@ -6,7 +6,12 @@ import { NavMenu } from '../src/nav-menu';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: `${BRAND.name}: ${BRAND.tagline}`,
+  // Pages set a short title; the template appends the brand. The home page sets none
+  // and gets the default.
+  title: {
+    default: `${BRAND.name}: ${BRAND.tagline}`,
+    template: `%s · ${BRAND.name}`,
+  },
   description: `${BRAND.name}: ${BRAND.tagline}.`,
 };
 
