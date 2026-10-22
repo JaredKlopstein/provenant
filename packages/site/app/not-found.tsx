@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { BRAND } from '../src/brand';
 
+// The root layout's title template appends the brand.
 export const metadata: Metadata = {
-  title: `Page not found: ${BRAND.name}`,
+  title: 'Page not found',
 };
 
 // Next renders this inside the root layout, with HTTP 404, for every URL no page or

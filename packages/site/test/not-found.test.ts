@@ -54,8 +54,10 @@ describe('not-found page', () => {
     ]);
   });
 
-  it('takes its title from BRAND', () => {
-    expect(metadata.title).toBe(`Page not found: ${BRAND.name}`);
+  it('sets a short title and leaves the brand to the layout template', () => {
+    expect(metadata.title).toBe('Page not found');
+    const code = readFileSync(new URL('not-found.tsx', APP), 'utf8');
+    expect(code).not.toContain(BRAND.name);
   });
 
   it('sets no status or redirect of its own', () => {

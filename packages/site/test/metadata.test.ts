@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import OpengraphImage, { alt, contentType, size } from '../app/opengraph-image.js';
+import { metadata } from '../app/layout.js';
 import { BRAND } from '../src/brand.js';
 
 /**
@@ -66,6 +67,23 @@ describe('favicon (app/icon.svg)', () => {
   it('carries no brand text, so a rename leaves it valid', () => {
     expect(svg).not.toMatch(new RegExp(BRAND.name, 'i'));
     expect(svg).not.toMatch(/<text\b/);
+  });
+});
+
+describe('page titles (app/layout.tsx)', () => {
+  it('appends the brand to every page title through a template', () => {
+    expect(metadata.title).toMatchObject({ template: `%s · ${BRAND.name}` });
+  });
+
+  it('keeps the brand and tagline as the default, so the home page title is unchanged', () => {
+    expect(metadata.title).toMatchObject({ default: `${BRAND.name}: ${BRAND.tagline}` });
+    expect(metadata.description).toBe(`${BRAND.name}: ${BRAND.tagline}.`);
+  });
+
+  it('builds the template from BRAND rather than a hard-coded name', () => {
+    const src = source('layout.tsx');
+    expect(src).toContain('template: `%s · ${BRAND.name}`');
+    expect(src).not.toContain(`'%s · ${BRAND.name}'`);
   });
 });
 

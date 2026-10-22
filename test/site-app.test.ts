@@ -74,7 +74,7 @@ describe('site app folder', () => {
 
   it('takes layout metadata from BRAND', async () => {
     const { metadata } = await import('../packages/site/app/layout.js');
-    expect(metadata.title).toBe(`${BRAND.name}: ${BRAND.tagline}`);
+    expect(metadata.title).toEqual({ default: `${BRAND.name}: ${BRAND.tagline}`, template: `%s · ${BRAND.name}` });
     expect(metadata.description).toContain(BRAND.tagline);
   });
 
