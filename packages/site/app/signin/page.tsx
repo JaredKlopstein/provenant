@@ -7,7 +7,7 @@ import { CALLBACK_PATH } from '../../src/auth/session';
 
 // The page URL carries the sign-in token: send no Referer anywhere, and keep it out of search.
 export const metadata: Metadata = {
-  title: `Sign in: ${BRAND.name}`,
+  title: 'Sign in',
   description: `Confirm your ${BRAND.name} sign-in.`,
   referrer: 'no-referrer',
   robots: { index: false, follow: false },

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { BRAND } from '../../src/brand';
 
 export const metadata: Metadata = {
-  title: `Verify: ${BRAND.name}`,
+  title: 'Verify',
   description: `Check a ${BRAND.name} evidence bundle offline with the free MIT verifier. Verifying is never paywalled.`,
 };
 

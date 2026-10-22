@@ -4,7 +4,7 @@ import { BRAND } from '../../src/brand';
 import { PROOF_TABLE } from '../../src/proof-table';
 
 export const metadata: Metadata = {
-  title: `Security: ${BRAND.name}`,
+  title: 'Security',
   description: `The standards ${BRAND.name} is built on, the open-core boundary, and what a self-hosted chain does and does not prove.`,
 };
 
