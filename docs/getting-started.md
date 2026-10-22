@@ -54,6 +54,11 @@ is the first in the chain) and its `self_hash`. Run the same command again and
 you get the original receipt back with `"replayed": true`. Nothing new is
 written.
 
+Record refusals too. When a consequential action is refused, by a policy, a
+person or the agent itself, record it with `--outcome denied`, so the chain
+shows the control working and not only what went through. `--outcome` also
+takes `failure`, `timeout` and `escalated`; the default is `success`.
+
 Verify the chain:
 
 ```bash
