@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { metadata as welcomeMetadata } from '../app/welcome/page.js';
 import OpengraphImage, { alt, contentType, size } from '../app/opengraph-image.js';
 import { metadata } from '../app/layout.js';
 import { metadata as signupMetadata } from '../app/signup/page.js';
@@ -104,6 +105,13 @@ describe('page titles (app/layout.tsx)', () => {
     expect(pageMetadata.title).toBe(name);
     const { template } = metadata.title as { template: string };
     expect(template.replace('%s', String(pageMetadata.title))).toBe(`${name} · ${BRAND.name}`);
+  });
+
+  // #138: the welcome page, last of the four title parts.
+  it('renders the welcome page title as "Welcome · brand"', () => {
+    expect(welcomeMetadata.title).toBe('Welcome');
+    const { template } = metadata.title as { template: string };
+    expect(template.replace('%s', String(welcomeMetadata.title))).toBe(`Welcome · ${BRAND.name}`);
   });
 });
 

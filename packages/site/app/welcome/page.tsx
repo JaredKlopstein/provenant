@@ -6,7 +6,7 @@ import { SIGNUP_PATH } from '../../src/auth/email';
 import { signedInFromCookie } from '../../src/checkout';
 
 export const metadata: Metadata = {
-  title: `Welcome: ${BRAND.name}`,
+  title: 'Welcome',
   description: `Start recording ${BRAND.name} receipts from source.`,
 };
 
