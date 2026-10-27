@@ -5,7 +5,7 @@
  *
  * Needs `Authorization: Bearer <ANCHOR_TICK_SECRET>`, which is not CRON_SECRET.
  * Everything else, including the store and authority it opens from
- * PROVENANT_HOME and PROVENANT_TSA_URL, is in src/anchor/tick-endpoint.ts.
+ * LACRE_HOME and LACRE_TSA_URL, is in src/anchor/tick-endpoint.ts.
  */
 import { createAnchorTickHandler } from '../src/anchor/tick-endpoint.js';
 

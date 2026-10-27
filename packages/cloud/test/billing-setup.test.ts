@@ -50,8 +50,12 @@ function surface(err: LacreError): string {
 let store: string;
 beforeEach(() => {
   store = mkdtempSync(join(tmpdir(), 'provenant-billing-'));
-  for (const name of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'DATABASE_URL', 'PROVENANT_BILLING_MODE']) {
+  for (const name of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'DATABASE_URL', 'LACRE_BILLING_MODE']) {
     vi.stubEnv(name, '');
+  }
+  // Blank every billing-mode variable, including the one-release legacy name.
+  for (const key of Object.keys(process.env)) {
+    if (key.endsWith('_BILLING_MODE')) vi.stubEnv(key, '');
   }
 });
 afterEach(() => {
@@ -159,31 +163,31 @@ describe('billing config: environment only, validated, never echoed', () => {
 
 describe('test mode comes first', () => {
   for (const [label, key] of [['sk live', LIVE_KEY], ['rk live', LIVE_RESTRICTED_KEY]] as const) {
-    it(`refuses a ${label} key unless PROVENANT_BILLING_MODE=live`, () => {
+    it(`refuses a ${label} key unless LACRE_BILLING_MODE=live`, () => {
       const err = thrown(() => loadBillingConfig({ STRIPE_SECRET_KEY: key }, ['stripe']));
-      expect(err.message).toMatch(/PROVENANT_BILLING_MODE/);
+      expect(err.message).toMatch(/LACRE_BILLING_MODE/);
       expectNoSecrets(surface(err));
 
-      const live = loadBillingConfig({ STRIPE_SECRET_KEY: key, PROVENANT_BILLING_MODE: 'live' }, ['stripe']);
+      const live = loadBillingConfig({ STRIPE_SECRET_KEY: key, LACRE_BILLING_MODE: 'live' }, ['stripe']);
       expect(live.mode).toBe('live');
     });
   }
 
   it('refuses live mode with a test key, so a "live" sync can never quietly hit test data', () => {
-    const err = thrown(() => loadBillingConfig({ STRIPE_SECRET_KEY: TEST_KEY, PROVENANT_BILLING_MODE: 'live' }, ['stripe']));
-    expect(err.message).toMatch(/PROVENANT_BILLING_MODE/);
+    const err = thrown(() => loadBillingConfig({ STRIPE_SECRET_KEY: TEST_KEY, LACRE_BILLING_MODE: 'live' }, ['stripe']));
+    expect(err.message).toMatch(/LACRE_BILLING_MODE/);
   });
 
-  it('rejects an unknown PROVENANT_BILLING_MODE', () => {
-    const err = thrown(() => loadBillingConfig({ STRIPE_SECRET_KEY: TEST_KEY, PROVENANT_BILLING_MODE: 'prod' }, ['stripe']));
-    expect(err.message).toMatch(/PROVENANT_BILLING_MODE/);
+  it('rejects an unknown LACRE_BILLING_MODE', () => {
+    const err = thrown(() => loadBillingConfig({ STRIPE_SECRET_KEY: TEST_KEY, LACRE_BILLING_MODE: 'prod' }, ['stripe']));
+    expect(err.message).toMatch(/LACRE_BILLING_MODE/);
   });
 
   it('the sync command refuses a live key with no live mode set, and exits non-zero', async () => {
     vi.stubEnv('STRIPE_SECRET_KEY', LIVE_KEY);
     const r = await cli(['billing', 'sync', '--dry-run']);
     expect(r.code).not.toBe(0);
-    expect(r.err).toMatch(/PROVENANT_BILLING_MODE/);
+    expect(r.err).toMatch(/LACRE_BILLING_MODE/);
     expectNoSecrets(r.out + r.err);
   });
 
@@ -191,7 +195,7 @@ describe('test mode comes first', () => {
     vi.stubEnv('STRIPE_SECRET_KEY', TEST_KEY);
     const r = await cli(['billing', 'sync', '--mode', 'live', '--dry-run']);
     expect(r.code).not.toBe(0);
-    expect(r.err).toMatch(/PROVENANT_BILLING_MODE/);
+    expect(r.err).toMatch(/LACRE_BILLING_MODE/);
     expectNoSecrets(r.out + r.err);
   });
 

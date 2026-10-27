@@ -111,7 +111,7 @@ export interface OverageStripe {
 export interface OverageReporterOptions {
   /** Defaults to process.env. Read once. Needs STRIPE_SECRET_KEY, the
    *  STRIPE_PRICE_* ids, STRIPE_METER_EVENT_NAME and, unless `db` is given,
-   *  DATABASE_URL. A live key is refused unless PROVENANT_BILLING_MODE=live. */
+   *  DATABASE_URL. A live key is refused unless LACRE_BILLING_MODE=live. */
   env?: Record<string, string | undefined>;
   /** Defaults to a real Stripe client for the loaded config. */
   stripe?: OverageStripe;
@@ -180,7 +180,7 @@ const ACCOUNT_ID = /\burn:provenant:agent:[A-Za-z0-9_-]+/g;
 /**
  * Loads the config and builds a reporter. Throws, naming the variables and no
  * values, when any is missing or malformed, or when a live key is set without
- * PROVENANT_BILLING_MODE=live.
+ * LACRE_BILLING_MODE=live.
  */
 export function createOverageReporter(opts: OverageReporterOptions = {}): OverageReporter {
   const config = loadBillingConfig(opts.env ?? process.env, [

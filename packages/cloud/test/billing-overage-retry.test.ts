@@ -225,7 +225,7 @@ describe('the cron route: CRON_SECRET', () => {
     expect(body.error.message).toBe('Overage retry is not configured.');
     expect(text).not.toMatch(/Set the named variables/);
     const headers = JSON.stringify([...res.headers]);
-    for (const exposed of [text, headers]) expect(exposed).not.toMatch(/STRIPE_|PROVENANT_|DATABASE_URL|CRON_SECRET/);
+    for (const exposed of [text, headers]) expect(exposed).not.toMatch(/STRIPE_|LACRE_|DATABASE_URL|CRON_SECRET/);
     expect(text).not.toContain(CRON_SECRET);
     const requestId = res.headers.get('x-request-id');
     expect(requestId).toBeTruthy();

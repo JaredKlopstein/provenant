@@ -22,7 +22,7 @@
  * the cause, which can name environment variables, goes to the server log.
  */
 import { resolve } from 'node:path';
-import { openDb, dbPath, type AnchorBackend, type Db } from '@lacre/core';
+import { openDb, dbPath, readLacreEnv, type AnchorBackend, type Db } from '@lacre/core';
 import { requireCronAuth } from '../cron/auth.js';
 import { genericError } from '../errors.js';
 import { runAnchorTick, type AnchorTickResult } from './scheduler.js';
@@ -52,19 +52,19 @@ export interface AnchorTickHandlerOptions {
 }
 
 /**
- * The deployed store: the receipt database under PROVENANT_HOME and the
- * timestamp authority named by PROVENANT_TSA_URL (a URL, or freetsa, digicert
+ * The deployed store: the receipt database under LACRE_HOME and the
+ * timestamp authority named by LACRE_TSA_URL (a URL, or freetsa, digicert
  * or sectigo; digicert by default), the same variables the CLI reads.
- * PROVENANT_HOME has no fallback here: a serverless function has no home
+ * LACRE_HOME has no directory fallback here: a serverless function has no home
  * directory worth anchoring, so an unset variable is an error, not an empty
  * store that reports "idle" forever.
  */
 export function anchorTickStoreFromEnv(env: Record<string, string | undefined>): AnchorTickStore {
-  const home = env.PROVENANT_HOME;
+  const home = readLacreEnv('LACRE_HOME', env);
   if (!home) {
-    throw new Error('PROVENANT_HOME is not set, so there is no receipt store to anchor.');
+    throw new Error('LACRE_HOME is not set, so there is no receipt store to anchor.');
   }
-  const configured = env.PROVENANT_TSA_URL ?? 'digicert';
+  const configured = readLacreEnv('LACRE_TSA_URL', env) ?? 'digicert';
   const url = (PUBLIC_TSAS as Record<string, string>)[configured] ?? configured;
   return { db: openDb(dbPath(resolve(home))), backend: createTsaBackend({ url }) };
 }
@@ -89,8 +89,8 @@ export function createAnchorTickHandler(opts: AnchorTickHandlerOptions = {}): (r
         message: 'The anchor tick is not configured on the server. Nothing was anchored.',
         retryable: false,
         cause:
-          `anchor tick: could not open the store: ${messageOf(err)} Set PROVENANT_HOME to the receipt store ` +
-          'and, optionally, PROVENANT_TSA_URL in the Vercel project, then redeploy.',
+          `anchor tick: could not open the store: ${messageOf(err)} Set LACRE_HOME to the receipt store ` +
+          'and, optionally, LACRE_TSA_URL in the Vercel project, then redeploy.',
         log: opts.log,
       });
     }

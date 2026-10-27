@@ -15,7 +15,7 @@
  * same instance, so its database pool is reused. Building it reads
  * STRIPE_WEBHOOK_SECRET, DATABASE_URL, STRIPE_SECRET_KEY and
  * STRIPE_PRICE_BUNDLE_OVERAGE; when any is missing or malformed, or a live key is
- * set without PROVENANT_BILLING_MODE=live, the request gets a generic 500 with a
+ * set without LACRE_BILLING_MODE=live, the request gets a generic 500 with a
  * request id. The config error, which names the variables (never their values),
  * goes only to the server log under the same id. Stripe retries a 500, so fixing
  * the variables and redeploying lets the next retry through.
