@@ -12,6 +12,9 @@
  *    deleted, so existing subscriptions keep billing on it;
  *  - the overage meter is found by its event name.
  *
+ * A display-name change updates that product in place. It does not create a
+ * product or a price, and it does not create a meter.
+ *
  * Each object also carries `provenant_key` metadata naming its catalog entry.
  *
  * A run that fails part-way is safe to repeat: it only does what is still
@@ -235,12 +238,16 @@ async function plan(client: CatalogClient, mode: BillingMode, apply: boolean): P
       if (apply) await client.products.create({ id, ...want });
       continue;
     }
-    const drifted =
-      found.name !== want.name ||
-      (found.description ?? undefined) !== want.description ||
-      Object.entries(want.metadata).some(([k, v]) => found.metadata[k] !== v);
-    if (drifted) {
-      steps.push({ op: 'update', object: 'product', key: id, detail: `update product "${want.name}" to match pricing.ts` });
+    const nameChanged = found.name !== want.name;
+    const descriptionChanged = (found.description ?? undefined) !== want.description;
+    const metadataChanged = Object.entries(want.metadata).some(([k, v]) => found.metadata[k] !== v);
+    if (nameChanged || descriptionChanged || metadataChanged) {
+      // A name-only difference still updates this product. It never mints a
+      // new product, price, or meter.
+      const detail = nameChanged && !descriptionChanged && !metadataChanged
+        ? `update product name to "${want.name}"`
+        : `update product "${want.name}" to match pricing.ts`;
+      steps.push({ op: 'update', object: 'product', key: id, detail });
       if (apply) await client.products.update(id, want);
     } else {
       steps.push({ op: 'unchanged', object: 'product', key: id, detail: `product "${want.name}" matches` });

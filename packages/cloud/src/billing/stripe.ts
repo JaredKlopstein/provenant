@@ -276,8 +276,22 @@ export async function createPortalSession(
   return stripe.billingPortal.sessions.create({ customer: customerId, return_url: returnUrl });
 }
 
-/** Meter event name for overage bundles. One event per bundle beyond the
- *  monthly allowance; the meter counts them. */
+/**
+ * Meter event name for overage bundles. One event per bundle beyond the
+ * monthly allowance; the meter counts them.
+ *
+ * Customer-visible names in stripeCatalog() say Lacre. These identifiers stay
+ * on purpose. Stripe cannot rename a product id or a meter event name, and
+ * webhooks read the metadata keys. Renaming them would mean new Stripe objects
+ * and new STRIPE_PRICE_* values for no visible gain.
+ *
+ * Kept:
+ * - product ids and price lookup keys `provenant_*`
+ * - metadata `provenant_plan`, `provenant_interval`, `provenant_purchase`,
+ *   `provenant_annual_subscription`, `provenant_key`
+ * - OVERAGE_METER_EVENT = 'provenant_overage_bundle'
+ * - event type `provenant.duplicate_metered.cancel`
+ */
 export const OVERAGE_METER_EVENT = 'provenant_overage_bundle';
 
 /** The product catalog to create in Stripe, generated from pricing.ts so the
@@ -286,7 +300,7 @@ export function stripeCatalog(): Array<Record<string, unknown>> {
   const out: Array<Record<string, unknown>> = [];
   for (const plan of Object.values(PLANS)) {
     if (plan.monthlyUsd === null || plan.monthlyUsd === 0) continue;
-    const product = { name: `Provenant ${plan.name}`, description: plan.features.join('; ') };
+    const product = { name: `Lacre ${plan.name}`, description: plan.features.join('; ') };
     const planMetadata = {
       plan_id: plan.id, retention_days: plan.retentionDays, anchor_cadence: plan.anchorCadence,
     };
@@ -304,7 +318,7 @@ export function stripeCatalog(): Array<Record<string, unknown>> {
     }
     if (plan.perExtraIdentityUsd) {
       out.push({
-        product: { name: `Provenant ${plan.name} — additional agent identity` },
+        product: { name: `Lacre ${plan.name} — additional agent identity` },
         price: {
           unit_amount: plan.perExtraIdentityUsd * 100,
           currency: 'usd',
@@ -319,7 +333,7 @@ export function stripeCatalog(): Array<Record<string, unknown>> {
   // Stripe bills the month's count on the subscriber's next invoice.
   out.push({
     product: {
-      name: 'Provenant anchored evidence bundle',
+      name: 'Lacre anchored evidence bundle',
       description: 'One signed, externally anchored evidence archive, verifiable offline.',
     },
     price: { unit_amount: PAYG_BUNDLE_PRICE_USD * 100, currency: 'usd' },
@@ -327,7 +341,7 @@ export function stripeCatalog(): Array<Record<string, unknown>> {
   });
   out.push({
     product: {
-      name: 'Provenant anchored evidence bundle — beyond plan allowance',
+      name: 'Lacre anchored evidence bundle — beyond plan allowance',
       description: 'One evidence bundle beyond the monthly allowance included in a subscription.',
     },
     price: {
@@ -337,7 +351,7 @@ export function stripeCatalog(): Array<Record<string, unknown>> {
     },
     meter: {
       event_name: OVERAGE_METER_EVENT,
-      display_name: 'Provenant evidence bundles beyond plan allowance',
+      display_name: 'Lacre evidence bundles beyond plan allowance',
     },
     metadata: { kind: 'overage_bundle' },
   });
