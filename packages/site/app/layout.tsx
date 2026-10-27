@@ -3,9 +3,9 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BRAND } from '../src/brand';
 import { FONT_VARIABLES } from '../src/fonts';
-import { LEGAL, PRIVACY_PATH, TERMS_PATH } from '../src/legal';
 import { NavMenu } from '../src/nav-menu';
 import { GETTING_STARTED_URL } from '../src/plans';
+import { SiteFooter } from '../src/site-footer';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -56,17 +56,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </header>
         <main id="main">{children}</main>
         <footer>
-          <p>
-            {BRAND.name}: {BRAND.tagline}. <a href={BRAND.repository}>Source on GitHub</a>.
-          </p>
-          <nav aria-label="Legal">
-            <Link href={TERMS_PATH}>Terms</Link> · <Link href={PRIVACY_PATH}>Privacy</Link> ·{' '}
-            {LEGAL.contactEmail ? (
-              <a href={`mailto:${LEGAL.contactEmail}`}>Contact</a>
-            ) : (
-              <Link href="/enterprise">Contact</Link>
-            )}
-          </nav>
+          <SiteFooter />
         </footer>
       </body>
     </html>
