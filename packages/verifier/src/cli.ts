@@ -185,7 +185,7 @@ USAGE
 ARGUMENTS
   RECEIPTS            JSON array of signed receipts in stored form, in chain
                       order (ascending seq).
-  --keys <file>       JSON object mapping each provenant.key_id to its public
+  --keys <file>       JSON object mapping each lacre.key_id to its public
                       key as an Ed25519 JWK. Include every key the run was
                       signed under, rotated ones too.
   --json              Machine-readable report on stdout

@@ -7,7 +7,7 @@
  * Message Signatures and the Web Bot Auth drafts, which Cloudflare and Google are
  * pushing, use Ed25519), and because deterministic signatures remove an entire
  * class of nonce-reuse failure. Every receipt carries an explicit
- * `provenant.signature_alg`, so a verifier never has to guess -- and adding
+ * `lacre.signature_alg`, so a verifier never has to guess -- and adding
  * P-256 later is an additive change, not a migration.
  *
  * NOTE: the Web Bot Auth drafts are individual IETF submissions with no working
@@ -85,7 +85,7 @@ export function jwkThumbprint(jwk: AgentJwk): string {
  * binds that id to the first key observed.
  */
 export function deriveAgentId(publicKey: Uint8Array): string {
-  return `urn:provenant:agent:${jwkThumbprint(publicKeyToJwk(publicKey))}`;
+  return `urn:lacre:agent:${jwkThumbprint(publicKeyToJwk(publicKey))}`;
 }
 
 export function sign(message: Uint8Array, secretKey: Uint8Array): Uint8Array {

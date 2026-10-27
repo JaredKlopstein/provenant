@@ -19,7 +19,7 @@ import {
 } from './receipt.js';
 import { verifyTimestampToken, type TimestampVerdict } from './rfc3161.js';
 
-export const BUNDLE_FORMAT = 'provenant-bundle-v1';
+export const BUNDLE_FORMAT = 'lacre-bundle-v1';
 
 export interface BundleAnchor {
   id: string;
@@ -148,9 +148,9 @@ export function verifyBundle(input: unknown, opts: VerifyOptions = {}): BundleVe
   if (bundle.format !== BUNDLE_FORMAT) {
     verdict.failures.push({
       seq: null, record_id: null, kind: 'BUNDLE_MALFORMED',
-      message: `unsupported bundle format '${String(bundle.format)}'; this verifier reads '${BUNDLE_FORMAT}'`,
+      message: `unknown bundle format '${String(bundle.format)}'; this verifier reads '${BUNDLE_FORMAT}'`,
     });
-    verdict.conclusion = 'Nothing could be verified: unrecognised bundle format.';
+    verdict.conclusion = 'Nothing could be verified: unknown bundle format.';
     return verdict;
   }
   if (!Array.isArray(bundle.receipts) || !isObj(bundle.agents) || !Array.isArray(bundle.anchors)) {
@@ -206,7 +206,7 @@ export function verifyBundle(input: unknown, opts: VerifyOptions = {}): BundleVe
       fail('SEQUENCE_GAP', `sequence jumps from ${prevSeq} to ${rec.seq}; ${rec.seq - prevSeq - 1} receipt(s) missing`,
         { expected: String(prevSeq + 1), actual: String(rec.seq) });
     }
-    const signedSeq = isObj(parsed.provenant) ? (parsed.provenant as Record<string, unknown>).seq : undefined;
+    const signedSeq = isObj(parsed.lacre) ? (parsed.lacre as Record<string, unknown>).seq : undefined;
     if (signedSeq !== rec.seq) {
       fail('SEQUENCE_GAP', `stored position ${rec.seq} disagrees with the signed seq ${String(signedSeq)}`,
         { expected: String(rec.seq), actual: String(signedSeq) });

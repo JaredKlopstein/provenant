@@ -72,7 +72,7 @@ describe('append', () => {
     const { receipt, seq } = record();
     expect(seq).toBe(0);
     expect(receipt.prev_hash).toBeNull();
-    expect(receipt.provenant.seq).toBe(0);
+    expect(receipt.lacre.seq).toBe(0);
   });
 
   it('links each receipt to its predecessor', () => {
@@ -287,7 +287,7 @@ describe('the tamper test', () => {
 });
 
 describe('tool-call fields (ADR 0004)', () => {
-  it('records all five fields under provenant, signed and verifiable', () => {
+  it('records all five fields under lacre, signed and verifiable', () => {
     record();
     const { receipt } = record({
       issuerKind: 'sdk',
@@ -300,7 +300,7 @@ describe('tool-call fields (ADR 0004)', () => {
     });
     record();
 
-    expect(receipt.provenant).toMatchObject({
+    expect(receipt.lacre).toMatchObject({
       issuer_kind: 'sdk',
       run_id: 'run-test-1',
       turn_id: 'turn-test-1',
@@ -347,7 +347,7 @@ describe('tool-call fields (ADR 0004)', () => {
         parent_record_id: null,
         prev_hash: null,
         input_hash: payloadHash({ a: 1 }),
-        provenant: {
+        lacre: {
           v: '1',
           action: 'refund.issue',
           side_effect_class: 'irreversible',
@@ -359,7 +359,7 @@ describe('tool-call fields (ADR 0004)', () => {
       kp.secretKey,
     );
 
-    expect(Object.keys(receipt.provenant).sort()).toEqual(Object.keys(expected.provenant).sort());
+    expect(Object.keys(receipt.lacre).sort()).toEqual(Object.keys(expected.lacre).sort());
     expect(readChain()[0]!.canonical_json).toBe(canonicalReceiptJson(expected));
     expect(selfHash).toBe(receiptHash(expected));
   });

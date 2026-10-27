@@ -99,7 +99,7 @@ export function exportBundle(db: Db, opts: ExportOptions = {}): Bundle {
       // and the verifier will neither notice nor contradict it. The verifier
       // ignores this field entirely and recomputes its own conclusion.
       unverified_note: external.length
-        ? `Claims (UNVERIFIED, recompute with provenant-verify): receipts 0 through ${external[external.length - 1]!.seq} were externally timestamped. Receipts after that position are covered only by this operator's own hash chain.`
+        ? `Claims (UNVERIFIED, recompute with lacre-verify): receipts 0 through ${external[external.length - 1]!.seq} were externally timestamped. Receipts after that position are covered only by this operator's own hash chain.`
         : 'Claims (UNVERIFIED): NOTHING IS EXTERNALLY ANCHORED. Every receipt here would be self-attested. Do not treat this bundle as independent evidence.',
     };
   }

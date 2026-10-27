@@ -40,7 +40,7 @@ describe('the cold-agent path', () => {
     const init = await json('init --display-name cold-agent');
     expect(init.code).toBe(0);
     const agentId = (init.body.result as { agent_id: string }).agent_id;
-    expect(agentId).toMatch(/^urn:provenant:agent:/);
+    expect(agentId).toMatch(/^urn:lacre:agent:/);
 
     // Step 2: dry run reveals the exact receipt without writing it
     const dry = await json(

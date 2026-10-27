@@ -175,7 +175,7 @@ const DEDUPE_MS = DAY_MS;
  *  than this lost its sender and counts as having had no response. */
 const IN_FLIGHT_MS = 10 * 60_000;
 const STRIPE_ID = /\b(cus|sub|si|cs|pi|in|il|ii|ch|evt|price|prod|pm|seti|src|card|mtr)_[A-Za-z0-9]+/g;
-const ACCOUNT_ID = /\burn:provenant:agent:[A-Za-z0-9_-]+/g;
+const ACCOUNT_ID = /\burn:lacre:agent:[A-Za-z0-9_-]+/g;
 
 /**
  * Loads the config and builds a reporter. Throws, naming the variables and no

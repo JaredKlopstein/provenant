@@ -41,8 +41,8 @@ const METER_NAME = 'test-configured-overage-meter';
 const ENV: Record<string, string> = { STRIPE_SECRET_KEY: TEST_KEY, [METER_EVENT_ENV]: METER_NAME };
 for (const [key, name] of Object.entries(PRICE_ENV)) ENV[name] = u('price', 'test' + key.replace(/_/g, ''));
 
-const MONTHLY = { account: 'urn:provenant:agent:test-monthly', customer: 'cus_test_monthly', subscription: 'sub_test_monthly', interval: 'month' as const };
-const ANNUAL = { account: 'urn:provenant:agent:test-annual', customer: 'cus_test_annual', subscription: 'sub_test_annual', interval: 'year' as const };
+const MONTHLY = { account: 'urn:lacre:agent:test-monthly', customer: 'cus_test_monthly', subscription: 'sub_test_monthly', interval: 'month' as const };
+const ANNUAL = { account: 'urn:lacre:agent:test-annual', customer: 'cus_test_annual', subscription: 'sub_test_annual', interval: 'year' as const };
 const SAVED_PM = 'pm_test_saved_at_checkout';
 
 const MIGRATIONS = ['0000_billing.sql', '0001_overage.sql', '0002_overage_retry.sql']
@@ -494,11 +494,11 @@ describe('free and pay-as-you-go users', () => {
   it('never create usage rows or meter events', async () => {
     const r = reporter();
     // Free: no Stripe customer at all.
-    expect((await exportBundles(r, 'urn:provenant:agent:test-free', 8)).every((o) => o.status === 'not_subscribed')).toBe(true);
+    expect((await exportBundles(r, 'urn:lacre:agent:test-free', 8)).every((o) => o.status === 'not_subscribed')).toBe(true);
     // Pay-as-you-go: a customer with a bundle credit and no subscription.
-    await db.insert(billingCustomers).values({ stripeCustomerId: 'cus_test_payg', accountId: 'urn:provenant:agent:test-payg' });
+    await db.insert(billingCustomers).values({ stripeCustomerId: 'cus_test_payg', accountId: 'urn:lacre:agent:test-payg' });
     await db.insert(billingBundleCredits).values({ stripeCheckoutSessionId: 'cs_test_payg', stripeCustomerId: 'cus_test_payg' });
-    expect((await exportBundles(r, 'urn:provenant:agent:test-payg', 8)).every((o) => o.status === 'not_subscribed')).toBe(true);
+    expect((await exportBundles(r, 'urn:lacre:agent:test-payg', 8)).every((o) => o.status === 'not_subscribed')).toBe(true);
     // A canceled Cloud subscription no longer has the plan.
     await subscriber({ ...MONTHLY, status: 'canceled' });
     expect((await exportBundles(r, MONTHLY.account, 8)).every((o) => o.status === 'not_subscribed')).toBe(true);

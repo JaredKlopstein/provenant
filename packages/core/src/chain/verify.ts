@@ -116,10 +116,10 @@ export function verifyChain(
       recordOk = false;
     }
 
-    if (parsed.provenant.seq !== rec.seq) {
-      fail('SEQUENCE_GAP', `Stored position ${rec.seq} disagrees with the signed seq ${parsed.provenant.seq}.`, {
+    if (parsed.lacre.seq !== rec.seq) {
+      fail('SEQUENCE_GAP', `Stored position ${rec.seq} disagrees with the signed seq ${parsed.lacre.seq}.`, {
         expected: String(rec.seq),
-        actual: String(parsed.provenant.seq),
+        actual: String(parsed.lacre.seq),
       });
       recordOk = false;
     }

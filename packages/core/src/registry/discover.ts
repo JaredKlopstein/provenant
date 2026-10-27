@@ -47,7 +47,7 @@ export function buildManifest(): Record<string, unknown> {
       key_format: 'RFC 8037 OKP JWK; key ids are RFC 7638 thumbprints',
       record_format: AAT_DRAFT_VERSION,
       record_format_caveat:
-        'draft-sharif-agent-audit-trail has NO formal IETF standing and may change. We follow its record shape and chaining rule, but default to Ed25519 where the draft specifies ECDSA P-256, and carry the algorithm explicitly in provenant.signature_alg. Lacre-specific fields live under the "provenant" key.',
+        'draft-sharif-agent-audit-trail has NO formal IETF standing and may change. We follow its record shape and chaining rule, but default to Ed25519 where the draft specifies ECDSA P-256, and carry the algorithm explicitly in lacre.signature_alg. Lacre-specific fields live under the "lacre" key.',
       chain_rule:
         'prev_hash(N) = hex(SHA-256(JCS(record(N-1)))) over the complete stored record including its signature. Genesis has prev_hash null.',
     },

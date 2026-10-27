@@ -9,7 +9,7 @@
  *
  *  1. Signature algorithm. AAT-00 mandates ECDSA P-256. We default to Ed25519
  *     for consistency with RFC 9421 agent identity, and record the algorithm
- *     explicitly in `provenant.signature_alg` so a verifier never guesses.
+ *     explicitly in `lacre.signature_alg` so a verifier never guesses.
  *
  *  2. No `self_hash` field. The brief called for one, but AAT defines
  *     prev_hash(N) = hex(SHA-256(JCS(record(N-1)))) over the COMPLETE stored
@@ -18,7 +18,7 @@
  *     an index into the chain, never part of the canonical record. This keeps
  *     us byte-exact with AAT while retaining O(1) append.
  *
- *  3. Provenant-specific governance fields live under a single `provenant`
+ *  3. Lacre-specific governance fields live under a single `lacre`
  *     object rather than at the top level, so the AAT core stays cleanly
  *     separable and an AAT validator sees a record it recognises.
  *
@@ -85,7 +85,7 @@ export type IssuerKind = z.infer<typeof IssuerKind>;
 export const ProvenanceClass = z.enum(['attested', 'observed', 'claimed']);
 export type ProvenanceClass = z.infer<typeof ProvenanceClass>;
 
-/** Provenant extension namespace. Everything here is outside AAT's schema. */
+/** Lacre extension namespace. Everything here is outside AAT's schema. */
 export const LacreExtension = z.object({
   v: z.literal(LACRE_RECEIPT_VERSION),
   /** Fully-qualified action name, e.g. "refund.issue". */
@@ -151,8 +151,8 @@ export const UnsignedReceipt = z.object({
   model_id: z.string().max(200).nullish(),
   latency_ms: z.number().int().nonnegative().nullish(),
 
-  // --- Provenant extension ---
-  provenant: LacreExtension,
+  // --- Lacre extension ---
+  lacre: LacreExtension,
 });
 export type UnsignedReceipt = z.infer<typeof UnsignedReceipt>;
 

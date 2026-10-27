@@ -27,7 +27,7 @@ From a source checkout, as above; `npx @lacre/verifier run` works once the
 package is published to npm.
 
 `receipts.json` is a JSON array of signed receipts in stored form, in seq
-order; `keys.json` maps each `provenant.key_id` to its Ed25519 JWK (include
+order; `keys.json` maps each `lacre.key_id` to its Ed25519 JWK (include
 rotated keys). The report lists **broken links** (prev_hash mismatch, bad
 signature, unknown key_id), **gaps** (seq not contiguous from 0, or a non-null
 genesis prev_hash) and **duplicate attempts** (the same action, input_hash and

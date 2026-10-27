@@ -8,7 +8,7 @@
  * contiguously from 0 (core's SEQUENCE_GAP), and the first record's prev_hash
  * must be null.
  *
- * Keys are looked up by `provenant.key_id`, not `agent_id`, so a run that
+ * Keys are looked up by `lacre.key_id`, not `agent_id`, so a run that
  * crosses a key rotation (ADR 0002) verifies as long as the caller supplies
  * every key it was signed under.
  *
@@ -94,16 +94,16 @@ export function checkRun(receipts: readonly unknown[], keys: RunKeys): RunReport
   let prevSeq: number | null = null;
 
   receipts.forEach((raw, index) => {
-    if (!isObj(raw) || !isObj(raw.provenant)) {
+    if (!isObj(raw) || !isObj(raw.lacre)) {
       brokenLinks.push({
         index, seq: null, record_id: null, kind: 'MALFORMED',
-        message: 'Not a receipt: expected an object with a provenant extension.',
+        message: 'Not a receipt: expected an object with a lacre extension.',
       });
       prevHash = null;
       prevSeq = prevSeq === null ? 0 : prevSeq + 1;
       return;
     }
-    const p = raw.provenant;
+    const p = raw.lacre;
     const seq = typeof p.seq === 'number' && Number.isSafeInteger(p.seq) && p.seq >= 0 ? p.seq : null;
     const record_id = str(raw.record_id);
     const at = { index, seq, record_id };
@@ -112,7 +112,7 @@ export function checkRun(receipts: readonly unknown[], keys: RunKeys): RunReport
     //     head, which the hash links alone cannot place. ---
     const expectedSeq = prevSeq === null ? 0 : prevSeq + 1;
     if (seq === null) {
-      gaps.push({ ...at, expectedSeq, message: `provenant.seq is missing or not a non-negative integer; expected ${expectedSeq}.` });
+      gaps.push({ ...at, expectedSeq, message: `lacre.seq is missing or not a non-negative integer; expected ${expectedSeq}.` });
     } else if (seq !== expectedSeq) {
       const msg = prevSeq === null
         ? `Run starts at seq ${seq}; expected genesis at seq 0. Records before ${seq} are missing.`

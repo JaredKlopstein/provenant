@@ -96,9 +96,9 @@ export function agentReliability(db: Db, agentId: string): AgentReliability {
     // what will start producing real numbers the moment contracts ship.
     try {
       const parsed = JSON.parse(r.canonicalJson) as {
-        provenant?: { contract_id?: string | null; contract_result?: string | null; lease_id?: string | null };
+        lacre?: { contract_id?: string | null; contract_result?: string | null; lease_id?: string | null };
       };
-      const p = parsed.provenant;
+      const p = parsed.lacre;
       if (p?.contract_id) {
         contractGoverned++;
         if (p.contract_result === 'rejected') contractRejected++;

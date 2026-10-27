@@ -29,7 +29,7 @@ describe('keygen', () => {
     const r = await json('keygen');
     expect(r.code).toBe(0);
     const res = r.body.result as { agent_id: string; registered: boolean; note: string };
-    expect(res.agent_id).toMatch(/^urn:provenant:agent:/);
+    expect(res.agent_id).toMatch(/^urn:lacre:agent:/);
     expect(res.registered).toBe(false);
     expect(res.note).toMatch(/NOT registered/);
     // The key exists but no agent row does.
