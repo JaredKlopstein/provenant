@@ -1,10 +1,12 @@
 # ADR 0001: The open-core boundary is a directory boundary, enforced in CI
 
+Provenant was renamed Lacre on 27 October 2026.
+
 **Status:** Accepted (Phase 1)
 
 ## Context
 
-Provenant is open core. Receipts, chaining, contracts, leases and local
+Lacre is open core. Receipts, chaining, contracts, leases and local
 verification are MIT and free. Anchoring and evidence bundles are paid.
 
 The temptation in every open-core codebase is to let the boundary become a
@@ -12,7 +14,7 @@ convention: a comment, a folder name, a code-review habit. It then erodes, and
 by the time anyone notices, the open package cannot be built or audited without
 the commercial one.
 
-For Provenant that erosion is not a licensing inconvenience. It is fatal. The
+For Lacre that erosion is not a licensing inconvenience. It is fatal. The
 product's entire claim is "a third party who does not trust the operator can
 verify this." If verification requires code from the package the operator pays
 for and controls, the claim is circular and the evidence is worthless.

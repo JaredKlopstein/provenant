@@ -239,7 +239,7 @@ describe('an authorized tick', () => {
   });
 
   it('returns 500 with no raw store error when reading the store fails', async () => {
-    const raw = 'test-raw-store-failure: SQLITE_CORRUPT at /srv/provenant/receipts.db';
+    const raw = 'test-raw-store-failure: SQLITE_CORRUPT at /srv/lacre/receipts.db';
     const broken = new Proxy({}, {
       get() {
         throw new Error(raw);
@@ -261,7 +261,7 @@ describe('an authorized tick', () => {
     const body = JSON.parse(text);
     expect(body.error.code).toBe('ANCHOR_TICK_FAILED');
     expect(body.error.retryable).toBe(true);
-    for (const leak of ['test-raw-store-failure', 'SQLITE_CORRUPT', '/srv/provenant', 'LACRE_']) {
+    for (const leak of ['test-raw-store-failure', 'SQLITE_CORRUPT', '/srv/lacre', 'LACRE_']) {
       expect(text).not.toContain(leak);
     }
     expect(state.calls).toBe(0);

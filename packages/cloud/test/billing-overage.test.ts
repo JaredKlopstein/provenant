@@ -313,7 +313,7 @@ describe('billing never blocks the export', () => {
   beforeEach(() => {
     core = openDb(':memory:');
     kp = generateKeypair();
-    store = mkdtempSync(join(tmpdir(), 'provenant-overage-'));
+    store = mkdtempSync(join(tmpdir(), 'lacre-overage-'));
   });
   afterEach(() => {
     closeDb(core);

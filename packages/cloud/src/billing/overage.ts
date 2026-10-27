@@ -121,7 +121,7 @@ export interface OverageReporterOptions {
   now?: () => Date;
   /** Receives each line already redacted. Defaults to console.error. */
   log?: (line: string) => void;
-  /** The Provenant account an export bills to: the account id checkout links
+  /** The Lacre account an export bills to: the account id checkout links
    *  to the Stripe customer. Defaults to the exporting agent's id. */
   account?: (ctx: ActionContext) => string | null;
   /** Most rows one retry pass sends. Defaults to 100. */

@@ -31,7 +31,7 @@ const WEBHOOK_SECRET = u('whsec', 'w'.repeat(24));
 const OTHER_SECRET = u('whsec', 'v'.repeat(24));
 const DB_USER = 'test-db-user';
 const DB_PASSWORD = 'test-db-password';
-const DB_HOST = 'db.provenant.test';
+const DB_HOST = 'db.lacre.test';
 const DATABASE_URL = ['postgresql:', '', `${DB_USER}:${DB_PASSWORD}@${DB_HOST}`, 'billing'].join('/');
 const STRIPE_KEY = u('sk', 'test', 'k'.repeat(24));
 const SECRETS = [WEBHOOK_SECRET, OTHER_SECRET, DATABASE_URL, DB_USER, DB_PASSWORD, DB_HOST, STRIPE_KEY];
@@ -142,7 +142,7 @@ function signed(event: Fixture, o: { secret?: string; timestamp?: number; header
         secret: o.secret ?? WEBHOOK_SECRET,
         ...(o.timestamp ? { timestamp: o.timestamp } : {}),
       });
-  return new Request(`https://provenant.test${BILLING_WEBHOOK_PATH}`, {
+  return new Request(`https://lacre.test${BILLING_WEBHOOK_PATH}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...(header === null ? {} : { 'stripe-signature': header }) },
     body: payload,
@@ -232,7 +232,7 @@ describe('signature verification on the raw body', () => {
 
   it('refuses anything but POST', async () => {
     const w = webhook();
-    const res = await w.webhook(new Request(`https://provenant.test${BILLING_WEBHOOK_PATH}`));
+    const res = await w.webhook(new Request(`https://lacre.test${BILLING_WEBHOOK_PATH}`));
     expect(res.status).toBe(405);
     expect(await counts()).toEqual(EMPTY);
   });
@@ -463,7 +463,7 @@ describe('plan state changes only through verified webhooks', () => {
       db: coreDb,
       billing: {
         env: billingEnv, stripe, customers: createCustomerLookup(db),
-        successUrl: 'https://provenant.test/ok', cancelUrl: 'https://provenant.test/no', returnUrl: 'https://provenant.test/a',
+        successUrl: 'https://lacre.test/ok', cancelUrl: 'https://lacre.test/no', returnUrl: 'https://lacre.test/a',
         log: () => {},
       },
       billingWebhook: { env: ENV, stripe: noOtherSubscriptions(), connect: () => db, log: { warn: () => {}, error: () => {} } },

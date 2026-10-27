@@ -371,7 +371,7 @@ function send(res: ServerResponse, status: number, body: unknown): void {
 }
 
 function llmsTxt(host: string): string {
-  return `# Provenant collector
+  return `# Lacre collector
 
 Tamper-evident receipts for autonomous agents. You are an agent; this service is
 designed for you to use directly, with no human in the loop.

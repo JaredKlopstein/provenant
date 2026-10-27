@@ -1,10 +1,12 @@
 # ADR 0003: Anchoring — what the paywall actually sells
 
+Provenant was renamed Lacre on 27 October 2026.
+
 **Status:** Accepted (Phase 2)
 
 ## Context
 
-Provenant's revenue thesis is that writing and chaining receipts locally is free,
+Lacre's revenue thesis is that writing and chaining receipts locally is free,
 and what we charge for is making the chain provable to **someone who does not
 trust the operator**. That only works if the free and paid tiers differ in a way
 that is *technically real* rather than artificially withheld.

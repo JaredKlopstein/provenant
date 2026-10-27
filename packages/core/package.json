@@ -59,14 +59,14 @@
     "rfc8785"
   ],
   "author": "Jared Klopstein",
-  "homepage": "https://jaredklopstein.github.io/provenant",
+  "homepage": "https://jaredklopstein.github.io/lacre",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JaredKlopstein/provenant.git",
+    "url": "git+https://github.com/JaredKlopstein/lacre.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/JaredKlopstein/provenant/issues"
+    "url": "https://github.com/JaredKlopstein/lacre/issues"
   },
   "publishConfig": {
     "access": "public"

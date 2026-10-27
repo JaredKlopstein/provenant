@@ -12,7 +12,7 @@ const resolveKey = (keyId: string) => (keyId === kp.keyId ? publicKeyToJwk(kp.pu
 function req(over: Partial<RequestLike> = {}): RequestLike {
   return {
     method: 'POST',
-    authority: 'collector.provenant.dev',
+    authority: 'collector.lacre.dev',
     path: '/receipts',
     headers: {},
     ...over,
@@ -33,7 +33,7 @@ describe('RFC 9421 signature base construction', () => {
     );
     expect(base).toBe(
       '"@method": POST\n' +
-        '"@authority": collector.provenant.dev\n' +
+        '"@authority": collector.lacre.dev\n' +
         '"@path": /receipts\n' +
         '"@signature-params": ("@method" "@authority" "@path");created=1700000000;keyid="k1";alg="ed25519"',
     );
@@ -64,10 +64,10 @@ describe('RFC 9421 signature base construction', () => {
     const base = signatureBase(
       ['@method', '@authority'],
       { keyid: 'k', created: 1 },
-      req({ method: 'post', authority: 'Collector.Provenant.DEV' }),
+      req({ method: 'post', authority: 'Collector.Lacre.DEV' }),
     );
     expect(base).toContain('"@method": POST');
-    expect(base).toContain('"@authority": collector.provenant.dev');
+    expect(base).toContain('"@authority": collector.lacre.dev');
   });
 
   it('serializes parameters in the documented order', () => {

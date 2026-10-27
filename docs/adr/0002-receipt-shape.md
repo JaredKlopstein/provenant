@@ -1,5 +1,7 @@
 # ADR 0002: Receipt shape, and where we diverge from the AAT draft
 
+Provenant was renamed Lacre on 27 October 2026.
+
 **Status:** Accepted (Phase 1)
 
 ## Context
@@ -21,7 +23,7 @@ that Cloudflare and Google are pushing use Ed25519, and deterministic signatures
 remove a whole class of nonce-reuse failure.
 
 To keep this honest rather than silent, every receipt carries
-`provenant.signature_alg`. A verifier never guesses. Adding P-256 later is
+`lacre.signature_alg`. A verifier never guesses. Adding P-256 later is
 additive, not a migration.
 
 **We therefore do not claim AAT conformance.** We claim alignment, and we name
@@ -41,12 +43,12 @@ Note a useful consequence of AAT's rule: because the chain hash covers the whole
 stored record, it covers the *signature* too. A re-signature cannot be swapped in
 without breaking the next link.
 
-### 3. Provenant fields live under a `provenant` namespace
+### 3. Lacre fields live under a `lacre` namespace
 
 `side_effect_class`, `seq`, `key_id`, `signature_alg`, and the future contract,
 lease and approval fields are not AAT concepts. Putting them at the top level
 would pollute a record an AAT validator is meant to recognise. They live under a
-single `provenant` object instead.
+single `lacre` object instead.
 
 ### 4. `seq` is signed, and the chain is global
 

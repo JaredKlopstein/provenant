@@ -1,5 +1,5 @@
 """
-Provenant reference client -- Python. ~40 lines of actual logic.
+Lacre reference client -- Python. ~40 lines of actual logic.
 
 Wraps the CLI rather than reimplementing the protocol, deliberately: the CLI is
 the reference surface, it already emits structured JSON and structured errors,
@@ -19,7 +19,7 @@ class LacreError(Exception):
         super().__init__(payload.get("message", "unknown error"))
         self.code = payload.get("code")
         self.retryable = payload.get("retryable", False)
-        # Every Provenant error carries a `fix` telling you exactly what to do next.
+        # Every Lacre error carries a `fix` telling you exactly what to do next.
         self.fix = payload.get("fix")
 
 

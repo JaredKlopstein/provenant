@@ -21,7 +21,7 @@ async function json(args: string): Promise<{ code: number; body: Record<string, 
   return { code, body: JSON.parse(code === 0 ? out : err) as Record<string, unknown> };
 }
 
-beforeEach(() => { store = mkdtempSync(join(tmpdir(), 'provenant-gaps-')); });
+beforeEach(() => { store = mkdtempSync(join(tmpdir(), 'lacre-gaps-')); });
 afterEach(() => rmSync(store, { recursive: true, force: true }));
 
 describe('keygen', () => {

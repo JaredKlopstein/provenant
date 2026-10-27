@@ -1,4 +1,4 @@
-/** Provenant Core -- MIT. Receipts, chaining, identity, local verification. */
+/** Lacre Core -- MIT. Receipts, chaining, identity, local verification. */
 export { canonicalize, canonicalBytes, CanonicalizationError } from './canonical/jcs.js';
 export { hashJson, sha256Hex, toHex, fromHex, toBase64Url, fromBase64Url } from './crypto/hash.js';
 export {

@@ -20,7 +20,7 @@ function cli(argv: string[]) {
   return { code, out: out.join('\n'), err: err.join('\n') };
 }
 
-const dir = mkdtempSync(join(tmpdir(), 'provenant-cli-'));
+const dir = mkdtempSync(join(tmpdir(), 'lacre-cli-'));
 const path = (n: string) => join(dir, n);
 
 beforeAll(() => {

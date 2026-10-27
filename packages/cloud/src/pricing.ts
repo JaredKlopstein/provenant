@@ -50,7 +50,7 @@ export interface Plan {
 export const PLANS: Record<PlanId, Plan> = {
   free: {
     id: 'free',
-    name: 'Provenant Core',
+    name: 'Lacre Core',
     monthlyUsd: 0,
     annualUsd: 0,
     includedAgentIdentities: null, // unlimited

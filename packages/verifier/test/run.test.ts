@@ -158,7 +158,7 @@ describe('lacre-verify run', () => {
   beforeAll(() => {
     // The committed fixtures are chunk-encoded; materialize real stored-form
     // files for the CLI, which reads exactly what an operator would hand it.
-    dir = mkdtempSync(join(tmpdir(), 'provenant-run-'));
+    dir = mkdtempSync(join(tmpdir(), 'lacre-run-'));
     for (const n of ['valid', 'tampered', 'missing-record', 'duplicate-attempt']) {
       writeFileSync(path(`${n}.json`), JSON.stringify(receipts(n)));
     }
@@ -244,7 +244,7 @@ describe('lacre-verify bundle invocation is unchanged', () => {
   });
 
   it('still verifies a bundle file', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'provenant-bundle-'));
+    const dir = mkdtempSync(join(tmpdir(), 'lacre-bundle-'));
     try {
       const file = join(dir, 'bundle.json');
       writeFileSync(file, JSON.stringify({

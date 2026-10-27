@@ -1,8 +1,8 @@
 # @lacre/verifier
 
-**MIT. Offline. Zero Provenant runtime dependencies.**
+**MIT. Offline. Zero Lacre runtime dependencies.**
 
-Verifies a Provenant evidence bundle and tells you whether the records are
+Verifies a Lacre evidence bundle and tells you whether the records are
 intact, exactly which ones are not, and whether the chain was externally
 anchored — with **no network access** and **no code from the commercial
 package**.
@@ -12,7 +12,7 @@ node packages/verifier/bin/lacre-verify.mjs evidence.json --trust digicert-root.
 ```
 
 Run from a source checkout after `pnpm install && pnpm run build` (see
-[Getting started from source](https://github.com/JaredKlopstein/provenant/blob/main/docs/getting-started.md)).
+[Getting started from source](https://github.com/JaredKlopstein/lacre/blob/main/docs/getting-started.md)).
 `npx @lacre/verifier` works in its place once the package is published to npm.
 
 Exit codes: `0` verified, `1` verification failed, `2` bundle unreadable or bad arguments.

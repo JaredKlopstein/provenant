@@ -26,7 +26,7 @@ import { PRICE_ENV, type CatalogKey } from '../src/billing/config.js';
 const u = (...parts: string[]) => parts.join('_');
 const STRIPE_KEY = u('sk', 'test', 'd'.repeat(24));
 const WEBHOOK_SECRET = u('whsec', 'd'.repeat(24));
-const DATABASE_URL = ['postgresql:', '', 'test-user:test-password@db.provenant.test', 'billing'].join('/');
+const DATABASE_URL = ['postgresql:', '', 'test-user:test-password@db.lacre.test', 'billing'].join('/');
 const PRICES: Record<CatalogKey, string> = {
   cloud_month: u('price', 'testcloudmonth'),
   cloud_year: u('price', 'testcloudyear'),
@@ -201,16 +201,16 @@ function harness() {
     stripe: stripe.client,
     customers: createCustomerLookup(db),
     authenticate: () => ({ ok: false, reason: 'unused' }),
-    successUrl: 'https://provenant.test/ok',
-    cancelUrl: 'https://provenant.test/no',
-    returnUrl: 'https://provenant.test/account',
+    successUrl: 'https://lacre.test/ok',
+    cancelUrl: 'https://lacre.test/no',
+    returnUrl: 'https://lacre.test/account',
     log: (l) => errors.push(l),
   });
 
   async function deliver(event: ReturnType<typeof stripeEvent>) {
     const payload = JSON.stringify(event);
     const header = Stripe.webhooks.generateTestHeaderString({ payload, secret: WEBHOOK_SECRET });
-    const res = await hook.webhook(new Request(`https://provenant.test${BILLING_WEBHOOK_PATH}`, {
+    const res = await hook.webhook(new Request(`https://lacre.test${BILLING_WEBHOOK_PATH}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'stripe-signature': header },
       body: payload,
@@ -220,7 +220,7 @@ function harness() {
   }
 
   async function checkout() {
-    return routes.checkout(new Request('https://provenant.test/billing/checkout', {
+    return routes.checkout(new Request('https://lacre.test/billing/checkout', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ plan: 'cloud', interval: 'month', client_reference_id: ACCOUNT }),

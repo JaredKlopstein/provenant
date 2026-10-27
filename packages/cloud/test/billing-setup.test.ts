@@ -49,7 +49,7 @@ function surface(err: LacreError): string {
 
 let store: string;
 beforeEach(() => {
-  store = mkdtempSync(join(tmpdir(), 'provenant-billing-'));
+  store = mkdtempSync(join(tmpdir(), 'lacre-billing-'));
   for (const name of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'DATABASE_URL', 'LACRE_BILLING_MODE']) {
     vi.stubEnv(name, '');
   }

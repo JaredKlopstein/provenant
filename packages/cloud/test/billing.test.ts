@@ -14,7 +14,7 @@ describe('pricing shape', () => {
     expect(free.retentionDays).toBeNull();
   });
 
-  it('never paywalls the capabilities that make Provenant worth adopting', () => {
+  it('never paywalls the capabilities that make Lacre worth adopting', () => {
     // Encoded as data so a change that cripples the funnel has to be deliberate.
     expect(NEVER_PAYWALLED).toContain('writing receipts');
     expect(NEVER_PAYWALLED).toContain('local hash chaining');
@@ -224,7 +224,7 @@ describe('self-serve checkout', () => {
     };
     return { stripe, calls };
   }
-  const urls = { successUrl: 'https://provenant.dev/ok', cancelUrl: 'https://provenant.dev/no' };
+  const urls = { successUrl: 'https://lacre.dev/ok', cancelUrl: 'https://lacre.dev/no' };
 
   it.each(['month', 'year'] as const)('creates a Cloud subscription session billed per %s', async (interval) => {
     const { stripe, calls } = fakeStripe();

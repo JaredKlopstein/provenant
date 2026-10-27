@@ -1,4 +1,4 @@
--- Provenant Cloud overage retry state (Postgres / Neon). Hand-written; matches
+-- Lacre Cloud overage retry state (Postgres / Neon). Hand-written; matches
 -- billing_usage_reports in packages/cloud/src/billing/schema.ts, which a test
 -- checks column for column.
 --

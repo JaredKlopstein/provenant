@@ -1,7 +1,7 @@
 {
   "name": "@lacre/verifier",
   "version": "0.1.0",
-  "description": "Standalone offline verifier for Provenant evidence bundles. Zero network, zero Provenant runtime dependency. MIT.",
+  "description": "Standalone offline verifier for Lacre evidence bundles. Zero network, zero Lacre runtime dependency. MIT.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -43,14 +43,14 @@
     "@lacre/core": "workspace:*"
   },
   "author": "Jared Klopstein",
-  "homepage": "https://jaredklopstein.github.io/provenant",
+  "homepage": "https://jaredklopstein.github.io/lacre",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JaredKlopstein/provenant.git",
+    "url": "git+https://github.com/JaredKlopstein/lacre.git",
     "directory": "packages/verifier"
   },
   "bugs": {
-    "url": "https://github.com/JaredKlopstein/provenant/issues"
+    "url": "https://github.com/JaredKlopstein/lacre/issues"
   },
   "publishConfig": {
     "access": "public"

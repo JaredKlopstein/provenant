@@ -39,7 +39,7 @@ export const MAX_REPLAY_WINDOW_SECONDS = 60;
 export const MAX_EXPIRY_SECONDS = 24 * 60 * 60;
 
 /**
- * Components every Provenant request must cover. Anything less is rejected.
+ * Components every Lacre request must cover. Anything less is rejected.
  *
  * `@query` is here for a reason found in audit: `@path` strips the query string,
  * and the collector passes `pathname + search` through to handlers. Covering
