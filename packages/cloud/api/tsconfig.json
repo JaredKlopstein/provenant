@@ -1,0 +1,41 @@
+{
+  // Type-check only, for Vercel's per-function check of api/.
+  //
+  // Vercel reads this file raw, before `extends` is applied, then deletes
+  // `composite` and, when `module` is unset, forces `strict: false`. The
+  // settings that have to survive that are written here. `noEmit` keeps
+  // `tsc -b` from writing a second dist; Vercel turns emit back on when it
+  // compiles a function.
+  //
+  // Its compiler host does not canonicalize symlinks, so the same package
+  // reached by two paths is two types, and `undici-types` (where `Request`
+  // gets `.method`) is not found next to the `@types/node` symlink. A `paths`
+  // entry with an extension resolves to one file and skips that lookup.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "declaration": false,
+    "composite": false,
+    "rootDir": "..",
+    "baseUrl": ".",
+    "paths": {
+      "@provenant/core": ["../../core/dist/index.d.ts"],
+      "@provenant/verifier": ["../../verifier/dist/index.d.ts"],
+      "drizzle-orm": ["../node_modules/drizzle-orm/index.d.ts"],
+      "drizzle-orm/*": ["../node_modules/drizzle-orm/*/index.d.ts"],
+      "undici-types": ["../../../node_modules/.pnpm/node_modules/undici-types/index.d.ts"]
+    }
+  },
+  "include": ["./**/*.ts", "../src/**/*.ts"]
+}
