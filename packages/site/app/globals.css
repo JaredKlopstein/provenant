@@ -267,6 +267,7 @@ form {
 /* Header and nav */
 
 .site-header {
+  position: relative;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg);
 }
@@ -283,11 +284,34 @@ form {
 }
 
 .site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-family: var(--font-serif);
   font-weight: 600;
   font-size: 1.125rem;
   color: var(--color-text);
   text-decoration: none;
+}
+
+.site-brand svg {
+  flex: none;
+}
+
+.mark-seal {
+  fill: var(--ink);
+}
+
+.mark-paper {
+  fill: var(--paper);
+}
+
+.mark-check {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .site-nav {
@@ -300,6 +324,7 @@ form {
 .site-nav ul {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-1) var(--space-4);
   margin: 0;
   padding: 0;
@@ -318,9 +343,31 @@ form {
   text-decoration: underline;
 }
 
+/* Sign in and Start free sit at the right; Start free is the one button. */
+.site-nav .nav-action {
+  margin-left: var(--space-4);
+}
+
+.site-nav .nav-cta a {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+
+.site-nav .nav-cta a:hover {
+  background: var(--color-accent-strong);
+  color: var(--color-on-accent);
+  text-decoration: none;
+}
+
 .nav-toggle {
   display: none;
-  min-height: 2.5rem;
+  width: 5.5rem;
+  min-height: 2.75rem;
   padding: var(--space-1) var(--space-4);
   background: var(--color-bg);
   color: var(--color-text);
@@ -333,40 +380,69 @@ form {
 }
 
 /*
- * Under 640px the nav collapses behind the menu button. Only once the menu
- * script has run (data-ready) is the list hidden, so without JavaScript the
- * links still show.
+ * Under 640px the list is hidden and the Menu button shown from first paint, in
+ * the server HTML too, so hydrating changes nothing and the page does not shift.
+ * The header row keeps one height; the opened list is a panel laid over the page
+ * below it, so opening the menu does not push <main> down either.
  */
 @media (max-width: 640px) {
-  .site-nav[data-ready] .nav-toggle {
+  .site-header-inner {
+    flex-wrap: nowrap;
+  }
+
+  .site-nav .nav-toggle {
     display: inline-flex;
   }
 
-  .site-nav[data-ready] ul {
+  .site-nav ul {
     display: none;
   }
 
-  .site-nav[data-ready][data-open] {
-    flex-basis: 100%;
-    justify-content: flex-start;
-  }
-
-  .site-nav[data-ready][data-open] .nav-toggle {
-    margin-left: auto;
-  }
-
-  .site-nav[data-ready][data-open] ul {
+  .site-nav[data-open] ul {
     display: flex;
     flex-direction: column;
-    flex-basis: 100%;
+    align-items: stretch;
     gap: 0;
-    padding-top: var(--space-2);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding: 0 var(--gutter) var(--space-4);
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: 0 0.75rem 1.5rem rgb(20 26 34 / 0.12);
   }
 
-  .site-nav[data-ready][data-open] a {
+  .site-nav[data-open] a {
     display: block;
     padding: var(--space-3) 0;
     border-top: 1px solid var(--color-border);
+  }
+
+  .site-nav[data-open] .nav-action {
+    margin-left: 0;
+  }
+
+  .site-nav[data-open] .nav-cta a {
+    margin-top: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    text-align: center;
+  }
+}
+
+/* Without JavaScript the Menu button could never open anything: show the links. */
+@media (scripting: none) {
+  .site-nav ul {
+    display: flex;
+  }
+
+  .site-nav .nav-toggle {
+    display: none;
+  }
+
+  .site-header-inner {
+    flex-wrap: wrap;
   }
 }
 

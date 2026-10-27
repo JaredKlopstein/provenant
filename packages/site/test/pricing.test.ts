@@ -5,6 +5,7 @@ import RootLayout from '../app/layout.js';
 import HomePage from '../app/page.js';
 import PricingPage, { metadata } from '../app/pricing/page.js';
 import { BRAND } from '../src/brand.js';
+import { SIGNUP_PATH } from '../src/auth/email.js';
 import { ACCOUNT_PATH, CHECKOUT_PAGE_PATH } from '../src/checkout.js';
 import {
   BUNDLE_DEFINITION,
@@ -269,10 +270,12 @@ describe('calls to action (#94)', () => {
     expect(resolves('/pricing')).toBe(true);
   });
 
-  it('has one static Account link to /account in the header', () => {
+  it('offers Sign in, not Account, in the static header (revamp 2/9)', () => {
     const html = renderToStaticMarkup(RootLayout({ children: null }));
     const header = /<header\b[\s\S]*?<\/header>/.exec(html)?.[0] ?? '';
-    expect(links(header).filter((l) => l.label === 'Account')).toEqual([{ label: 'Account', href: ACCOUNT_PATH }]);
+    expect(links(header).filter((l) => l.label === 'Sign in')).toEqual([{ label: 'Sign in', href: SIGNUP_PATH }]);
+    expect(links(header).map((l) => l.href)).not.toContain(ACCOUNT_PATH);
+    expect(resolves(SIGNUP_PATH)).toBe(true);
     expect(resolves(ACCOUNT_PATH)).toBe(true);
   });
 
