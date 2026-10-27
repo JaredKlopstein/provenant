@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import RootLayout from '../app/layout.js';
 import PricingPage from '../app/pricing/page.js';
-import { NAV_LIST_ID } from '../src/nav-menu.js';
+import { NAV_LIST_ID, navKeyAction } from '../src/nav-menu.js';
+import { SIGNUP_PATH } from '../src/auth/email.js';
+import { BRAND } from '../src/brand.js';
+import { GETTING_STARTED_URL } from '../src/plans.js';
 
 /**
  * The global stylesheet. Pages carry no class names, so app/globals.css targets
@@ -132,13 +135,35 @@ describe('global stylesheet', () => {
     expect(block(':focus-visible')).toMatch(/outline: 3px solid /);
   });
 
-  it('collapses the nav behind the menu button under 640px, only once the script is ready', () => {
+  it('collapses the nav behind the menu button under 640px from first paint, with no hydration gate', () => {
     expect(block('.nav-toggle')).toContain('display: none');
     expect(block('.site-nav ul')).toContain('display: flex');
     const narrow = media('(max-width: 640px)');
-    expect(block('.site-nav[data-ready] .nav-toggle', narrow)).toContain('display: inline-flex');
-    expect(block('.site-nav[data-ready] ul', narrow)).toContain('display: none');
-    expect(block('.site-nav[data-ready][data-open] ul', narrow)).toContain('display: flex');
+    expect(narrow).not.toContain('data-ready');
+    expect(rules).not.toContain('data-ready');
+    expect(block('.site-nav .nav-toggle', narrow)).toContain('display: inline-flex');
+    expect(block('.site-nav ul', narrow)).toContain('display: none');
+    expect(block('.site-nav[data-open] ul', narrow)).toContain('display: flex');
+  });
+
+  it('keeps the header row one height: a fixed-size Menu button and an overlay panel', () => {
+    const toggle = block('.nav-toggle');
+    expect(toggle).toMatch(/width: \d/);
+    expect(toggle).toContain('min-height: 2.75rem');
+    const narrow = media('(max-width: 640px)');
+    expect(block('.site-header-inner', narrow)).toContain('flex-wrap: nowrap');
+    const panel = block('.site-nav[data-open] ul', narrow);
+    expect(panel).toContain('position: absolute');
+    expect(panel).toContain('top: 100%');
+    expect(block('.site-header')).toContain('position: relative');
+  });
+
+  it('shows the links and hides the Menu button when scripting is off', () => {
+    const noScript = media('(scripting: none)');
+    expect(block('.site-nav ul', noScript)).toContain('display: flex');
+    expect(block('.site-nav .nav-toggle', noScript)).toContain('display: none');
+    // It comes after the narrow-screen rules, so it wins over them.
+    expect(rules.indexOf('@media (scripting: none)')).toBeGreaterThan(rules.indexOf('@media (max-width: 640px)'));
   });
 
   it('lays out pricing as a card grid that stacks when narrow, with Cloud emphasised', async () => {
@@ -164,29 +189,48 @@ describe('global stylesheet', () => {
 describe('site header', () => {
   const html = renderToStaticMarkup(RootLayout({ children: null }));
 
-  it('renders the seven nav links next to a menu button that controls them', () => {
+  it('renders the five page links, Sign in and Start free next to a menu button that controls them', () => {
     const nav = /<nav aria-label="Main"[^>]*>([\s\S]*?)<\/nav>/.exec(html)?.[1] ?? '';
     const button = /<button\b[^>]*>Menu<\/button>/.exec(nav)?.[0] ?? '';
     expect(button).toContain('type="button"');
     expect(button).toContain('aria-expanded="false"');
     expect(button).toContain(`aria-controls="${NAV_LIST_ID}"`);
     expect(nav).toContain(`<ul id="${NAV_LIST_ID}">`);
-    expect([...nav.matchAll(/<a href="([^"]+)"/g)].map((m) => m[1])).toEqual([
-      '/',
-      '/pricing',
-      '/how-it-works',
-      '/verify',
-      '/security',
-      '/enterprise',
-      '/account',
+    const links = [...nav.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map((m) => [m[2], m[1]]);
+    expect(links).toEqual([
+      ['How it works', '/how-it-works'],
+      ['Verify', '/verify'],
+      ['Security', '/security'],
+      ['Pricing', '/pricing'],
+      ['Enterprise', '/enterprise'],
+      ['Sign in', SIGNUP_PATH],
+      ['Start free', GETTING_STARTED_URL],
     ]);
+    expect(nav).toContain(`<li class="nav-cta"><a href="${GETTING_STARTED_URL}">Start free</a></li>`);
+    expect(nav).not.toMatch(/>Home<|>Account<|href="\/signin"/);
   });
 
-  it('renders the nav uncollapsed before hydration, so it works without JavaScript', () => {
+  it('renders the same nav before and after hydration, closed, so it works without JavaScript', () => {
     const nav = /<nav aria-label="Main"[^>]*>/.exec(html)?.[0] ?? '';
-    expect(nav).toContain('class="site-nav"');
-    expect(nav).not.toContain('data-ready');
-    expect(nav).not.toContain('data-open');
+    expect(nav).toBe('<nav aria-label="Main" class="site-nav">');
+    // With scripting off the CSS shows these links (see the stylesheet tests above).
+    expect(html).toContain(`<ul id="${NAV_LIST_ID}">`);
+  });
+
+  it('marks the logo mark decorative, so the link is named by the brand alone', () => {
+    const brand = /<a class="site-brand" href="\/">([\s\S]*?)<\/a>/.exec(html)?.[1] ?? '';
+    expect(brand).toMatch(/^<svg aria-hidden="true" focusable="false"/);
+    expect(brand.replace(/<svg[\s\S]*<\/svg>/, '')).toBe(BRAND.name);
+  });
+
+  it('closes on Escape and sends focus back to the Menu button', () => {
+    expect(navKeyAction('Escape', true)).toEqual({ open: false, focusToggle: true });
+  });
+
+  it('ignores Escape while closed and every other key', () => {
+    expect(navKeyAction('Escape', false)).toBeNull();
+    expect(navKeyAction('Enter', true)).toBeNull();
+    expect(navKeyAction('Tab', true)).toBeNull();
   });
 
   it('marks the nav client component as a client component', () => {

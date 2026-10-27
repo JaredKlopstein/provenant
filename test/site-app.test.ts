@@ -82,9 +82,9 @@ describe('site app folder', () => {
     expect(metadata.description).toContain(BRAND.tagline);
   });
 
-  it('has the six nav entries and a footer', () => {
+  it('has the five page entries, Sign in, Start free and a footer', () => {
     const layout = sources.find((s) => s.file === 'layout.tsx')!.src;
-    for (const label of ['Home', 'Pricing', 'How it works', 'Verify', 'Security', 'Enterprise']) {
+    for (const label of ['How it works', 'Verify', 'Security', 'Pricing', 'Enterprise', 'Sign in', 'Start free']) {
       expect(layout).toContain(`label: '${label}'`);
     }
     expect(layout).toContain('<footer>');

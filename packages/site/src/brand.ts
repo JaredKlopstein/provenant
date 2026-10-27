@@ -16,6 +16,6 @@ export interface Brand {
 export const BRAND: Brand = {
   name: 'Provenant',
   domain: null,
-  tagline: 'tamper-evident receipts for autonomous agents',
+  tagline: 'tamper-evident receipts for AI agents',
   repository: 'https://github.com/JaredKlopstein/provenant',
 };
