@@ -21,7 +21,7 @@ async function json(args: string): Promise<{ code: number; body: Record<string, 
 }
 
 beforeEach(() => {
-  store = mkdtempSync(join(tmpdir(), 'provenant-cli-'));
+  store = mkdtempSync(join(tmpdir(), 'lacre-cli-'));
 });
 afterEach(() => rmSync(store, { recursive: true, force: true }));
 

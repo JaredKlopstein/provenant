@@ -162,7 +162,7 @@ export type BillingInterval = 'month' | 'year';
 
 interface CheckoutBase {
   customerEmail?: string;
-  /** The Provenant account id, so the webhook can link the new Stripe
+  /** The Lacre account id, so the webhook can link the new Stripe
    *  customer to it. */
   clientReferenceId?: string;
   successUrl: string;
@@ -291,6 +291,7 @@ export async function createPortalSession(
  *   `provenant_annual_subscription`, `provenant_key`
  * - OVERAGE_METER_EVENT = 'provenant_overage_bundle'
  * - event type `provenant.duplicate_metered.cancel`
+ * - idempotency keys `provenant-overage-*` (overage.ts)
  */
 export const OVERAGE_METER_EVENT = 'provenant_overage_bundle';
 

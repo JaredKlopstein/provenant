@@ -1,4 +1,4 @@
--- Provenant Cloud billing tables (Postgres / Neon). Hand-written; matches
+-- Lacre Cloud billing tables (Postgres / Neon). Hand-written; matches
 -- packages/cloud/src/billing/schema.ts, which a test checks column for column.
 --
 -- The owner applies this to Neon by hand. Nothing runs it automatically, at

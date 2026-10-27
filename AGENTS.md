@@ -6,8 +6,8 @@ and `.github/workflows/ci.yml`. When they disagree, those sources win.
 
 ## Product
 
-Provenant: tamper-evident receipts for autonomous agents. Agents write
-structured receipts of every consequential action; Provenant hash-chains and
+Lacre: tamper-evident receipts for autonomous agents. Agents write
+structured receipts of every consequential action; Lacre hash-chains and
 signs them so anyone can later prove the record was not altered.
 
 ## Purpose
@@ -21,7 +21,7 @@ worth", and [ADR 0003](docs/adr/0003-anchoring.md)).
 
 ## Repository
 
-- GitHub: https://github.com/JaredKlopstein/provenant
+- GitHub: https://github.com/JaredKlopstein/lacre
 - pnpm workspace (`packages/*`), TypeScript, Vitest. Node >= 22.5.0, pnpm 11.15.1.
 - Published packages: `@lacre/core`, `@lacre/verifier` (both MIT).
   `@lacre/cloud` is private and commercial.
@@ -76,7 +76,7 @@ works with no network and no code from core or cloud). CI runs this on Node
 
 - npm publish of `@lacre/core` and `@lacre/verifier` via
   `pnpm run release` (`pnpm run release:dry` to rehearse). Human only.
-- Landing page at https://jaredklopstein.github.io/provenant, served by
+- Landing page at https://jaredklopstein.github.io/lacre, served by
   GitHub Pages from `docs/`.
 
 ## Monitoring

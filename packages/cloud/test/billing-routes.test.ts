@@ -66,9 +66,9 @@ function fakeStripe() {
 }
 
 const URLS = {
-  successUrl: 'https://provenant.test/billing/ok',
-  cancelUrl: 'https://provenant.test/billing/cancelled',
-  returnUrl: 'https://provenant.test/account',
+  successUrl: 'https://lacre.test/billing/ok',
+  cancelUrl: 'https://lacre.test/billing/cancelled',
+  returnUrl: 'https://lacre.test/account',
 };
 
 function routes(overrides: Partial<BillingRoutesOptions> = {}) {
@@ -87,7 +87,7 @@ function routes(overrides: Partial<BillingRoutesOptions> = {}) {
 }
 
 const post = (path: string, body?: unknown) =>
-  new Request(`https://billing.provenant.test${path}`, {
+  new Request(`https://billing.lacre.test${path}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -171,13 +171,13 @@ describe('checkout', () => {
 
   it('rejects a body that is not JSON', async () => {
     const r = routes();
-    const req = new Request('https://billing.provenant.test/billing/checkout', { method: 'POST', body: '{nope' });
+    const req = new Request('https://billing.lacre.test/billing/checkout', { method: 'POST', body: '{nope' });
     expect((await r.checkout(req)).status).toBe(400);
   });
 
   it('rejects anything but POST', async () => {
     const r = routes();
-    const res = await r.checkout(new Request('https://billing.provenant.test/billing/checkout'));
+    const res = await r.checkout(new Request('https://billing.lacre.test/billing/checkout'));
     expect(res.status).toBe(405);
   });
 

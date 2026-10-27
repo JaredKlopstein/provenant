@@ -3,7 +3,7 @@
  * Open-core boundary check.
  *
  * The business model rests on one structural property: a third party must be able
- * to verify a Provenant bundle using only MIT code, with no network access and no
+ * to verify a Lacre bundle using only MIT code, with no network access and no
  * code from the commercial package. If that property is ever compromised, the
  * product's credibility -- and therefore its revenue -- goes with it.
  *

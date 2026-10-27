@@ -1,5 +1,5 @@
 /**
- * Provenant Cloud -- COMMERCIAL, not MIT.
+ * Lacre Cloud -- COMMERCIAL, not MIT.
  *
  * Nothing in packages/core or packages/verifier may import from here; CI
  * enforces it (scripts/check-boundaries.mjs). The verifier in particular must

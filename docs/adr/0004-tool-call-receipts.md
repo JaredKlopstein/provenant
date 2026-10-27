@@ -1,5 +1,7 @@
 # ADR 0004: Tool-call receipts, and what a receipt proves
 
+Provenant was renamed Lacre on 27 October 2026.
+
 **Status:** Accepted
 
 ## Context
@@ -13,10 +15,10 @@ provenance class, and `appendReceipt` had no way to set them.
 
 ## Decision
 
-### 1. Five optional fields under `provenant`
+### 1. Five optional fields under `lacre`
 
 The AAT core stays untouched and nothing new goes at the top level (ADR 0002,
-decision 3). The new fields live in the `provenant` extension:
+decision 3). The new fields live in the `lacre` extension:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -53,13 +55,13 @@ The draft-side names below have **not yet been checked against the -01 text**.
 Confirm them before relying on this table, in particular before the verifier
 run check (#16).
 
-| Provenant | draft-noa-scitt-ai-agent-receipt-01 |
+| Lacre | draft-noa-scitt-ai-agent-receipt-01 |
 |---|---|
-| `provenant.issuer_kind` | issuer type (to confirm) |
-| `provenant.run_id` | run identifier (to confirm) |
-| `provenant.turn_id` | turn identifier (to confirm) |
-| `provenant.attempt_id` | attempt identifier (to confirm) |
-| `provenant.provenance_class` | provenance or assurance class (to confirm) |
+| `lacre.issuer_kind` | issuer type (to confirm) |
+| `lacre.run_id` | run identifier (to confirm) |
+| `lacre.turn_id` | turn identifier (to confirm) |
+| `lacre.attempt_id` | attempt identifier (to confirm) |
+| `lacre.provenance_class` | provenance or assurance class (to confirm) |
 | `input_hash` | arguments digest (to confirm) |
 | `output_hash` | result digest (to confirm) |
 
@@ -71,7 +73,7 @@ standing either.
 A receipt that verifies proves:
 
 - **Issuer authentication.** The holder of the key named by
-  `provenant.key_id` signed these exact bytes.
+  `lacre.key_id` signed these exact bytes.
 - **Unaltered recorded bytes.** Nothing in the signed record has changed since
   signing, including the hashes of the arguments and result.
 - **Chain linkage.** The receipt sits at its `seq` in an unbroken chain.
@@ -87,7 +89,7 @@ It does **not** prove:
 - **Correctness.** The arguments may have been wrong and the result false. A
   receipt shows what was said, not that it was right. `provenance_class` states
   how the issuer came to know it. It does not upgrade a claim into a fact.
-- **Legal or regulatory compliance.** Provenant is not a compliance product.
+- **Legal or regulatory compliance.** Lacre is not a compliance product.
 
 ## Consequences
 

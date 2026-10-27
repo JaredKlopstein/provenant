@@ -8,7 +8,7 @@
  *
  *  - Checkout is public. A person buying a plan cannot send agent-signed
  *    requests, so it takes no RFC 9421 signature. It takes an optional
- *    `client_reference_id` (the Provenant account id) and forwards it to
+ *    `client_reference_id` (the Lacre account id) and forwards it to
  *    Stripe, so the webhook can link the new Stripe customer to the account.
  *
  *  - A Cloud subscription is sold once per customer. Meter events are scoped
@@ -127,7 +127,7 @@ const CheckoutRequest = z.strictObject({
 });
 
 const CHECKOUT_EXAMPLES =
-  'POST {"plan":"cloud","interval":"month","client_reference_id":"<your Provenant account id>"} or ' +
+  'POST {"plan":"cloud","interval":"month","client_reference_id":"<your Lacre account id>"} or ' +
   '{"plan":"cloud","interval":"year"} for the Cloud subscription, or {"kind":"payg_bundle"} for one ' +
   'evidence bundle. "client_reference_id" links the purchase to your account; monthly checkout requires it.';
 
@@ -263,7 +263,7 @@ function parseCheckout(body: Uint8Array): ParsedCheckout {
   }
   if (interval === 'month' && !ref) {
     throw invalid(
-      'Monthly Cloud checkout needs client_reference_id, your Provenant account id, so an existing ' +
+      'Monthly Cloud checkout needs client_reference_id, your Lacre account id, so an existing ' +
         'subscription can be checked first and no overage is billed twice.',
     );
   }
@@ -301,7 +301,7 @@ async function portal(ctx: Context, opts: BillingRoutesOptions, request: Request
           retryable: false,
           fix: {
             note:
-              `Buy a plan with POST ${BILLING_PATHS.checkout}, passing your Provenant account id as ` +
+              `Buy a plan with POST ${BILLING_PATHS.checkout}, passing your Lacre account id as ` +
               'client_reference_id. The link appears once Stripe confirms the purchase.',
           },
         },

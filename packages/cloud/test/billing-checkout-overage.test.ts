@@ -30,9 +30,9 @@ const PRICES: Record<CatalogKey, string> = {
 const ACCOUNT = 'urn:lacre:agent:test-overage-account';
 const CUSTOMER = 'cus_test_overage';
 const URLS = {
-  successUrl: 'https://provenant.test/billing/ok',
-  cancelUrl: 'https://provenant.test/billing/cancelled',
-  returnUrl: 'https://provenant.test/account',
+  successUrl: 'https://lacre.test/billing/ok',
+  cancelUrl: 'https://lacre.test/billing/cancelled',
+  returnUrl: 'https://lacre.test/account',
 };
 
 function billingEnv(without: CatalogKey[] = []): Record<string, string> {
@@ -87,7 +87,7 @@ function routes(o: { env?: Record<string, string>; existing?: SubscriptionSummar
 }
 
 const checkout = (r: ReturnType<typeof routes>, body: Record<string, unknown>) =>
-  r.checkout(new Request('https://billing.provenant.test/billing/checkout', {
+  r.checkout(new Request('https://billing.lacre.test/billing/checkout', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),

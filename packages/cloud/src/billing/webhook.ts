@@ -317,8 +317,8 @@ async function checkoutCompleted(tx: BillingTx, session: Stripe.Checkout.Session
 
 function mismatchWarning(link: 'customer_linked_elsewhere' | 'account_linked_elsewhere'): string {
   const what = link === 'customer_linked_elsewhere'
-    ? 'the Stripe customer is already linked to a different Provenant account'
-    : 'the Provenant account is already linked to a different Stripe customer';
+    ? 'the Stripe customer is already linked to a different Lacre account'
+    : 'the Lacre account is already linked to a different Stripe customer';
   return (
     `billing webhook: warning: checkout.session.completed carried a client_reference_id, but ${what}. ` +
     'No link was changed and no customer moved account. Look the checkout session up in the Stripe ' +

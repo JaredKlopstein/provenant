@@ -1,35 +1,35 @@
-# Provenant
+# Lacre
 
 **Tamper-evident receipts for autonomous agents.**
 
-[jaredklopstein.github.io/provenant](https://jaredklopstein.github.io/provenant) ·
+[jaredklopstein.github.io/lacre](https://jaredklopstein.github.io/lacre) ·
 [`@lacre/core`](https://www.npmjs.com/package/@lacre/core) ·
 [`@lacre/verifier`](https://www.npmjs.com/package/@lacre/verifier)
 
 Agents write structured receipts of every consequential action they take.
-Provenant hash-chains and signs them, so anyone can later prove the record was
+Lacre hash-chains and signs them, so anyone can later prove the record was
 not altered — and see exactly which record was, if one was.
 
 Agents are the users. Humans read this during incidents, audits and security
 reviews. The write path is designed for agents; the read path for humans.
 
 ```bash
-provenant init --json
-provenant record --action refund.issue \
+lacre init --json
+lacre record --action refund.issue \
   --action-detail '{"customer_id":"c_8812","amount_usd":42.50}' \
   --side-effect-class irreversible \
   --idempotency-key refund-c_8812-0001 --json
-provenant chain verify --json
+lacre chain verify --json
 ```
 
-**Trying it?** The packages are not on npm yet, so run Provenant from a source
-checkout: [Getting started from source](https://github.com/JaredKlopstein/provenant/blob/main/docs/getting-started.md)
+**Trying it?** The packages are not on npm yet, so run Lacre from a source
+checkout: [Getting started from source](https://github.com/JaredKlopstein/lacre/blob/main/docs/getting-started.md)
 covers clone and build, a first receipt, and an offline check of a real
 anchored bundle.
 
 ## Status: Phase 2 complete
 
-**Free — Provenant Core (MIT):**
+**Free — Lacre Core (MIT):**
 
 - Receipt recording with RFC 8785 canonicalization, SHA-256 chaining, Ed25519 signatures
 - Self-registration with trust-on-first-use identity; RFC 9421 HTTP Message Signatures
@@ -47,10 +47,10 @@ could otherwise change what gets recorded — so the documented shorthands
 (`--agent`, `--from`, `--to`) are real aliases and every alias is listed in
 `discover`.
 
-**Free — `provenant-verify` (MIT):** standalone offline bundle verification,
+**Free — `lacre-verify` (MIT):** standalone offline bundle verification,
 including full RFC 3161 timestamp checking. Verifying is never paywalled.
 
-**Paid — Provenant Cloud:** RFC 3161 anchoring against a real timestamp
+**Paid — Lacre Cloud:** RFC 3161 anchoring against a real timestamp
 authority, and evidence bundle export (JSON, PDF, HTML).
 
 **Partly built, and not to be presented as working** — the collector
@@ -64,14 +64,14 @@ Not built yet: contracts and approvals (Phase 3); leases and fencing tokens
 
 ```bash
 # free: record and verify locally
-provenant record --action refund.issue --action-detail '{"amount_usd":42}' --json
-provenant chain verify --json
+lacre record --action refund.issue --action-detail '{"amount_usd":42}' --json
+lacre chain verify --json
 
 # paid: anchor to an authority you don't control, then export evidence
-provenant-cloud anchor now --backend tsa --json
-provenant-cloud bundle export --format both --out evidence.json --json
+lacre-cloud anchor now --backend tsa --json
+lacre-cloud bundle export --format both --out evidence.json --json
 
-# anyone, offline, with no Provenant server and no commercial code
+# anyone, offline, with no Lacre server and no commercial code
 node packages/verifier/bin/lacre-verify.mjs evidence.json --trust digicert-root.pem
 ```
 
@@ -100,13 +100,13 @@ a determined operator. Do not oversell them.
 
 ## Honest risks
 
-- **This does not make you compliant with anything.** Provenant produces
+- **This does not make you compliant with anything.** Lacre produces
   tamper-evident records that *support* logging obligations such as EU AI Act
   Article 12. It is not a compliance product, we are not lawyers, and this is not
   legal advice. Compliance claims are legal exposure.
 - **Do not adopt this on a regulatory timetable alone.** A Digital Omnibus
   proposal to delay parts of the EU AI Act has been under negotiation, and
-  enforcement dates may move. Adopt Provenant because you need to debug and prove
+  enforcement dates may move. Adopt Lacre because you need to debug and prove
   what your agents did; treat any compliance benefit as a consequence, not a
   reason.
 - **The standard we align with is a draft with no IETF standing.**
@@ -196,7 +196,7 @@ independence is stricter than it strictly had to be.
 Everything needed to operate this service is in one unauthenticated call:
 
 ```bash
-provenant discover --json
+lacre discover --json
 ```
 
 It returns the full action list with input/output JSON Schemas, the error code

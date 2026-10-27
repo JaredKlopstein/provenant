@@ -21,7 +21,7 @@ const BIN = join(dirname(fileURLToPath(import.meta.url)), '../bin/lacre.mjs');
  * what a user really gets. That is the only comparison that means anything.
  */
 describe('the shipped binary exposes the same actions as the library', () => {
-  const store = mkdtempSync(join(tmpdir(), 'provenant-parity-'));
+  const store = mkdtempSync(join(tmpdir(), 'lacre-parity-'));
 
   function runBin(args: string[]): unknown {
     const out = execFileSync('node', [BIN, ...args, '--store', store], { encoding: 'utf8' });

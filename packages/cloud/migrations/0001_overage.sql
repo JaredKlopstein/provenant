@@ -1,4 +1,4 @@
--- Provenant Cloud overage-bundle tables (Postgres / Neon). Hand-written;
+-- Lacre Cloud overage-bundle tables (Postgres / Neon). Hand-written;
 -- matches the overage tables in packages/cloud/src/billing/schema.ts, which a
 -- test checks column for column.
 --

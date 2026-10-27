@@ -73,7 +73,7 @@ export interface AnchorRecord {
  */
 export interface AnchorBackend {
   readonly name: string;
-  /** Human-readable description used by `provenant anchor status`. */
+  /** Human-readable description used by `lacre anchor status`. */
   readonly description: string;
   /** Does this backend produce a proof a third party can check? `noop` does not. */
   readonly isExternal: boolean;

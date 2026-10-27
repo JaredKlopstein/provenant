@@ -97,7 +97,7 @@ export const initAction = defineAction({
     const agentId = deriveAgentId(kp.publicKey);
     const reg = registerAgent(ctx.db, {
       agentId,
-      displayName: input.display_name ?? 'provenant-agent',
+      displayName: input.display_name ?? 'lacre-agent',
       publicKeyJwk: publicKeyToJwk(kp.publicKey),
       agentVersion: input.agent_version ?? '0.0.0',
       trustLevel: input.trust_level ?? 'L1',

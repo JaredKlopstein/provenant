@@ -1,7 +1,7 @@
 {
   "name": "@lacre/cloud",
   "version": "0.1.0",
-  "description": "Provenant Cloud: anchoring, evidence bundles, hosted collector, billing. Commercial -- not MIT.",
+  "description": "Lacre Cloud: anchoring, evidence bundles, hosted collector, billing. Commercial -- not MIT.",
   "license": "UNLICENSED",
   "private": true,
   "type": "module",

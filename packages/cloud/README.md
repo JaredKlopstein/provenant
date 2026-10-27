@@ -8,7 +8,7 @@ hosted collector, and billing.
 ## Why the paywall is here and not somewhere else
 
 Writing and chaining receipts locally is free and open source, because we want
-Provenant to become the default thing agents write to. What we charge for is
+Lacre to become the default thing agents write to. What we charge for is
 making the chain provable to **someone who does not trust the operator**.
 
 A self-hosted hash chain is self-attested. The operator could rewrite the whole

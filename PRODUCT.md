@@ -6,10 +6,10 @@ agents are in [AGENTS.md](AGENTS.md).
 
 ## Identity
 
-- Name: Provenant
+- Name: Lacre
 - Tagline: tamper-evident receipts for autonomous agents
-- Repository: https://github.com/JaredKlopstein/provenant
-- Site: https://jaredklopstein.github.io/provenant
+- Repository: https://github.com/JaredKlopstein/lacre
+- Site: https://jaredklopstein.github.io/lacre
 - Packages: `@lacre/core` (MIT), `@lacre/verifier` (MIT),
   `@lacre/cloud` (commercial, private, not published)
 - Owner: Jared Klopstein
@@ -44,8 +44,8 @@ None.
 
 - Coding agents (Claude, Hermes via the AI Command Center) work issues labeled
   `ai-ready`, following [AGENTS.md](AGENTS.md).
-- Provenant's own end users are agents; they self-describe the service with
-  `provenant discover --json` (README, "For agents").
+- Lacre's own end users are agents; they self-describe the service with
+  `lacre discover --json` (README, "For agents").
 
 ## Permissions
 
@@ -72,7 +72,7 @@ None.
   signature verification (README, "Development").
 - Unmeasurable reliability rates are reported as `null` with a reason, never
   as `0` (README, "Agent reliability is a signal, not a guarantee").
-- Provenant is not a compliance product and claims alignment, not
+- Lacre is not a compliance product and claims alignment, not
   conformance, with `draft-sharif-agent-audit-trail` (README, "Honest risks",
   [ADR 0002](docs/adr/0002-receipt-shape.md)).
 - Unknown CLI options are rejected, not ignored (README, "Status").

@@ -26,7 +26,7 @@ function fakeStripe() {
   return { stripe, calls };
 }
 
-const urls = { successUrl: 'https://provenant.dev/ok', cancelUrl: 'https://provenant.dev/no' };
+const urls = { successUrl: 'https://lacre.dev/ok', cancelUrl: 'https://lacre.dev/no' };
 
 function submitMessage(params: Record<string, unknown>): string | undefined {
   const customText = params.custom_text as { submit?: { message?: string } } | undefined;

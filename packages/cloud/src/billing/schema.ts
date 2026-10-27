@@ -20,7 +20,7 @@ const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode
 export const billingCustomers = pgTable('billing_customers', {
   id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
   stripeCustomerId: text('stripe_customer_id').notNull().unique(),
-  /** The Provenant account this customer pays for: checkout's
+  /** The Lacre account this customer pays for: checkout's
    *  client_reference_id. Set once, when the row is new or the link is empty,
    *  and never overwritten. Unique, so an account has one Stripe customer. */
   accountId: text('account_id').unique(),
