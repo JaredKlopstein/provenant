@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -15,7 +16,9 @@ import {
  */
 
 const DOCS = new URL('../docs/', import.meta.url).pathname;
-const SITE = 'https://jaredklopstein.github.io/provenant';
+const SITE = 'https://jaredklopstein.github.io/lacre';
+/** Where the landing page sends readers. Revamp 11b moves it to lacre.dev. */
+const MAIN_SITE = 'https://lacre-site.vercel.app/';
 
 const read = (name: string) => readFileSync(join(DOCS, name), 'utf8');
 
@@ -73,6 +76,17 @@ describe('index.html', () => {
     expect(html).toMatch(
       /<meta name="referrer" content="(no-referrer|strict-origin|strict-origin-when-cross-origin)">/,
     );
+  });
+
+  it('says the product is now Lacre and points at the main site, in one URL', () => {
+    expect(html).toContain(`<link rel="canonical" href="${MAIN_SITE}">`);
+    expect(html).toContain(`Provenant is now Lacre. The main site is <a href="${MAIN_SITE}">`);
+    expect(html.match(/https:\/\/lacre-site\.vercel\.app[^"]*/g)).toEqual([MAIN_SITE, MAIN_SITE]);
+  });
+
+  it('never redirects on a timer, so the demo stays usable (WCAG 2.2.1)', () => {
+    expect(html).not.toMatch(/http-equiv="refresh"/i);
+    expect(html).not.toMatch(/location\.(href|replace|assign)/);
   });
 
   it('keeps a clickjacking guard, since GitHub Pages cannot send X-Frame-Options', () => {
@@ -170,5 +184,40 @@ describe('pricing cards', () => {
 
   it('does not claim checkout is live', () => {
     expect(html).not.toMatch(/stripe|checkout/i);
+  });
+});
+
+/**
+ * The tamper demo's DATA is a real chain anchored at DigiCert. Recompute it the
+ * way the page does (RFC 8785, SHA-256) so a bad regeneration fails here rather
+ * than on the live demo.
+ */
+describe('tamper demo DATA', () => {
+  const html = read('index.html');
+  const line = /^const DATA = (.*);$/m.exec(html)?.[1];
+  const DATA = JSON.parse(line ?? 'null') as {
+    anchor: { seq: number; head: string; time: string; authority: string };
+    receipts: { seq: number; canonical: string; self_hash: string }[];
+  };
+  const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
+
+  it('is three receipts whose hashes link up to the anchored head', () => {
+    expect(DATA.receipts.map((r) => r.seq)).toEqual([0, 1, 2]);
+    let prev: string | null = null;
+    for (const r of DATA.receipts) {
+      expect(sha256(r.canonical)).toBe(r.self_hash);
+      expect(JSON.parse(r.canonical).prev_hash).toBe(prev);
+      prev = r.self_hash;
+    }
+    expect(DATA.anchor.seq).toBe(2);
+    expect(prev).toBe(DATA.anchor.head);
+    expect(DATA.anchor.authority).toContain('DigiCert');
+  });
+
+  it('carries the lacre extension the demo script reads', () => {
+    const actions = DATA.receipts.map((r) => JSON.parse(r.canonical).lacre.action);
+    expect(actions).toEqual(['refund.issue', 'email.send', 'refund.issue']);
+    expect(JSON.parse(DATA.receipts[0]!.canonical).action_detail.amount_usd).toBe(42.5);
+    expect(html).toContain('recs[i].lacre.action');
   });
 });
