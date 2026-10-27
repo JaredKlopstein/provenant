@@ -66,7 +66,7 @@ describe('home page', () => {
 
   it('hard-codes the example: nothing generates, signs or fetches it', () => {
     const src = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
-    expect(src).not.toMatch(/\bfetch\(|\bawait\b|@provenant\/|packages\/core|\bsign\(/);
+    expect(src).not.toMatch(/\bfetch\(|\bawait\b|@lacre\/|packages\/core|\bsign\(/);
   });
 
   it('renders the limits table from the shared PROOF_TABLE under its own heading', () => {

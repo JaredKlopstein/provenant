@@ -3,8 +3,8 @@
 **Tamper-evident receipts for autonomous agents.**
 
 [jaredklopstein.github.io/provenant](https://jaredklopstein.github.io/provenant) ·
-[`@provenant/core`](https://www.npmjs.com/package/@provenant/core) ·
-[`@provenant/verifier`](https://www.npmjs.com/package/@provenant/verifier)
+[`@lacre/core`](https://www.npmjs.com/package/@lacre/core) ·
+[`@lacre/verifier`](https://www.npmjs.com/package/@lacre/verifier)
 
 Agents write structured receipts of every consequential action they take.
 Provenant hash-chains and signs them, so anyone can later prove the record was

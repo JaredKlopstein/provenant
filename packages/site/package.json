@@ -1,5 +1,5 @@
 {
-  "name": "@provenant/site",
+  "name": "@lacre/site",
   "version": "0.0.0",
   "description": "Marketing site. Next.js on Vercel (server routes enabled, not a static export).",
   "license": "UNLICENSED",
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
-    "@provenant/cloud": "workspace:*",
+    "@lacre/cloud": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "next": "^16.4.2",
     "react": "^19.3.1",

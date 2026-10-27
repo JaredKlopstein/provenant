@@ -30,8 +30,8 @@
     "rootDir": "..",
     "baseUrl": ".",
     "paths": {
-      "@provenant/core": ["../../core/dist/index.d.ts"],
-      "@provenant/verifier": ["../../verifier/dist/index.d.ts"],
+      "@lacre/core": ["../../core/dist/index.d.ts"],
+      "@lacre/verifier": ["../../verifier/dist/index.d.ts"],
       "drizzle-orm": ["../node_modules/drizzle-orm/index.d.ts"],
       "drizzle-orm/*": ["../node_modules/drizzle-orm/*/index.d.ts"],
       "undici-types": ["../../../node_modules/.pnpm/node_modules/undici-types/index.d.ts"]

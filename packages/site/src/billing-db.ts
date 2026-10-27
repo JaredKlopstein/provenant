@@ -9,8 +9,8 @@
  */
 import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import { billingSchema } from '@provenant/cloud/dist/billing/schema.js';
-import type { BillingDb } from '@provenant/cloud/dist/billing/store.js';
+import { billingSchema } from '@lacre/cloud/dist/billing/schema.js';
+import type { BillingDb } from '@lacre/cloud/dist/billing/store.js';
 
 export const BILLING_DATABASE_ENV = 'DATABASE_URL';
 

@@ -1,5 +1,5 @@
 {
-  "name": "@provenant/verifier",
+  "name": "@lacre/verifier",
   "version": "0.1.0",
   "description": "Standalone offline verifier for Provenant evidence bundles. Zero network, zero Provenant runtime dependency. MIT.",
   "license": "MIT",
@@ -40,7 +40,7 @@
     "tamper-evident"
   ],
   "devDependencies": {
-    "@provenant/core": "workspace:*"
+    "@lacre/core": "workspace:*"
   },
   "author": "Jared Klopstein",
   "homepage": "https://jaredklopstein.github.io/provenant",

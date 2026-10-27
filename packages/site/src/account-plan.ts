@@ -4,8 +4,8 @@
  * writer. Null before the webhook has recorded one, which /account says plainly.
  */
 import { and, desc, eq, inArray } from 'drizzle-orm';
-import { billingCustomers, billingSubscriptions } from '@provenant/cloud/dist/billing/schema.js';
-import { PLANS, type PlanId } from '@provenant/cloud/dist/pricing.js';
+import { billingCustomers, billingSubscriptions } from '@lacre/cloud/dist/billing/schema.js';
+import { PLANS, type PlanId } from '@lacre/cloud/dist/pricing.js';
 import type { BillingDb } from './billing-db';
 
 /** Stripe statuses of a subscription that is still the customer's plan. Canceled and ended ones are not. */

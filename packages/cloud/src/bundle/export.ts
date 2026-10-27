@@ -16,8 +16,8 @@
 import {
   asc, gte, lte, and, type SQL,
   dbSchema, keyDirectory, chainId, listAnchors, toAnchorRecord, type Db,
-} from '@provenant/core';
-import { BUNDLE_FORMAT, type Bundle } from '@provenant/verifier';
+} from '@lacre/core';
+import { BUNDLE_FORMAT, type Bundle } from '@lacre/verifier';
 
 export interface ExportOptions {
   fromSeq?: number;

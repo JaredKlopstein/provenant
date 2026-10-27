@@ -1,7 +1,7 @@
 # Getting started from source
 
-`@provenant/core` and `@provenant/verifier` are not published to npm yet, so
-`npx @provenant/...` and a global `provenant` command will not work. Until they
+`@lacre/core` and `@lacre/verifier` are not published to npm yet, so
+`npx @lacre/...` and a global `provenant` command will not work. Until they
 are, run everything from a source checkout. Every command below runs from the
 repository root, in order, with no edits.
 
@@ -144,7 +144,7 @@ and exits `1`.
 
 ## Once the packages are published
 
-When `@provenant/core` and `@provenant/verifier` are on npm, `npx
-@provenant/verifier` replaces `node packages/verifier/bin/provenant-verify.mjs`,
+When `@lacre/core` and `@lacre/verifier` are on npm, `npx
+@lacre/verifier` replaces `node packages/verifier/bin/provenant-verify.mjs`,
 and an installed `provenant` command replaces `node
 packages/core/bin/provenant.mjs`. The arguments stay the same.

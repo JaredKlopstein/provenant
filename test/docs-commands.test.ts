@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 /**
  * The copy-paste commands in the docs are a reader's first contact with the
- * product. Neither package is on npm yet, so an `npx @provenant/...` line that
+ * product. Neither package is on npm yet, so an `npx @lacre/...` line that
  * does not say so fails on the first command, and a `node packages/.../bin/...`
  * path that does not exist fails just as fast. These tests keep both out.
  *
@@ -40,12 +40,12 @@ function stripTags(text: string): string {
     .join('\n');
 }
 
-/** 1-based numbers of lines that start with `npx @provenant/` and have no note nearby. */
+/** 1-based numbers of lines that start with `npx @lacre/` and have no note nearby. */
 function unnotedNpxLines(markdown: string): number[] {
   const lines = stripTags(markdown).split('\n');
   const found: number[] = [];
   lines.forEach((line, i) => {
-    if (!line.trimStart().startsWith('npx @provenant/')) return;
+    if (!line.trimStart().startsWith('npx @lacre/')) return;
     const nearby = lines.slice(Math.max(0, i - NOTE_WINDOW), i + NOTE_WINDOW + 1);
     if (!nearby.some((l) => PUBLISHED_NOTE.test(l))) found.push(i + 1);
   });
@@ -88,27 +88,27 @@ describe('docs commands', () => {
 
 describe('the checks themselves', () => {
   it('flag an npx line with no published note nearby', () => {
-    const md = ['```bash', 'npx @provenant/verifier evidence.json', '```'].join('\n');
+    const md = ['```bash', 'npx @lacre/verifier evidence.json', '```'].join('\n');
     expect(unnotedNpxLines(md)).toEqual([2]);
   });
 
   it('flag an indented npx line too', () => {
-    expect(unnotedNpxLines('    npx @provenant/verifier evidence.json')).toEqual([1]);
+    expect(unnotedNpxLines('    npx @lacre/verifier evidence.json')).toEqual([1]);
   });
 
   it('flag an npx line hidden inside a pre tag', () => {
-    const html = '<pre class="cmd"><span class="c"># verify</span>\nnpx @provenant/verifier evidence.json</pre>';
+    const html = '<pre class="cmd"><span class="c"># verify</span>\nnpx @lacre/verifier evidence.json</pre>';
     expect(unnotedNpxLines(html)).toEqual([2]);
   });
 
   it('flag an npx line that shares its line with the pre tag', () => {
-    const html = '<pre class="cmd">npx @provenant/core init</pre>';
+    const html = '<pre class="cmd">npx @lacre/core init</pre>';
     expect(unnotedNpxLines(html)).toEqual([1]);
   });
 
   it('accept an npx line in a pre block when the note is nearby', () => {
     const html = [
-      '<pre class="cmd">npx @provenant/verifier evidence.json</pre>',
+      '<pre class="cmd">npx @lacre/verifier evidence.json</pre>',
       '<p>This works once the package is published to npm.</p>',
     ].join('\n');
     expect(unnotedNpxLines(html)).toEqual([]);
@@ -122,7 +122,7 @@ describe('the checks themselves', () => {
   it('accept an npx line with the note nearby', () => {
     const md = [
       '```bash',
-      'npx @provenant/verifier evidence.json',
+      'npx @lacre/verifier evidence.json',
       '```',
       '',
       'This works once the package is published to npm.',
@@ -132,7 +132,7 @@ describe('the checks themselves', () => {
 
   it('do not accept a note that is too far away', () => {
     const md = [
-      'npx @provenant/verifier evidence.json',
+      'npx @lacre/verifier evidence.json',
       ...Array.from({ length: NOTE_WINDOW }, () => ''),
       'This works once the package is published to npm.',
     ].join('\n');

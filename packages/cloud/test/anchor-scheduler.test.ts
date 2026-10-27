@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import {
   openDb, closeDb, appendReceipt, generateKeypair, deriveAgentId, listAnchors, dbSchema,
   type AnchorBackend, type Db, type Keypair,
-} from '@provenant/core';
+} from '@lacre/core';
 import { createTestAuthority } from '../src/anchor/test-authority.js';
 import { createAnchorScheduler, runAnchorTick, type AnchorTickResult } from '../src/anchor/scheduler.js';
 import { createCollector } from '../src/collector/server.js';

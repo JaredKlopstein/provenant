@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { getTableConfig } from 'drizzle-orm/pg-core';
-import { eq } from '@provenant/core';
+import { eq } from '@lacre/core';
 import {
   billingSchema, billingCustomers, billingSubscriptions, billingUsageReports, billingOverageSubscriptions,
 } from '../src/billing/schema.js';

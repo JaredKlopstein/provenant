@@ -18,27 +18,27 @@ const ROOT = new URL('..', import.meta.url).pathname;
 
 /** pkg -> packages it is forbidden from importing. */
 const FORBIDDEN = {
-  core: ['@provenant/cloud'],
+  core: ['@lacre/cloud'],
   // The verifier is the credibility anchor. It may not depend on cloud, and it may
   // not depend on core either: an "independent" verifier that shares its hashing
   // implementation with the thing it audits is not independent. The shared-vector
   // cross-check test (packages/verifier/test/cross-impl.test.ts) guards against the
   // two implementations drifting apart.
-  verifier: ['@provenant/cloud', '@provenant/core'],
+  verifier: ['@lacre/cloud', '@lacre/core'],
   cloud: [],
   // The marketing site renders its pricing cards from cloud's pricing module, so
   // it may import cloud. Core and verifier stay forbidden until a site issue
   // genuinely needs one and loosens this entry deliberately.
-  site: ['@provenant/core', '@provenant/verifier'],
+  site: ['@lacre/core', '@lacre/verifier'],
 };
 
 /**
- * pkg -> other internal packages it may name under the '@provenant/' scope. The
- * bare-scope check below rejects every other '@provenant/' reference from a
+ * pkg -> other internal packages it may name under the '@lacre/' scope. The
+ * bare-scope check below rejects every other '@lacre/' reference from a
  * package with forbidden dependencies, so an allowed import has to be listed.
  */
 const SCOPE_ALLOWED = {
-  site: ['@provenant/cloud'],
+  site: ['@lacre/cloud'],
 };
 
 /** Modules that would let the verifier phone home. It must work fully offline. */
@@ -107,7 +107,7 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
     // Catch the package name however it is written -- template literals,
     // concatenation, dynamic import, absolute path, deep relative escape.
     for (const bad of forbidden) {
-      const shortName = bad.replace('@provenant/', '');
+      const shortName = bad.replace('@lacre/', '');
       if (src.includes(bad)) {
         violations.push(`${rel}: '${pkg}' must not reference '${bad}' (found anywhere in source)`);
       }
@@ -118,14 +118,14 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
       }
     }
     /**
-     * Catch the scope prefix on its own. `'@provenant/' + 'core'` splits the
+     * Catch the scope prefix on its own. `'@lacre/' + 'core'` splits the
      * package name across two literals and defeats any whole-name match, so for
      * a package that has ANY forbidden dependency the bare scope has no
      * legitimate use in shipped source: the only names it could form are its own
      * (which it would not import) or a forbidden one.
      */
     if (forbidden.length > 0) {
-      for (const m of src.matchAll(/@provenant\//g)) {
+      for (const m of src.matchAll(/@lacre\//g)) {
         const tail = src.slice(m.index, m.index + 80);
         const spec = tail.split(/['"`\s]/)[0];
         // An allowed name counts only whole, never as a prefix of a longer name,
@@ -133,9 +133,9 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
         const allowed = (SCOPE_ALLOWED[pkg] ?? []).some(
           (name) => (spec === name || spec.startsWith(name + '/')) && !spec.split('/').includes('..'),
         );
-        if (!allowed && !tail.startsWith(`@provenant/${pkg}`)) {
+        if (!allowed && !tail.startsWith(`@lacre/${pkg}`)) {
           violations.push(
-            `${rel}: '${pkg}' must not reference the '@provenant/' scope (found "${tail.split(/['"\`\s]/)[0]}"). ` +
+            `${rel}: '${pkg}' must not reference the '@lacre/' scope (found "${tail.split(/['"\`\s]/)[0]}"). ` +
               `Splitting a package name across string literals is not an escape hatch.`,
           );
           break;
@@ -162,7 +162,7 @@ for (const [pkg, forbidden] of Object.entries(FORBIDDEN)) {
       // Relative escapes out of the package are the sneaky way to do the same thing.
       const escape = spec.startsWith('.') ? /(^|\/)\.\.\/\.\.\/(cloud|core|verifier)\//.exec(spec) : null;
       if (escape) {
-        const target = `@provenant/${escape[2]}`;
+        const target = `@lacre/${escape[2]}`;
         if (forbidden.includes(target)) {
           violations.push(`${rel}: '${pkg}' must not reach into '${spec}' (relative escape)`);
         }

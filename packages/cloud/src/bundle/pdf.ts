@@ -11,8 +11,8 @@
  * version of this product.
  */
 import PDFDocument from 'pdfkit';
-import type { Bundle } from '@provenant/verifier';
-import { verifyBundle, type VerifyOptions } from '@provenant/verifier';
+import type { Bundle } from '@lacre/verifier';
+import { verifyBundle, type VerifyOptions } from '@lacre/verifier';
 
 export interface PdfOptions extends VerifyOptions {
   title?: string;
@@ -137,7 +137,7 @@ export function bundleToPdf(bundle: Bundle, opts: PdfOptions = {}): Promise<Buff
     );
     doc.moveDown(0.4);
     doc.font('Courier').fontSize(9).fillColor('#111')
-      .text('  npx @provenant/verifier bundle.json --trust <authority-root.pem>');
+      .text('  npx @lacre/verifier bundle.json --trust <authority-root.pem>');
     doc.moveDown(0.4);
     P(
       'The verifier is MIT licensed, makes no network connections, and shares no code with the software ' +

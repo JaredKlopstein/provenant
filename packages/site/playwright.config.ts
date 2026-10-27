@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // Automated axe check of the marketing site. Run with `pnpm --filter
-// @provenant/site test:a11y`, which builds first; the web server below serves
+// @lacre/site test:a11y`, which builds first; the web server below serves
 // that prerendered build with `next start`. Specs live in test-a11y/, outside
 // the root vitest include, so `pnpm run ci` never runs them.
 const port = Number(process.env.A11Y_PORT ?? 3100);

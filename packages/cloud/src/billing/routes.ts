@@ -29,7 +29,7 @@
  * logged and never returned.
  */
 import { z } from 'zod';
-import { ProvenantError } from '@provenant/core';
+import { ProvenantError } from '@lacre/core';
 import { PLANS, type PlanId } from '../pricing.js';
 import { genericError } from '../errors.js';
 import {

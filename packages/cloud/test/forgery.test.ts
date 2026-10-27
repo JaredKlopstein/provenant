@@ -5,8 +5,8 @@ import {
   publicKeyToJwk, signReceipt, receiptHash, canonicalReceiptJson, verifyChain,
   keyDirectory, createAnchor, registerAnchorBackend, chainId,
   type Db, type Keypair, type Receipt,
-} from '@provenant/core';
-import { verifyBundle } from '@provenant/verifier';
+} from '@lacre/core';
+import { verifyBundle } from '@lacre/verifier';
 import { createTestAuthority, type TestAuthority } from '../src/anchor/test-authority.js';
 import { exportBundle } from '../src/bundle/export.js';
 

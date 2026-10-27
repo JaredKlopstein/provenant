@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { createPrivateKey, X509Certificate, type KeyObject } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { AnchorBackend, AnchorProof } from '@provenant/core';
+import type { AnchorBackend, AnchorProof } from '@lacre/core';
 import { mintTimeStampToken } from './cms.js';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), '../../test/fixtures/tsa');

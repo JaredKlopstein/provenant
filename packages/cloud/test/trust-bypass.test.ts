@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createPrivateKey, createHash, X509Certificate } from 'node:crypto';
-import { verifyTimestampToken, parseDer } from '@provenant/verifier';
+import { verifyTimestampToken, parseDer } from '@lacre/verifier';
 import { mintTimeStampToken } from '../src/anchor/cms.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));

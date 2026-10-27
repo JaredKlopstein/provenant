@@ -4,7 +4,7 @@ import type { Server } from 'node:http';
 import {
   openDb, closeDb, generateKeypair, deriveAgentId, publicKeyToJwk, signRequest, ProvenantError,
   type Db, type Keypair,
-} from '@provenant/core';
+} from '@lacre/core';
 import { createCollector } from '../src/collector/server.js';
 import { createBillingRoutes, type BillingCaller, type BillingRoutesOptions } from '../src/billing/routes.js';
 import { stripeCatalog, type StripeLike, type SubscriptionLister } from '../src/billing/stripe.js';

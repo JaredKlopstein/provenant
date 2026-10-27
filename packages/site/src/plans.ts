@@ -11,7 +11,7 @@ import {
   PAYG_BUNDLE_PRICE_USD,
   PLANS,
   type Plan,
-} from '@provenant/cloud/dist/pricing.js';
+} from '@lacre/cloud/dist/pricing.js';
 import { BRAND } from './brand';
 
 export type Billing = 'monthly' | 'annual';

@@ -16,9 +16,9 @@
  * 303 (to Stripe, or back to the page with ?checkout=<outcome>), and JSON,
  * answered with cloud's JSON, every error carrying its fix.
  */
-import { createBillingRoutes, type AuthResult } from '@provenant/cloud/dist/billing/routes.js';
-import { createCustomerLookup } from '@provenant/cloud/dist/billing/store.js';
-import type { StripeLike, SubscriptionLister } from '@provenant/cloud/dist/billing/stripe.js';
+import { createBillingRoutes, type AuthResult } from '@lacre/cloud/dist/billing/routes.js';
+import { createCustomerLookup } from '@lacre/cloud/dist/billing/store.js';
+import type { StripeLike, SubscriptionLister } from '@lacre/cloud/dist/billing/stripe.js';
 import { SIGNUP_PATH, linkBase } from './auth/email';
 import { getSignedInAccount } from './auth/session';
 import { BILLING_DATABASE_ENV, billingDb, type ConnectBillingDb } from './billing-db';

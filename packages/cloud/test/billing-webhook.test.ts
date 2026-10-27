@@ -8,7 +8,7 @@ import Stripe from 'stripe';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { getTableConfig, type PgTable } from 'drizzle-orm/pg-core';
-import { openDb, closeDb, type Db } from '@provenant/core';
+import { openDb, closeDb, type Db } from '@lacre/core';
 import {
   billingSchema, billingCustomers, billingSubscriptions, billingBundleCredits, billingWebhookEvents,
 } from '../src/billing/schema.js';

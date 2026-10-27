@@ -3,9 +3,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
-import { billingSchema, billingCustomers } from '@provenant/cloud/dist/billing/schema.js';
-import { PRICE_ENV } from '@provenant/cloud/dist/billing/config.js';
-import type { StripeLike, SubscriptionLister, SubscriptionSummary } from '@provenant/cloud/dist/billing/stripe.js';
+import { billingSchema, billingCustomers } from '@lacre/cloud/dist/billing/schema.js';
+import { PRICE_ENV } from '@lacre/cloud/dist/billing/config.js';
+import type { StripeLike, SubscriptionLister, SubscriptionSummary } from '@lacre/cloud/dist/billing/stripe.js';
 import { POST } from '../app/api/checkout/route.js';
 import CheckoutPage from '../app/checkout/page.js';
 import WelcomePage from '../app/welcome/page.js';

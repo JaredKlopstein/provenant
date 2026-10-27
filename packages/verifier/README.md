@@ -1,4 +1,4 @@
-# @provenant/verifier
+# @lacre/verifier
 
 **MIT. Offline. Zero Provenant runtime dependencies.**
 
@@ -13,7 +13,7 @@ node packages/verifier/bin/provenant-verify.mjs evidence.json --trust digicert-r
 
 Run from a source checkout after `pnpm install && pnpm run build` (see
 [Getting started from source](https://github.com/JaredKlopstein/provenant/blob/main/docs/getting-started.md)).
-`npx @provenant/verifier` works in its place once the package is published to npm.
+`npx @lacre/verifier` works in its place once the package is published to npm.
 
 Exit codes: `0` verified, `1` verification failed, `2` bundle unreadable or bad arguments.
 
@@ -23,7 +23,7 @@ Exit codes: `0` verified, `1` verification failed, `2` bundle unreadable or bad 
 node packages/verifier/bin/provenant-verify.mjs run receipts.json --keys keys.json [--json]
 ```
 
-From a source checkout, as above; `npx @provenant/verifier run` works once the
+From a source checkout, as above; `npx @lacre/verifier run` works once the
 package is published to npm.
 
 `receipts.json` is a JSON array of signed receipts in stored form, in seq
@@ -40,8 +40,8 @@ unreadable. The same check is available as `checkRun(receipts, keys)`.
 It is the credibility anchor of the whole product, so its independence is
 enforced in CI rather than by convention:
 
-- may not import `@provenant/cloud`
-- may not import `@provenant/core` — so auditing this package is a *complete*
+- may not import `@lacre/cloud`
+- may not import `@lacre/core` — so auditing this package is a *complete*
   audit of the verification path
 - may not import any network module (`node:crypto` is a platform builtin, not a
   dependency, and is used for RSA/ECDSA and X.509 inside RFC 3161 tokens)

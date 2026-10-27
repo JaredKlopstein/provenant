@@ -18,7 +18,7 @@
  * missing.
  */
 import { z } from 'zod';
-import { defineAction, ProvenantError, type NextAction } from '@provenant/core';
+import { defineAction, ProvenantError, type NextAction } from '@lacre/core';
 import { stripeCatalog } from './stripe.js';
 import {
   loadBillingConfig, createStripeClient, redact as redactSecretShapes, PRICE_ENV,
