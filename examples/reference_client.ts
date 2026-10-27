@@ -11,7 +11,7 @@ import { execFileSync } from 'node:child_process';
 
 const BIN = new URL('../packages/core/bin/provenant.mjs', import.meta.url).pathname;
 
-export interface ProvenantError {
+export interface LacreError {
   code: string;
   message: string;
   retryable: boolean;
@@ -29,7 +29,7 @@ function call(command: string, args: Record<string, unknown> = {}): any {
     return JSON.parse(execFileSync('node', argv, { encoding: 'utf8' })).result;
   } catch (err: any) {
     // Every Provenant error carries a `fix` telling you exactly what to do next.
-    const parsed = JSON.parse(err.stdout || err.stderr || '{}')?.error as ProvenantError | undefined;
+    const parsed = JSON.parse(err.stdout || err.stderr || '{}')?.error as LacreError | undefined;
     if (parsed) throw Object.assign(new Error(parsed.message), parsed);
     throw err;
   }

@@ -6,7 +6,7 @@ import { canonicalBytes } from '../canonical/jcs.js';
 import { sha256Hex, fromHex } from '../crypto/hash.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { nowRfc3339 } from '../chain/append.js';
-import { ProvenantError } from '../errors.js';
+import { LacreError } from '../errors.js';
 import {
   getAnchorBackend,
   anchorBackendNames,
@@ -59,7 +59,7 @@ export function buildStatement(db: Db): AnchorStatement | null {
 export async function createAnchor(db: Db, backendName: string): Promise<AnchorRecord> {
   const backend = getAnchorBackend(backendName);
   if (!backend) {
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'INVALID_INPUT',
       message: `Unknown anchor backend '${backendName}'. Nothing was anchored. Available: ${anchorBackendNames().join(', ')}.`,
       retryable: false,
@@ -75,7 +75,7 @@ export async function createAnchor(db: Db, backendName: string): Promise<AnchorR
 
   const statement = buildStatement(db);
   if (!statement) {
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'INVALID_INPUT',
       message: 'The chain is empty; there is no head to anchor. Nothing was anchored.',
       retryable: false,
@@ -107,7 +107,7 @@ export async function createAnchor(db: Db, backendName: string): Promise<AnchorR
     // existing attestation. This is the exact signature of tampering, and the
     // system should refuse to paper over it by minting a fresh timestamp for the
     // new version.
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'ANCHOR_CONTRADICTION',
       message:
         `Anchor ${existing.id} already commits seq ${statement.seq} to head ${existing.headHash}, ` +

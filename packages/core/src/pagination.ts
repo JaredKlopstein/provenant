@@ -8,7 +8,7 @@
  * append-only, so a seq cursor is stable under concurrent writes; an OFFSET
  * would silently skip or repeat rows.
  */
-import { ProvenantError } from './errors.js';
+import { LacreError } from './errors.js';
 
 export const DEFAULT_LIMIT = 25;
 export const MAX_LIMIT = 500;
@@ -26,7 +26,7 @@ export function decodeCursor(cursor: string): number {
     }
     return parsed.seq;
   } catch {
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'INVALID_CURSOR',
       message: `Cursor '${cursor.slice(0, 24)}' could not be decoded. Cursors are opaque and must be passed back verbatim from a previous response. Nothing was returned.`,
       retryable: false,

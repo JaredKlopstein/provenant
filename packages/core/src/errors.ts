@@ -52,7 +52,7 @@ export interface ErrorFix {
   note: string;
 }
 
-export interface ProvenantErrorPayload {
+export interface LacreErrorPayload {
   code: ErrorCode;
   message: string;
   retryable: boolean;
@@ -60,15 +60,15 @@ export interface ProvenantErrorPayload {
   details?: Record<string, unknown>;
 }
 
-export class ProvenantError extends Error {
+export class LacreError extends Error {
   readonly code: ErrorCode;
   readonly retryable: boolean;
   readonly fix?: ErrorFix;
   readonly details?: Record<string, unknown>;
 
-  constructor(payload: ProvenantErrorPayload) {
+  constructor(payload: LacreErrorPayload) {
     super(payload.message);
-    this.name = 'ProvenantError';
+    this.name = 'LacreError';
     this.code = payload.code;
     this.retryable = payload.retryable;
     this.fix = payload.fix;
@@ -76,7 +76,7 @@ export class ProvenantError extends Error {
   }
 
   /** The wire shape. Identical across CLI --json, HTTP and MCP. */
-  toJSON(): { error: ProvenantErrorPayload } {
+  toJSON(): { error: LacreErrorPayload } {
     return {
       error: {
         code: this.code,
@@ -90,10 +90,10 @@ export class ProvenantError extends Error {
 }
 
 /** Wrap an unknown throw so no surface ever emits an untyped error. */
-export function toProvenantError(err: unknown): ProvenantError {
-  if (err instanceof ProvenantError) return err;
+export function toLacreError(err: unknown): LacreError {
+  if (err instanceof LacreError) return err;
   const message = err instanceof Error ? err.message : String(err);
-  return new ProvenantError({
+  return new LacreError({
     code: 'INVALID_INPUT',
     message,
     retryable: false,

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import {
-  openDb, closeDb, generateKeypair, deriveAgentId, publicKeyToJwk, signRequest, ProvenantError,
+  openDb, closeDb, generateKeypair, deriveAgentId, publicKeyToJwk, signRequest, LacreError,
   type Db, type Keypair,
 } from '@lacre/core';
 import { createCollector } from '../src/collector/server.js';
@@ -258,9 +258,9 @@ describe('test mode comes first', () => {
       } catch (e) {
         err = e;
       }
-      expect(err).toBeInstanceOf(ProvenantError);
-      expect((err as ProvenantError).message).toMatch(/PROVENANT_BILLING_MODE/);
-      expectNoSecrets(JSON.stringify((err as ProvenantError).toJSON()));
+      expect(err).toBeInstanceOf(LacreError);
+      expect((err as LacreError).message).toMatch(/PROVENANT_BILLING_MODE/);
+      expectNoSecrets(JSON.stringify((err as LacreError).toJSON()));
 
       // The owner's explicit opt-in is what allows it.
       const live = createCollector({ db, billing: { ...billing, env: { ...billing.env, PROVENANT_BILLING_MODE: 'live' } } });

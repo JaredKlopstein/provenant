@@ -11,7 +11,7 @@
 import { z } from 'zod';
 import { allActions } from './registry.js';
 import { ERROR_CODES } from '../errors.js';
-import { AAT_DRAFT_VERSION, PROVENANT_RECEIPT_VERSION } from '../receipt/schema.js';
+import { AAT_DRAFT_VERSION, LACRE_RECEIPT_VERSION } from '../receipt/schema.js';
 import { DEFAULT_LIMIT, MAX_LIMIT } from '../pagination.js';
 
 /**
@@ -36,7 +36,7 @@ export function buildManifest(): Record<string, unknown> {
   return {
     service: 'provenant',
     version: '0.1.0',
-    receipt_version: PROVENANT_RECEIPT_VERSION,
+    receipt_version: LACRE_RECEIPT_VERSION,
     description:
       'Agent-native accountability. Agents write signed, hash-chained receipts of consequential actions; anyone can later verify that the record was not altered.',
 

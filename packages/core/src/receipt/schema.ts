@@ -29,7 +29,7 @@
 import { z } from 'zod';
 
 export const AAT_DRAFT_VERSION = 'draft-sharif-agent-audit-trail-00' as const;
-export const PROVENANT_RECEIPT_VERSION = '1' as const;
+export const LACRE_RECEIPT_VERSION = '1' as const;
 
 const HEX64 = /^[0-9a-f]{64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -86,8 +86,8 @@ export const ProvenanceClass = z.enum(['attested', 'observed', 'claimed']);
 export type ProvenanceClass = z.infer<typeof ProvenanceClass>;
 
 /** Provenant extension namespace. Everything here is outside AAT's schema. */
-export const ProvenantExtension = z.object({
-  v: z.literal(PROVENANT_RECEIPT_VERSION),
+export const LacreExtension = z.object({
+  v: z.literal(LACRE_RECEIPT_VERSION),
   /** Fully-qualified action name, e.g. "refund.issue". */
   action: z.string().min(1).max(200),
   side_effect_class: SideEffectClass,
@@ -121,7 +121,7 @@ export const ProvenantExtension = z.object({
   attempt_id: z.string().min(1).nullish(),
   provenance_class: ProvenanceClass.nullish(),
 });
-export type ProvenantExtension = z.infer<typeof ProvenantExtension>;
+export type LacreExtension = z.infer<typeof LacreExtension>;
 
 /**
  * A receipt without its signature. This exact object -- canonicalized with JCS --
@@ -152,7 +152,7 @@ export const UnsignedReceipt = z.object({
   latency_ms: z.number().int().nonnegative().nullish(),
 
   // --- Provenant extension ---
-  provenant: ProvenantExtension,
+  provenant: LacreExtension,
 });
 export type UnsignedReceipt = z.infer<typeof UnsignedReceipt>;
 

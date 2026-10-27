@@ -13,7 +13,7 @@ import {
 } from '../crypto/keys.js';
 import { toBase64Url, fromBase64Url } from '../crypto/hash.js';
 import { jwkThumbprint } from '../crypto/keys.js';
-import { ProvenantError } from '../errors.js';
+import { LacreError } from '../errors.js';
 import { registerAgent, listAgents, getAgent } from '../agents/store.js';
 import { agentReliability } from '../agents/reliability.js';
 import { project } from '../pagination.js';
@@ -31,7 +31,7 @@ interface KeyFile {
 export function loadKeypair(storeDir: string): Keypair {
   const path = keyPath(storeDir);
   if (!existsSync(path)) {
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'NO_KEYPAIR',
       message: `No keypair found at ${path}. Nothing was written.`,
       retryable: false,
@@ -176,7 +176,7 @@ export const keygenAction = defineAction({
 
     if (exists && !input.force) {
       const current = loadKeypair(ctx.storeDir);
-      throw new ProvenantError({
+      throw new LacreError({
         code: 'KEY_EXISTS',
         message:
           `A keypair already exists at ${path} for agent ${deriveAgentId(current.publicKey)}. ` +
@@ -289,7 +289,7 @@ export const agentRegisterAction = defineAction({
       ? fromBase64Url(input.public_key)
       : ctx.identity().publicKey;
     if (publicKey.length !== 32) {
-      throw new ProvenantError({
+      throw new LacreError({
         code: 'INVALID_INPUT',
         message: `public_key must be a 32-byte Ed25519 key encoded as base64url; got ${publicKey.length} bytes. Nothing was written.`,
         retryable: false,

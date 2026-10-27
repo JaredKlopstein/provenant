@@ -87,7 +87,7 @@ import { afterAll } from 'vitest';
  */
 describe('every error fix points at a real action', () => {
   it('has no fix.action outside the registry', async () => {
-    const { ProvenantError } = await import('../src/errors.js');
+    const { LacreError } = await import('../src/errors.js');
     const { readdirSync, readFileSync, statSync } = await import('node:fs');
 
     const srcDir = join(dirname(fileURLToPath(import.meta.url)), '../src');
@@ -118,6 +118,6 @@ describe('every error fix points at a real action', () => {
     }
 
     expect(offenders, `fix.action referencing nonexistent actions:\n${offenders.join('\n')}`).toEqual([]);
-    expect(ProvenantError).toBeTruthy();
+    expect(LacreError).toBeTruthy();
   });
 });

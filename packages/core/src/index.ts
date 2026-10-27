@@ -9,7 +9,7 @@ export {
 export {
   Receipt, UnsignedReceipt, ActionType, Outcome, TrustLevel, SideEffectClass,
   IssuerKind, ProvenanceClass,
-  AAT_DRAFT_VERSION, PROVENANT_RECEIPT_VERSION,
+  AAT_DRAFT_VERSION, LACRE_RECEIPT_VERSION,
 } from './receipt/schema.js';
 export {
   signReceipt, verifyReceiptSignature, receiptHash, canonicalReceiptJson,
@@ -31,7 +31,7 @@ export {
 export {
   agentReliability, receiptCounts, type AgentReliability, type DerivedRate,
 } from './agents/reliability.js';
-export { ProvenantError, toProvenantError, ERROR_CODES, type ErrorCode } from './errors.js';
+export { LacreError, toLacreError, ERROR_CODES, type ErrorCode } from './errors.js';
 export {
   registerAnchorBackend, getAnchorBackend, anchorBackendNames,
   type AnchorBackend, type AnchorProof, type AnchorStatement, type AnchorRecord, type AnchorProofType,

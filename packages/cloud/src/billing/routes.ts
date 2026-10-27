@@ -29,7 +29,7 @@
  * logged and never returned.
  */
 import { z } from 'zod';
-import { ProvenantError } from '@lacre/core';
+import { LacreError } from '@lacre/core';
 import { PLANS, type PlanId } from '../pricing.js';
 import { genericError } from '../errors.js';
 import {
@@ -188,7 +188,7 @@ async function checkout(ctx: Context, opts: BillingRoutesOptions, request: Reque
       result: { url: session.url, mode: input.kind === 'payg_bundle' ? 'payment' : 'subscription' },
     });
   } catch (err) {
-    if (err instanceof ProvenantError) return json(400, err.toJSON());
+    if (err instanceof LacreError) return json(400, err.toJSON());
     ctx.log(`billing checkout: ${describe(err)}`);
     return internal();
   }
@@ -245,7 +245,7 @@ function parseCheckout(body: Uint8Array): ParsedCheckout {
   }
 
   if (plan === 'enterprise') {
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'INVALID_INPUT',
       message: 'Enterprise is not sold through self-serve checkout. Nothing was charged.',
       retryable: false,
@@ -343,8 +343,8 @@ async function readBody(request: Request): Promise<Uint8Array | null> {
   return body.length > MAX_BODY_BYTES ? null : body;
 }
 
-function invalid(message: string): ProvenantError {
-  return new ProvenantError({
+function invalid(message: string): LacreError {
+  return new LacreError({
     code: 'INVALID_INPUT',
     message: `${message} Nothing was charged.`,
     retryable: false,

@@ -19,7 +19,7 @@
 import { inspect } from 'node:util';
 import Stripe from 'stripe';
 import { z } from 'zod';
-import { ProvenantError } from '@lacre/core';
+import { LacreError } from '@lacre/core';
 import type { StripeLike } from './stripe.js';
 import type { CatalogClient } from './sync.js';
 
@@ -140,8 +140,8 @@ const schemas = {
     present(name).regex(/^price_[A-Za-z0-9]+$/, `${name} is not a Stripe price id`),
 };
 
-function configError(problems: string[], variables: string[]): ProvenantError {
-  return new ProvenantError({
+function configError(problems: string[], variables: string[]): LacreError {
+  return new LacreError({
     code: 'INVALID_INPUT',
     message: `Billing configuration is incomplete: ${problems.join('; ')}. Nothing was executed.`,
     retryable: false,
@@ -158,7 +158,7 @@ function configError(problems: string[], variables: string[]): ProvenantError {
 
 /**
  * Reads and validates billing config for the given needs. Throws a
- * ProvenantError naming every missing or malformed variable, and no value.
+ * LacreError naming every missing or malformed variable, and no value.
  */
 export function loadBillingConfig(
   env: Env = process.env,
