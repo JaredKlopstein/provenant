@@ -5,6 +5,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { GET, POST } from '../app/api/auth/callback/route.js';
 import SigninPage, { metadata } from '../app/signin/page.js';
+import { SIGNUP_PATH } from '../src/auth/email.js';
 import { CALLBACK_PATH, CHECKOUT_PATH, CONFIRM_PATH, SESSION_COOKIE, createLinkToken } from '../src/auth/session.js';
 import { usedTokenSchema } from '../src/auth/used-tokens.js';
 
@@ -81,7 +82,19 @@ const post = (token: string, headers: Record<string, string> = { origin: SITE })
     }),
   );
 
-const unescape = (html: string) => html.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+const unescape = (html: string) => html.replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&amp;/g, '&');
+
+/** The honest failure when a link is present but it cannot be checked. Nothing is signed in. */
+function expectCouldNotCheck(html: string) {
+  const text = unescape(html)
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ');
+  expect(text).toContain(
+    "We couldn't check your sign-in link just now, so no one was signed in and the link hasn't been used. Try it again in a few minutes, or request a new link.",
+  );
+  expect(html).toContain(`<a href="${SIGNUP_PATH}">request a new link</a>`);
+  expect(html).not.toContain('<form');
+}
 
 describe('GET of the emailed link', () => {
   it('renders a confirm page with a "Sign in" button that POSTs the token, and writes nothing', async () => {
@@ -134,17 +147,39 @@ describe('GET of the emailed link', () => {
 
     expect(await redirectOf(() => openPage(used))).toBe(NOT_VALID);
     expect(await redirectOf(() => openPage(forged))).toBe(NOT_VALID);
-    expect(await redirectOf(() => SigninPage({ searchParams: Promise.resolve({}) }))).toBe(NOT_VALID);
     vi.setSystemTime(new Date('2026-10-21T12:15:01Z'));
     expect(await redirectOf(() => openPage(expiring))).toBe(NOT_VALID);
   });
 
-  it('says sign-in is unavailable, and redirects nowhere, when the database is not configured', async () => {
+  it('sends a visit with no token to the signup page, even when auth is not configured', async () => {
+    expect(await redirectOf(() => SigninPage({ searchParams: Promise.resolve({}) }))).toBe(SIGNUP_PATH);
+    vi.stubEnv('SESSION_SECRET', '');
+    vi.stubEnv('EMAIL_API_URL', '');
+    vi.stubEnv('EMAIL_API_KEY', '');
+    vi.stubEnv('EMAIL_FROM', '');
+    vi.stubEnv('DATABASE_URL', '');
+    expect(await redirectOf(() => SigninPage({ searchParams: Promise.resolve({}) }))).toBe(SIGNUP_PATH);
+    expect(await redirectOf(() => SigninPage({ searchParams: Promise.resolve({ token: ['a', 'b'] }) }))).toBe(
+      SIGNUP_PATH,
+    );
+    expect(await usedCount()).toBe(0);
+  });
+
+  it('says the link could not be checked, and redirects nowhere, when the database is not configured', async () => {
     const token = await createLinkToken('ada@example.com', SECRET);
     vi.stubEnv('DATABASE_URL', '');
     const html = await openPage(token);
-    expect(html).toMatch(/role="status"[^>]*>Sign-in is not available right now/);
-    expect(html).not.toContain('<form');
+    expectCouldNotCheck(html);
+    expect(await usedCount()).toBe(0);
+  });
+
+  it('says the link could not be checked when a token is present but auth is not configured', async () => {
+    const token = await createLinkToken('ada@example.com', SECRET);
+    vi.stubEnv('SESSION_SECRET', '');
+    const html = await openPage(token);
+    expectCouldNotCheck(html);
+    expect(html).not.toContain('ada@example.com');
+    expect(await usedCount()).toBe(0);
   });
 });
 
