@@ -14,7 +14,7 @@ from pathlib import Path
 BIN = str(Path(__file__).resolve().parent.parent / "packages/core/bin/provenant.mjs")
 
 
-class ProvenantError(Exception):
+class LacreError(Exception):
     def __init__(self, payload):
         super().__init__(payload.get("message", "unknown error"))
         self.code = payload.get("code")
@@ -35,7 +35,7 @@ def call(command, args=None):
     proc = subprocess.run(argv, capture_output=True, text=True)
     if proc.returncode != 0:
         payload = json.loads(proc.stderr or proc.stdout or "{}").get("error", {})
-        raise ProvenantError(payload)
+        raise LacreError(payload)
     return json.loads(proc.stdout)["result"]
 
 

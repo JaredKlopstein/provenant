@@ -11,7 +11,7 @@ import {
   Outcome,
   SideEffectClass,
   UnsignedReceipt,
-  PROVENANT_RECEIPT_VERSION,
+  LACRE_RECEIPT_VERSION,
   type Receipt,
   type TrustLevel,
 } from '../receipt/schema.js';
@@ -129,7 +129,7 @@ export const recordAction = defineAction({
       ...(input.risk_score !== undefined ? { risk_score: input.risk_score } : {}),
       ...(input.latency_ms !== undefined ? { latency_ms: input.latency_ms } : {}),
       provenant: {
-        v: PROVENANT_RECEIPT_VERSION,
+        v: LACRE_RECEIPT_VERSION,
         action: input.action,
         side_effect_class: input.side_effect_class,
         seq,

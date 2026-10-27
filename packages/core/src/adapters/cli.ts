@@ -16,7 +16,7 @@ import { buildManifest, EXIT_CODES } from '../registry/discover.js';
 import { openDb, closeDb } from '../db/client.js';
 import { resolveStoreDir, dbPath } from '../config.js';
 import { loadKeypair } from '../actions/identity.js';
-import { ProvenantError, toProvenantError } from '../errors.js';
+import { LacreError, toLacreError } from '../errors.js';
 import type { Keypair } from '../crypto/keys.js';
 
 // Registering the action modules IS what populates the CLI. This list must stay
@@ -337,7 +337,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
   const json = flags.json === true || flags.json === 'true';
 
   const emitError = (err: unknown): number => {
-    const pe = toProvenantError(err);
+    const pe = toLacreError(err);
     if (json) io.err(JSON.stringify(pe.toJSON(), null, 2));
     else {
       io.err(`error [${pe.code}]: ${pe.message}`);
@@ -384,7 +384,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
       return 0;
     }
     return emitError(
-      new ProvenantError({
+      new LacreError({
         code: 'INVALID_INPUT',
         message: `Unknown command '${positional.join(' ')}'. Nothing was executed.`,
         retryable: false,
@@ -443,7 +443,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
           : `--${f.replace(/_/g, '-')}`;
       });
       return emitError(
-        new ProvenantError({
+        new LacreError({
           code: 'UNKNOWN_ARGUMENT',
           message:
             `Unrecognised option(s) for '${matched.name}': ${details.join(', ')}. ` +
@@ -466,7 +466,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
     const parsed = (matched.input as z.ZodType).safeParse(rawInput);
     if (!parsed.success) {
       return emitError(
-        new ProvenantError({
+        new LacreError({
           code: 'INVALID_INPUT',
           message: `Arguments for '${matched.name}' failed validation: ${parsed.error.issues
             .map((i) => `${i.path.join('.') || '<root>'}: ${i.message}`)
@@ -484,7 +484,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
     const wantDryRun = flags.dry_run === true || flags.dry_run === 'true';
     if (wantDryRun && !matched.dryRun) {
       return emitError(
-        new ProvenantError({
+        new LacreError({
           code: 'INVALID_INPUT',
           message: `'${matched.name}' is a ${matched.sideEffect} action and has no dry-run. Nothing was executed.`,
           retryable: false,

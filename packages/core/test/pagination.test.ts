@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { encodeCursor, decodeCursor, project, DEFAULT_LIMIT } from '../src/pagination.js';
-import { ProvenantError } from '../src/errors.js';
+import { LacreError } from '../src/errors.js';
 
 function expectInvalidCursor(cursor: string): void {
   let caught: unknown;
@@ -9,8 +9,8 @@ function expectInvalidCursor(cursor: string): void {
   } catch (e) {
     caught = e;
   }
-  expect(caught).toBeInstanceOf(ProvenantError);
-  const err = caught as ProvenantError;
+  expect(caught).toBeInstanceOf(LacreError);
+  const err = caught as LacreError;
   expect(err.code).toBe('INVALID_CURSOR');
   expect(err.retryable).toBe(false);
   // The error must teach its own fix: restart the listing without a cursor.
@@ -83,7 +83,7 @@ describe('pagination cursors', () => {
     try {
       decodeCursor(long);
     } catch (e) {
-      message = (e as ProvenantError).message;
+      message = (e as LacreError).message;
     }
     expect(message).toContain(`'${'a'.repeat(24)}'`);
     expect(message).not.toContain('a'.repeat(25));

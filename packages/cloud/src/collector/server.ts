@@ -14,7 +14,7 @@ import { createServer, type IncomingMessage, type ServerResponse, type Server } 
 import {
   verifyRequest, NonceCache, keyDirectoryDocument, buildManifest,
   registerAgent, keyDirectory, requireAgent,
-  ProvenantError, toProvenantError, jwkToPublicKey, jwkThumbprint,
+  LacreError, toLacreError, jwkToPublicKey, jwkThumbprint,
   type Db, type AgentJwk, type RequestLike, type SignatureVerifyResult,
 } from '@lacre/core';
 import { createAnchorScheduler, type AnchorSchedulerOptions } from '../anchor/scheduler.js';
@@ -211,7 +211,7 @@ function registerEndpoint(res: ServerResponse, opts: CollectorOptions, body: Uin
       agent_version?: string; capabilities?: string[];
     };
     if (!input.public_key_jwk || !input.agent_id) {
-      throw new ProvenantError({
+      throw new LacreError({
         code: 'INVALID_INPUT',
         message: 'agent_id and public_key_jwk are required. Nothing was written.',
         retryable: false,
@@ -240,7 +240,7 @@ function registerEndpoint(res: ServerResponse, opts: CollectorOptions, body: Uin
       ],
     });
   } catch (err) {
-    const pe = toProvenantError(err);
+    const pe = toLacreError(err);
     send(res, pe.code === 'AGENT_KEY_MISMATCH' ? 409 : 400, pe.toJSON());
   }
 }
@@ -254,7 +254,7 @@ function recordEndpoint(res: ServerResponse, opts: CollectorOptions, body: Uint8
     // The signing key must be the key bound to the agent it claims to be. Without
     // this, any registered agent could write receipts attributed to another.
     if (agent.keyId !== keyId) {
-      throw new ProvenantError({
+      throw new LacreError({
         code: 'AGENT_KEY_MISMATCH',
         message:
           `The request was signed with key ${keyId}, but agent '${agentId}' is bound to ${agent.keyId}. ` +
@@ -268,7 +268,7 @@ function recordEndpoint(res: ServerResponse, opts: CollectorOptions, body: Uint8
     // keys and must never hold them. Agents sign locally and submit the signed
     // receipt; the collector only chains and stores it. That is what keeps a
     // hosted deployment from being able to forge its customers' records.
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'INVALID_INPUT',
       message:
         'Submitting pre-signed receipts to the hosted collector is not implemented yet. ' +
@@ -279,7 +279,7 @@ function recordEndpoint(res: ServerResponse, opts: CollectorOptions, body: Uint8
       },
     });
   } catch (err) {
-    const pe = toProvenantError(err);
+    const pe = toLacreError(err);
     send(res, pe.code === 'AGENT_NOT_FOUND' ? 404 : pe.code === 'AGENT_KEY_MISMATCH' ? 403 : 400, pe.toJSON());
   }
 }

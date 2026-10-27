@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { inspect } from 'node:util';
-import { runCli, getAction, ProvenantError } from '@lacre/core';
+import { runCli, getAction, LacreError } from '@lacre/core';
 import { loadBillingConfig, redact, PRICE_ENV } from '../src/billing/config.js';
 import { syncCatalog, type CatalogClient, type SyncResult } from '../src/billing/sync.js';
 import { stripeCatalog, OVERAGE_METER_EVENT } from '../src/billing/stripe.js';
@@ -32,18 +32,18 @@ function expectNoSecrets(text: string) {
 }
 
 /** Runs `fn` and returns its thrown error. Fails the test if it does not throw. */
-function thrown(fn: () => unknown): ProvenantError {
+function thrown(fn: () => unknown): LacreError {
   try {
     fn();
   } catch (err) {
-    expect(err).toBeInstanceOf(ProvenantError);
-    return err as ProvenantError;
+    expect(err).toBeInstanceOf(LacreError);
+    return err as LacreError;
   }
   throw new Error('expected a throw');
 }
 
 /** Everything a caller could print from an error. */
-function surface(err: ProvenantError): string {
+function surface(err: LacreError): string {
   return [err.message, JSON.stringify(err.toJSON()), inspect(err)].join('\n');
 }
 
@@ -357,9 +357,9 @@ describe('catalog sync', () => {
     } catch (e) {
       err = e;
     }
-    expect(err).toBeInstanceOf(ProvenantError);
-    expectNoSecrets(surface(err as ProvenantError));
-    expect((err as ProvenantError).fix?.note).toMatch(/idempotent/);
+    expect(err).toBeInstanceOf(LacreError);
+    expectNoSecrets(surface(err as LacreError));
+    expect((err as LacreError).fix?.note).toMatch(/idempotent/);
   });
 });
 

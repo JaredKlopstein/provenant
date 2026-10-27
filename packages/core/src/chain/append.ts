@@ -22,9 +22,9 @@ import {
   type TrustLevel,
   type IssuerKind,
   type ProvenanceClass,
-  PROVENANT_RECEIPT_VERSION,
+  LACRE_RECEIPT_VERSION,
 } from '../receipt/schema.js';
-import { ProvenantError } from '../errors.js';
+import { LacreError } from '../errors.js';
 
 export interface AppendInput {
   agentId: string;
@@ -125,7 +125,7 @@ export function appendReceipt(db: Db, input: AppendInput): AppendResult {
         // second action and report success -- so a caller who reused a key by
         // mistake would believe a refund was recorded that never was.
         if (existing.argsHash !== null && existing.argsHash !== argsHash) {
-          throw new ProvenantError({
+          throw new LacreError({
             code: 'IDEMPOTENCY_MISMATCH',
             message:
               `Idempotency key '${input.idempotencyKey}' was already used by agent ${input.agentId} ` +
@@ -182,7 +182,7 @@ export function appendReceipt(db: Db, input: AppendInput): AppendResult {
       ...(input.latencyMs !== undefined ? { latency_ms: input.latencyMs } : {}),
 
       provenant: {
-        v: PROVENANT_RECEIPT_VERSION,
+        v: LACRE_RECEIPT_VERSION,
         action: input.action,
         side_effect_class: input.sideEffectClass,
         seq,
@@ -227,7 +227,7 @@ export function appendReceipt(db: Db, input: AppendInput): AppendResult {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('UNIQUE') && msg.includes('seq')) {
-        throw new ProvenantError({
+        throw new LacreError({
           code: 'CHAIN_CONFLICT',
           message:
             `Another writer appended to the chain concurrently; sequence ${seq} was taken. ` +

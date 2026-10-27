@@ -25,7 +25,7 @@
  */
 import {
   and, asc, desc, eq, gt,
-  createAnchor, dbSchema, getAnchorBackend, registerAnchorBackend, ProvenantError,
+  createAnchor, dbSchema, getAnchorBackend, registerAnchorBackend, LacreError,
   type AnchorBackend, type AnchorRecord, type Db,
 } from '@lacre/core';
 import { PLANS } from '../pricing.js';
@@ -143,7 +143,7 @@ export async function runAnchorTick(opts: AnchorTickOptions): Promise<AnchorTick
       errors.push(lastError.message);
       // A non-retryable refusal (ANCHOR_CONTRADICTION: history was rewritten
       // under an existing anchor) will not improve with another call.
-      if (err instanceof ProvenantError && !err.retryable) break;
+      if (err instanceof LacreError && !err.retryable) break;
       if (attempt < retry.attempts) {
         await sleep(Math.min(retry.maxDelayMs, retry.baseDelayMs * 2 ** (attempt - 1)));
       }
@@ -272,7 +272,7 @@ function resolveTiming(opts: AnchorTickOptions) {
   const tickIntervalMs = opts.tickIntervalMs ?? DEFAULT_TICK_INTERVAL_MS;
   const safetyMarginMs = opts.safetyMarginMs ?? DEFAULT_SAFETY_MARGIN_MS;
   if (!(maxDelayMs > 0) || !(tickIntervalMs > 0) || !(safetyMarginMs >= 0)) {
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'INVALID_INPUT',
       message:
         `Invalid anchor scheduler timing: maxDelayMs=${maxDelayMs}, tickIntervalMs=${tickIntervalMs}, ` +
@@ -282,7 +282,7 @@ function resolveTiming(opts: AnchorTickOptions) {
     });
   }
   if (tickIntervalMs + safetyMarginMs > maxDelayMs) {
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'INVALID_INPUT',
       message:
         `Ticking every ${tickIntervalMs} ms with a ${safetyMarginMs} ms margin cannot keep a ` +

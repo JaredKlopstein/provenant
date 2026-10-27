@@ -18,7 +18,7 @@
  * missing.
  */
 import { z } from 'zod';
-import { defineAction, ProvenantError, type NextAction } from '@lacre/core';
+import { defineAction, LacreError, type NextAction } from '@lacre/core';
 import { stripeCatalog } from './stripe.js';
 import {
   loadBillingConfig, createStripeClient, redact as redactSecretShapes, PRICE_ENV,
@@ -177,9 +177,9 @@ export async function syncCatalog(
   try {
     return await plan(client, opts.mode, opts.apply);
   } catch (err) {
-    if (err instanceof ProvenantError) throw err;
+    if (err instanceof LacreError) throw err;
     const type = (err as { type?: unknown }).type;
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'INVALID_INPUT',
       message: `A Stripe call failed during billing.sync: ${clean(err instanceof Error ? err.message : String(err))}`,
       retryable: typeof type === 'string' && TRANSIENT.has(type),
@@ -325,7 +325,7 @@ const StepOut = z.object({
 async function run(mode: BillingMode, apply: boolean): Promise<SyncResult> {
   const config = loadBillingConfig(process.env, ['stripe']);
   if (mode !== config.mode) {
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'INVALID_INPUT',
       message:
         `billing.sync was asked for ${mode} mode but PROVENANT_BILLING_MODE is ${config.mode}. ` +

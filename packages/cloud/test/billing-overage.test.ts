@@ -9,7 +9,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { getTableConfig, type PgTable } from 'drizzle-orm/pg-core';
 import {
-  openDb, closeDb, appendReceipt, generateKeypair, deriveAgentId, ProvenantError,
+  openDb, closeDb, appendReceipt, generateKeypair, deriveAgentId, LacreError,
   type Db, type Keypair, type ActionContext,
 } from '@lacre/core';
 import {
@@ -518,11 +518,11 @@ describe('configuration: env only, test mode first, never logged', () => {
       try {
         createOverageReporter({ env: rest, stripe: fake.client, db });
       } catch (e) {
-        return e as ProvenantError;
+        return e as LacreError;
       }
       throw new Error('expected a throw');
     })();
-    expect(err).toBeInstanceOf(ProvenantError);
+    expect(err).toBeInstanceOf(LacreError);
     expect(err.message).toMatch(/STRIPE_METER_EVENT_NAME/);
     expect(() => createOverageReporter({ env: { ...ENV, [METER_EVENT_ENV]: 'not a name!' }, stripe: fake.client, db }))
       .toThrow(/STRIPE_METER_EVENT_NAME is not a Stripe meter event name/);

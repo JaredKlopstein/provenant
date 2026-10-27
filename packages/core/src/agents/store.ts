@@ -16,7 +16,7 @@
 import { eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { agents, type AgentRow } from '../db/schema.js';
-import { ProvenantError } from '../errors.js';
+import { LacreError } from '../errors.js';
 import { jwkThumbprint, type AgentJwk } from '../crypto/keys.js';
 import { nowRfc3339 } from '../chain/append.js';
 import type { TrustLevel } from '../receipt/schema.js';
@@ -57,7 +57,7 @@ export function registerAgent(db: Db, input: RegisterInput): RegisteredAgent {
     if (existing.keyId === keyId) {
       return toPublic(existing, false);
     }
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'AGENT_KEY_MISMATCH',
       message:
         `Agent '${input.agentId}' is already registered to key ${existing.keyId}, ` +
@@ -100,7 +100,7 @@ export function registerAgent(db: Db, input: RegisterInput): RegisteredAgent {
 export function requireAgent(db: Db, agentId: string): AgentRow {
   const row = getAgent(db, agentId);
   if (!row) {
-    throw new ProvenantError({
+    throw new LacreError({
       code: 'AGENT_NOT_FOUND',
       message: `No agent registered with id '${agentId}'. Nothing was written.`,
       retryable: false,
