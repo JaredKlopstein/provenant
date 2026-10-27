@@ -532,3 +532,15 @@ body > footer > p {
 .account-bar form {
   margin: 0;
 }
+
+/* Legal pages: the draft notice while owner-supplied details are missing. */
+.legal-draft {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+footer nav[aria-label='Legal'] {
+  margin-top: var(--space-2);
+}

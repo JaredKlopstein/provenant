@@ -42,6 +42,7 @@ const unescape = (html: string) =>
 describe('site app folder', () => {
   it('has the layout, the home, pricing, how-it-works, verify, security, enterprise, signup, sign-in confirm, checkout, welcome, account and not-found pages, and the contact, auth, checkout and portal routes', () => {
     expect(sources.map((s) => s.file).sort()).toEqual([
+      '.well-known/security.txt/route.ts',
       'account/page.tsx',
       'api/account/portal/route.ts',
       'api/auth/callback/route.ts',
@@ -58,9 +59,11 @@ describe('site app folder', () => {
       'page.tsx',
       'pricing/page.tsx',
       'pricing/waitlist-form.tsx',
+      'privacy/page.tsx',
       'security/page.tsx',
       'signin/page.tsx',
       'signup/page.tsx',
+      'terms/page.tsx',
       'verify/page.tsx',
       'welcome/page.tsx',
     ]);

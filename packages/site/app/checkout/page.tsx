@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { BRAND } from '../../src/brand';
 import { SIGNUP_PATH } from '../../src/auth/email';
 import { AccountBar } from '../../src/account-bar';
+import { PRIVACY_PATH, TERMS_PATH } from '../../src/legal';
 import { CHECKOUT_API_PATH, CHECKOUT_OUTCOMES, signedInFromCookie, type CheckoutOutcome } from '../../src/checkout';
 import { EARLY_ACCESS_LABEL, WAITLIST_HREF, annualOverageDisclosure, priceCards } from '../../src/plans';
 
@@ -54,6 +55,10 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
         <p>
           Choose what to buy. Payment is handled by Stripe, and your purchase is linked to the account you
           are signed in with.
+        </p>
+        <p>
+          Purchases are covered by the <Link href={TERMS_PATH}>Terms</Link>, including refunds and cancellation.
+          The <Link href={PRIVACY_PATH}>Privacy Policy</Link> explains what data is kept.
         </p>
         {outcome && (
           <p role="status">
