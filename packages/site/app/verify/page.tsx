@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description: `Check a ${BRAND.name} evidence bundle offline with the free MIT verifier. Verifying is never paywalled.`,
 };
 
-// The checkout directory still follows the repository path. The verifier file
-// is lacre-verify.mjs, which is not that name.
+// The checkout directory and the verifier file both follow the repository path,
+// so neither hard-codes the name.
 const REPO_DIR = BRAND.repository.slice(BRAND.repository.lastIndexOf('/') + 1);
 // A path shown in a shell command, not an import: the site imports nothing from the
 // verifier (test/site-app.test.ts). scripts/check-boundaries.mjs rejects any literal
 // path into another package from site source, so it is joined from its parts.
-const VERIFY = `node ${['packages', 'verifier', 'bin', 'lacre-verify.mjs'].join('/')} examples/sample-evidence/evidence.json`;
+const VERIFY = `node ${['packages', 'verifier', 'bin', `${REPO_DIR}-verify.mjs`].join('/')} examples/sample-evidence/evidence.json`;
 
 // SHA-256 fingerprint of DigiCert Trusted Root G4, as printed in the getting-started
 // guide. A public certificate fingerprint, kept in groups so no long hex run sits in source.
