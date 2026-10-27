@@ -35,7 +35,7 @@ function esc(v: unknown): string {
 
 export function bundleToHtml(bundle: Bundle, opts: HtmlOptions = {}): string {
   const v = verifyBundle(bundle, opts);
-  const title = opts.title ?? 'Provenant Evidence Report';
+  const title = opts.title ?? 'Lacre Evidence Report';
   const state = v.ok ? (v.anchored ? 'ok' : 'warn') : 'bad';
   // An anchor whose authority the reader does not trust is NOT a trusted
   // anchor, and the headline must not say otherwise. `is_evidence` requires only
@@ -171,13 +171,13 @@ export function bundleToHtml(bundle: Bundle, opts: HtmlOptions = {}): string {
           ? 'It establishes, via a timestamp authority you have told this tool to trust, that this exact history existed at the attested time and has not been altered since.'
           : '<b>It does not yet establish that the history is unaltered.</b> A timestamp token is present and cryptographically sound, but the authority that signed it is <b>not in your trust list</b>, so nothing here rules out that the signer was chosen by whoever produced this bundle. Confirm the fingerprint above against the authority directly, then re-run the verifier with <code>--trust-fingerprint</code>.'
     }</li>
-    <li><b>It does not make anyone compliant with any regulation.</b> Provenant
+    <li><b>It does not make anyone compliant with any regulation.</b> Lacre
         produces tamper-evident records that support logging obligations. This is
         not legal advice.</li>
   </ul>
 
   <footer>
-    Provenant &middot; bundle format ${esc(v.format)} &middot;
+    Lacre &middot; bundle format ${esc(v.format)} &middot;
     ${v.anchored ? (trustedAnchor ? 'externally anchored, authority trusted' : 'anchored, authority unverified') : 'self-attested'}
   </footer>
 </main>

@@ -388,7 +388,7 @@ function notConfigured(ctx: Context, key: CatalogKey): Response {
     code: 'BILLING_UNAVAILABLE',
     message: 'This purchase is not configured on the server. Nothing was charged.',
     retryable: false,
-    cause: `billing checkout: the operator must set ${PRICE_ENV[key]}; provenant-cloud billing sync prints its value.`,
+    cause: `billing checkout: the operator must set ${PRICE_ENV[key]}; lacre-cloud billing sync prints its value.`,
     log: ctx.log,
   });
 }

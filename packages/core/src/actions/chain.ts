@@ -14,7 +14,7 @@ export const chainVerifyAction = defineAction({
   description: {
     what: 'Recomputes every receipt hash, re-checks every link, and re-verifies every signature against the registered agent keys. Reports the precise receipts that failed and the contiguous ranges that are still provably intact.',
     when: 'After an incident, before exporting evidence, on a schedule, or any time you need to state whether the local record has been altered. Also the fastest way to confirm a restored backup is sound.',
-    whenNot: 'This proves the chain is internally consistent. It does NOT prove the operator did not rewrite the whole chain, because a self-hosted chain is self-attested. For evidence a third party should believe, you need external anchoring (Provenant Cloud) plus the standalone verifier.',
+    whenNot: 'This proves the chain is internally consistent. It does NOT prove the operator did not rewrite the whole chain, because a self-hosted chain is self-attested. For evidence a third party should believe, you need external anchoring (Lacre Cloud) plus the standalone verifier.',
     cost: 'Reads and re-hashes every receipt in range: linear in chain length, roughly a second per 100k receipts, no network. Use --from/--to to bound it on a large chain.',
     returns: 'ok, receipts_checked, the current head, a failures array naming each broken receipt with its seq and reason, intact_ranges proving what is still sound, and warnings (such as agent clock skew) that are not integrity failures.',
   },
@@ -62,7 +62,7 @@ export const chainVerifyAction = defineAction({
       // Stated on every single verification, deliberately. An operator who
       // forgets this distinction will overstate what they can prove.
       anchor_note:
-        'This chain is self-attested: it proves internal consistency only. An operator with database access could have rewritten the entire history, including this result. External anchoring (Provenant Cloud) is what makes the chain evidence to someone who does not trust the operator.',
+        'This chain is self-attested: it proves internal consistency only. An operator with database access could have rewritten the entire history, including this result. External anchoring (Lacre Cloud) is what makes the chain evidence to someone who does not trust the operator.',
     };
   },
   nextActions(_input, output) {

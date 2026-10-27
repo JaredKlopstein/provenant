@@ -552,7 +552,7 @@ describe('migration', () => {
   });
 
   it('is never run automatically: nothing in cloud reads the migrations or calls a migrator', () => {
-    const files = [...walk(SRC), fileURLToPath(new URL('../bin/provenant-cloud.mjs', import.meta.url))];
+    const files = [...walk(SRC), fileURLToPath(new URL('../bin/lacre-cloud.mjs', import.meta.url))];
     // Code only: the schema's doc comment names the migration on purpose.
     const code = (f: string) => readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     const offenders = files.filter((f) => /migrations|0000_billing|\bmigrate\s*\(|\/migrator['"]/.test(code(f)));

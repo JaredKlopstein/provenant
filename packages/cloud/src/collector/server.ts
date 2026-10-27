@@ -275,7 +275,7 @@ function recordEndpoint(res: ServerResponse, opts: CollectorOptions, body: Uint8
         'The collector never holds agent secret keys, so it cannot sign on your behalf. Nothing was written.',
       retryable: false,
       fix: {
-        note: 'Record locally with the provenant CLI for now; remote submission of pre-signed receipts lands with the collector GA.',
+        note: 'Record locally with the lacre CLI for now; remote submission of pre-signed receipts lands with the collector GA.',
       },
     });
   } catch (err) {

@@ -7,7 +7,7 @@ RFC 3161 authority** on 2026-09-03.
 Nothing here is mocked. You can check it yourself, offline, right now:
 
 ```bash
-node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidence.json
+node packages/verifier/bin/lacre-verify.mjs examples/sample-evidence/evidence.json
 ```
 
 Run it from the root of a source checkout after `pnpm install && pnpm run build`
@@ -20,7 +20,7 @@ because trust has to come from you, not from the bundle. To close that loop, pin
 the root:
 
 ```bash
-node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidence.json \
+node packages/verifier/bin/lacre-verify.mjs examples/sample-evidence/evidence.json \
   --trust-fingerprint 33846b545a49c9be4903c60e01713c1bd4e4ef31ea65cd95d69e62794f30b941
 ```
 

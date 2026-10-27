@@ -99,8 +99,8 @@ export function toLacreError(err: unknown): LacreError {
     retryable: false,
     fix: {
       note:
-        'This was not a recognised Provenant error. The action did NOT complete. ' +
-        'Re-check the argument schema with: provenant discover --json',
+        'This was not a recognised Lacre error. The action did NOT complete. ' +
+        'Re-check the argument schema with: lacre discover --json',
     },
   });
 }

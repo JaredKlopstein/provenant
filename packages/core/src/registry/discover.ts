@@ -5,7 +5,7 @@
  * binary) and no other context must be able to operate the service correctly.
  * If it needs a README, this manifest is incomplete.
  *
- * `provenant discover --json` and (later) `GET /discover` return this exact
+ * `lacre discover --json` and (later) `GET /discover` return this exact
  * object, unauthenticated, so the CLI and the HTTP surface can never drift.
  */
 import { z } from 'zod';
@@ -15,7 +15,7 @@ import { AAT_DRAFT_VERSION, LACRE_RECEIPT_VERSION } from '../receipt/schema.js';
 import { DEFAULT_LIMIT, MAX_LIMIT } from '../pagination.js';
 
 /**
- * The `provenant` CLI's exit-code contract. Root help renders this same object,
+ * The `lacre` CLI's exit-code contract. Root help renders this same object,
  * and surface-parity.test.ts fails if the shipped binary's help and manifest
  * disagree, so scripts can branch on it without guessing.
  */
@@ -34,7 +34,7 @@ function jsonSchema(schema: z.ZodType): unknown {
 
 export function buildManifest(): Record<string, unknown> {
   return {
-    service: 'provenant',
+    service: 'lacre',
     version: '0.1.0',
     receipt_version: LACRE_RECEIPT_VERSION,
     description:
@@ -47,7 +47,7 @@ export function buildManifest(): Record<string, unknown> {
       key_format: 'RFC 8037 OKP JWK; key ids are RFC 7638 thumbprints',
       record_format: AAT_DRAFT_VERSION,
       record_format_caveat:
-        'draft-sharif-agent-audit-trail has NO formal IETF standing and may change. We follow its record shape and chaining rule, but default to Ed25519 where the draft specifies ECDSA P-256, and carry the algorithm explicitly in provenant.signature_alg. Provenant-specific fields live under the "provenant" key.',
+        'draft-sharif-agent-audit-trail has NO formal IETF standing and may change. We follow its record shape and chaining rule, but default to Ed25519 where the draft specifies ECDSA P-256, and carry the algorithm explicitly in provenant.signature_alg. Lacre-specific fields live under the "provenant" key.',
       chain_rule:
         'prev_hash(N) = hex(SHA-256(JCS(record(N-1)))) over the complete stored record including its signature. Genesis has prev_hash null.',
     },
@@ -149,14 +149,14 @@ export function buildManifest(): Record<string, unknown> {
       {
         step: 1,
         why: 'Create a keypair and self-register. No approval, no network.',
-        cli: 'provenant init --json',
+        cli: 'lacre init --json',
         action: 'init',
         arguments: { display_name: 'my-agent' },
       },
       {
         step: 2,
         why: 'See exactly what would be written, without writing it.',
-        cli: `provenant record --action refund.issue --action-detail '{"amount_usd":42}' --side-effect-class irreversible --dry-run --json`,
+        cli: `lacre record --action refund.issue --action-detail '{"amount_usd":42}' --side-effect-class irreversible --dry-run --json`,
         action: 'record',
         arguments: {
           action: 'refund.issue',
@@ -167,7 +167,7 @@ export function buildManifest(): Record<string, unknown> {
       {
         step: 3,
         why: 'Write the receipt for real. Returns seq, self_hash and prev_hash.',
-        cli: `provenant record --action refund.issue --action-detail '{"amount_usd":42}' --side-effect-class irreversible --json`,
+        cli: `lacre record --action refund.issue --action-detail '{"amount_usd":42}' --side-effect-class irreversible --json`,
         action: 'record',
         arguments: {
           action: 'refund.issue',
@@ -179,7 +179,7 @@ export function buildManifest(): Record<string, unknown> {
       {
         step: 4,
         why: 'Prove the chain is intact. ok:true means nothing was altered locally.',
-        cli: 'provenant chain verify --json',
+        cli: 'lacre chain verify --json',
         action: 'chain.verify',
         arguments: {},
       },
@@ -188,7 +188,7 @@ export function buildManifest(): Record<string, unknown> {
     limitations: [
       'A self-hosted chain is self-attested. It proves internal consistency, not that the operator left history alone. External anchoring is what makes it evidence to a third party.',
       'Trust-on-first-use binds an agent id to its first key, but cannot tell you that first key was legitimate.',
-      'Provenant produces tamper-evident records that support logging obligations. It does not make anyone compliant with anything, and this is not legal advice.',
+      'Lacre produces tamper-evident records that support logging obligations. It does not make anyone compliant with anything, and this is not legal advice.',
       'An anchor does not prove completeness. Truncating the receipts recorded since the last anchor leaves a chain that still verifies. Anchor cadence bounds that window; it does not eliminate it.',
       'A timestamp token carried inside a bundle proves nothing about who vouches for the signer. Trust must come from the reader, via a pinned fingerprint or trust anchor.',
     ],

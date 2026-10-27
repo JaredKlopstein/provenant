@@ -9,7 +9,7 @@
  */
 import { execFileSync } from 'node:child_process';
 
-const BIN = new URL('../packages/core/bin/provenant.mjs', import.meta.url).pathname;
+const BIN = new URL('../packages/core/bin/lacre.mjs', import.meta.url).pathname;
 
 export interface LacreError {
   code: string;

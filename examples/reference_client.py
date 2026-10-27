@@ -11,7 +11,7 @@ import json
 import subprocess
 from pathlib import Path
 
-BIN = str(Path(__file__).resolve().parent.parent / "packages/core/bin/provenant.mjs")
+BIN = str(Path(__file__).resolve().parent.parent / "packages/core/bin/lacre.mjs")
 
 
 class LacreError(Exception):

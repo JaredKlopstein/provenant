@@ -34,7 +34,7 @@ export PROVENANT_HOME="$PWD/.provenant"
 Create a signing key and register this agent:
 
 ```bash
-node packages/core/bin/provenant.mjs init --json
+node packages/core/bin/lacre.mjs init --json
 ```
 
 The response has `"ok": true`, your new `agent_id`, the store path and a
@@ -43,7 +43,7 @@ The response has `"ok": true`, your new `agent_id`, the store path and a
 Record one receipt:
 
 ```bash
-node packages/core/bin/provenant.mjs record --action refund.issue \
+node packages/core/bin/lacre.mjs record --action refund.issue \
   --action-detail '{"customer_id":"c_8812","amount_usd":42.50}' \
   --side-effect-class irreversible \
   --idempotency-key refund-c_8812-0001 --json
@@ -62,7 +62,7 @@ takes `failure`, `timeout` and `escalated`; the default is `success`.
 Verify the chain:
 
 ```bash
-node packages/core/bin/provenant.mjs chain verify --json
+node packages/core/bin/lacre.mjs chain verify --json
 ```
 
 Expect `"ok": true`, `"failures": []` and `"anchored": false`, together with an
@@ -79,7 +79,7 @@ production RFC 3161 authority. The verifier needs no network access and no code
 from `core` or `cloud`:
 
 ```bash
-node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidence.json
+node packages/verifier/bin/lacre-verify.mjs examples/sample-evidence/evidence.json
 ```
 
 It exits `0` and prints:
@@ -104,7 +104,7 @@ self-signed root. To close that loop, pin DigiCert Trusted Root G4 by its
 fingerprint:
 
 ```bash
-node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidence.json \
+node packages/verifier/bin/lacre-verify.mjs examples/sample-evidence/evidence.json \
   --trust-fingerprint 33846b545a49c9be4903c60e01713c1bd4e4ef31ea65cd95d69e62794f30b941
 ```
 
@@ -145,6 +145,6 @@ and exits `1`.
 ## Once the packages are published
 
 When `@lacre/core` and `@lacre/verifier` are on npm, `npx
-@lacre/verifier` replaces `node packages/verifier/bin/provenant-verify.mjs`,
+@lacre/verifier` replaces `node packages/verifier/bin/lacre-verify.mjs`,
 and an installed `provenant` command replaces `node
-packages/core/bin/provenant.mjs`. The arguments stay the same.
+packages/core/bin/lacre.mjs`. The arguments stay the same.

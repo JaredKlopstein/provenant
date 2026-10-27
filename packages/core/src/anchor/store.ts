@@ -68,7 +68,7 @@ export async function createAnchor(db: Db, backendName: string): Promise<AnchorR
         arguments: { backend: 'noop' },
         note:
           "The open-source build ships only 'noop', which produces no external proof. " +
-          'Real timestamp authority backends are part of Provenant Cloud.',
+          'Real timestamp authority backends are part of Lacre Cloud.',
       },
     });
   }

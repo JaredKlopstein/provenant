@@ -27,7 +27,7 @@
     "@types/pdfkit": "^0.13.9"
   },
   "bin": {
-    "provenant-cloud": "./bin/provenant-cloud.mjs"
+    "lacre-cloud": "./bin/lacre-cloud.mjs"
   },
   "publishConfig": {
     "access": "restricted"

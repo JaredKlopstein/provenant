@@ -68,7 +68,7 @@ export const PLANS: Record<PlanId, Plan> = {
       'Local hash chain, single-node SQLite',
       'CLI with --json on every command',
       'Local chain verification',
-      'Offline evidence-bundle verification (provenant-verify)',
+      'Offline evidence-bundle verification (lacre-verify)',
       'MIT licensed, no time limit, no agent cap',
     ],
   },
@@ -135,7 +135,7 @@ export const NEVER_PAYWALLED = [
   'writing receipts',
   'local hash chaining',
   'local chain verification',
-  'offline bundle verification (provenant-verify)',
+  'offline bundle verification (lacre-verify)',
   // Commitments for features not yet built. Listed here so that when contracts
   // (Phase 3) and leases (Phase 4) ship, they ship free -- but they are NOT
   // advertised in `features` until they exist.

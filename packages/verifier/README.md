@@ -8,7 +8,7 @@ anchored — with **no network access** and **no code from the commercial
 package**.
 
 ```bash
-node packages/verifier/bin/provenant-verify.mjs evidence.json --trust digicert-root.pem
+node packages/verifier/bin/lacre-verify.mjs evidence.json --trust digicert-root.pem
 ```
 
 Run from a source checkout after `pnpm install && pnpm run build` (see
@@ -20,7 +20,7 @@ Exit codes: `0` verified, `1` verification failed, `2` bundle unreadable or bad 
 ## Checking a single run
 
 ```bash
-node packages/verifier/bin/provenant-verify.mjs run receipts.json --keys keys.json [--json]
+node packages/verifier/bin/lacre-verify.mjs run receipts.json --keys keys.json [--json]
 ```
 
 From a source checkout, as above; `npx @lacre/verifier run` works once the

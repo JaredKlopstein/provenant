@@ -332,16 +332,16 @@ pnpm install
 pnpm run build
 
 <span class="c"># record what your agent just did</span>
-node packages/core/bin/provenant.mjs init
-node packages/core/bin/provenant.mjs record --action refund.issue \
+node packages/core/bin/lacre.mjs init
+node packages/core/bin/lacre.mjs record --action refund.issue \
   --action-detail '{"customer_id":"c_8812","amount_usd":42.50}' \
   --side-effect-class irreversible
 
 <span class="c"># prove the local chain is intact</span>
-node packages/core/bin/provenant.mjs chain verify
+node packages/core/bin/lacre.mjs chain verify
 
 <span class="c"># check a bundle someone hands you — offline, no account</span>
-node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidence.json</pre>
+node packages/verifier/bin/lacre-verify.mjs examples/sample-evidence/evidence.json</pre>
     <div class="prose">
       <p>
         There is a real DigiCert-anchored sample bundle in the repository. Verify it before you

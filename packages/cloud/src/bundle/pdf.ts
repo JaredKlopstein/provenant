@@ -44,7 +44,7 @@ export function bundleToPdf(bundle: Bundle, opts: PdfOptions = {}): Promise<Buff
     };
 
     // ---- header ----
-    doc.font('Helvetica-Bold').fontSize(20).fillColor('#111').text(opts.title ?? 'Provenant Evidence Report');
+    doc.font('Helvetica-Bold').fontSize(20).fillColor('#111').text(opts.title ?? 'Lacre Evidence Report');
     doc.font('Helvetica').fontSize(9).fillColor('#666')
       .text(`${opts.organization ? opts.organization + ' — ' : ''}generated ${new Date().toISOString()}`);
     doc.moveDown(0.5);
@@ -166,7 +166,7 @@ export function bundleToPdf(bundle: Bundle, opts: PdfOptions = {}): Promise<Buff
       trustedAnchor ? '#1a7f45' : '#8a5a00',
     );
     P(
-      '• It does NOT make anyone compliant with any regulation. Provenant produces tamper-evident ' +
+      '• It does NOT make anyone compliant with any regulation. Lacre produces tamper-evident ' +
       'records that support logging obligations. This is not legal advice.',
       '#333',
     );
