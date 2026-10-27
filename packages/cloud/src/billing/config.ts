@@ -262,6 +262,6 @@ export function createStripeClient(config: BillingConfig): StripeLike & CatalogC
   }
   return new Stripe(config.stripeSecretKey, {
     maxNetworkRetries: 2,
-    appInfo: { name: 'provenant-cloud' },
+    appInfo: { name: 'lacre-cloud' },
   });
 }

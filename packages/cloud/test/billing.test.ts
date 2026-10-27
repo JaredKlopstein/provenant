@@ -183,6 +183,24 @@ describe('stripe catalog', () => {
     expect(price(overage).recurring).toEqual({ interval: 'month', usage_type: 'metered' });
   });
 
+  it('names products and the overage meter Lacre, and keeps the meter event name', () => {
+    const catalog = stripeCatalog();
+    const names = catalog.map((c) => (c.product as { name: string }).name);
+    expect(new Set(names)).toEqual(new Set([
+      'Lacre Cloud',
+      'Lacre Cloud — additional agent identity',
+      'Lacre anchored evidence bundle',
+      'Lacre anchored evidence bundle — beyond plan allowance',
+    ]));
+    expect(names.join('\n')).not.toMatch(/Provenant/);
+
+    const overage = catalog.find((c) => meta(c).kind === 'overage_bundle')!;
+    expect(overage.meter).toEqual({
+      event_name: 'provenant_overage_bundle',
+      display_name: 'Lacre evidence bundles beyond plan allowance',
+    });
+  });
+
   it('does not list the free or enterprise plans as purchasable products', () => {
     const planIds = stripeCatalog().map((c) => meta(c).plan_id);
     expect(planIds).not.toContain('free');
@@ -226,6 +244,7 @@ describe('self-serve checkout', () => {
 
     expect(calls[0]!.mode).toBe('payment');
     expect(calls[0]!.line_items).toEqual([{ price: 'price_payg_bundle', quantity: 1 }]);
+    expect(calls[0]!.metadata).toEqual({ provenant_purchase: 'payg_bundle' });
     expect(calls[0]!.subscription_data).toBeUndefined();
     // So the webhook has a customer to credit the bundle to and link.
     expect(calls[0]!.customer_creation).toBe('always');

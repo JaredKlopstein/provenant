@@ -335,6 +335,38 @@ describe('catalog sync', () => {
     expect(dry.steps.every((s) => s.op === 'unchanged')).toBe(true);
   });
 
+  it('a dry run against a catalog with the old names plans only product name updates', async () => {
+    const fake = fakeStripe();
+    await syncCatalog(fake.client, { mode: 'test', apply: true });
+    expect(fake.products.size).toBe(4);
+    const expected = [...fake.products.values()].map((product) => {
+      expect(product.name.startsWith('Lacre')).toBe(true);
+      const next = product.name;
+      product.name = product.name.replace(/^Lacre\b/, 'Provenant');
+      return { id: product.id, next };
+    });
+    expect(fake.meters).toHaveLength(1);
+    fake.meters[0]!.display_name = 'Provenant evidence bundles beyond plan allowance';
+    fake.writes.length = 0;
+
+    const plan = await syncCatalog(fake.client, { mode: 'test', apply: false });
+
+    expect(fake.writes).toEqual([]);
+    const updates = plan.steps.filter((s) => s.op === 'update');
+    expect(updates).toHaveLength(expected.length);
+    expect(updates.every((s) => s.object === 'product')).toBe(true);
+    expect(updates.map((s) => ({ key: s.key, detail: s.detail }))).toEqual(
+      expected.map((p) => ({ key: p.id, detail: `update product name to "${p.next}"` })),
+    );
+    expect(updates.every((s) => s.key.startsWith('provenant_'))).toBe(true);
+    expect(plan.steps.filter((s) => s.op === 'create' || s.op === 'replace')).toEqual([]);
+    expect(plan.steps.filter((s) => s.object === 'price').every((s) => s.op === 'unchanged')).toBe(true);
+    expect(plan.steps.filter((s) => s.object === 'meter').every((s) => s.op === 'unchanged')).toBe(true);
+    expect(plan.summary).toMatchObject({ create: 0, replace: 0, update: expected.length });
+    expect(plan.prices.every((p) => p.lookup_key.startsWith('provenant_') && p.price_id !== null)).toBe(true);
+    for (const product of fake.products.values()) expect(product.name.startsWith('Provenant')).toBe(true);
+  });
+
   it('replaces a price whose amount drifted, moving the lookup key and archiving the old one', async () => {
     const fake = fakeStripe();
     await syncCatalog(fake.client, { mode: 'test', apply: true });
