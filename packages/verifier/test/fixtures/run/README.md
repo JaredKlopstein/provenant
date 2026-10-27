@@ -17,7 +17,8 @@ these prove the verifier's own chain walk accepts what core actually writes.
 
 Key ids and agent ids are readable labels rather than RFC 7638 thumbprints;
 the verifier treats `key_id` as an opaque lookup key, so this changes nothing
-it checks.
+it checks. Every receipt carries its governance fields under `lacre`, and
+every agent id is `urn:lacre:agent:test-agent`.
 
 ## Why long values are stored as `{"$chunks": [...]}`
 

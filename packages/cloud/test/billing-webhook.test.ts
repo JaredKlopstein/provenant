@@ -59,8 +59,8 @@ const PRICE_YEAR = u('price', 'testcloudyear');
 const CUSTOMER = 'cus_test_alpha';
 const OTHER_CUSTOMER = 'cus_test_beta';
 const SUBSCRIPTION = 'sub_test_alpha';
-const ACCOUNT = 'urn:provenant:agent:test-account-one';
-const OTHER_ACCOUNT = 'urn:provenant:agent:test-account-two';
+const ACCOUNT = 'urn:lacre:agent:test-account-one';
+const OTHER_ACCOUNT = 'urn:lacre:agent:test-account-two';
 
 const MIGRATION = fileURLToPath(new URL('../migrations/0000_billing.sql', import.meta.url));
 const SRC = fileURLToPath(new URL('../src', import.meta.url));

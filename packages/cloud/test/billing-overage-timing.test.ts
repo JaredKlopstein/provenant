@@ -26,8 +26,8 @@ const PRICE_YEAR = u('price', 'testcloudyear');
 const ENV: Record<string, string> = { STRIPE_SECRET_KEY: TEST_KEY, [METER_EVENT_ENV]: 'test-overage-meter' };
 for (const [key, name] of Object.entries(PRICE_ENV)) ENV[name] = u('price', 'test' + key.replace(/_/g, ''));
 
-const MONTHLY = { account: 'urn:provenant:agent:test-monthly', customer: 'cus_test_monthly', subscription: 'sub_test_monthly', interval: 'month' as const };
-const ANNUAL = { account: 'urn:provenant:agent:test-annual', customer: 'cus_test_annual', subscription: 'sub_test_annual', interval: 'year' as const };
+const MONTHLY = { account: 'urn:lacre:agent:test-monthly', customer: 'cus_test_monthly', subscription: 'sub_test_monthly', interval: 'month' as const };
+const ANNUAL = { account: 'urn:lacre:agent:test-annual', customer: 'cus_test_annual', subscription: 'sub_test_annual', interval: 'year' as const };
 const SAVED_PM = 'pm_test_saved_at_checkout';
 
 const MIGRATIONS = ['0000_billing.sql', '0001_overage.sql', '0002_overage_retry.sql']

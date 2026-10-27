@@ -101,7 +101,7 @@ describe('checkout', () => {
   ] as const)('creates a Cloud subscription session billed per %s with the matching price ids', async (interval, lineItems) => {
     const r = routes();
     const res = await r.checkout(
-      post('/billing/checkout', { plan: 'cloud', interval, client_reference_id: 'urn:provenant:agent:test-account' }),
+      post('/billing/checkout', { plan: 'cloud', interval, client_reference_id: 'urn:lacre:agent:test-account' }),
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; result: { url: string; mode: string } };
@@ -132,7 +132,7 @@ describe('checkout', () => {
 
   it('forwards client_reference_id to the session when given, and omits it otherwise', async () => {
     const r = routes();
-    const account = 'urn:provenant:agent:test-account';
+    const account = 'urn:lacre:agent:test-account';
     await r.checkout(post('/billing/checkout', { plan: 'cloud', interval: 'month', client_reference_id: account }));
     await r.checkout(post('/billing/checkout', { kind: 'payg_bundle', client_reference_id: account }));
     await r.checkout(post('/billing/checkout', { plan: 'cloud', interval: 'year' }));
@@ -186,7 +186,7 @@ describe('checkout', () => {
     delete env[PRICE_ENV.overage_bundle];
     const r = routes({ env });
     const res = await r.checkout(
-      post('/billing/checkout', { plan: 'cloud', interval: 'month', client_reference_id: 'urn:provenant:agent:test-account' }),
+      post('/billing/checkout', { plan: 'cloud', interval: 'month', client_reference_id: 'urn:lacre:agent:test-account' }),
     );
     expect(res.status).toBe(503);
 
@@ -214,7 +214,7 @@ describe('checkout', () => {
 });
 
 describe('billing portal', () => {
-  const caller: BillingCaller = { keyId: 'test-key-id', agentId: 'urn:provenant:agent:test' };
+  const caller: BillingCaller = { keyId: 'test-key-id', agentId: 'urn:lacre:agent:test' };
 
   it('returns a portal URL for a known authenticated customer', async () => {
     const r = routes({
@@ -297,7 +297,7 @@ describe('redaction', () => {
       throw leaky();
     };
     const res = await r.checkout(
-      post('/billing/checkout', { plan: 'cloud', interval: 'month', client_reference_id: 'urn:provenant:agent:test-account' }),
+      post('/billing/checkout', { plan: 'cloud', interval: 'month', client_reference_id: 'urn:lacre:agent:test-account' }),
     );
     expect(res.status).toBe(502);
     const text = await res.text();

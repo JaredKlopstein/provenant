@@ -44,7 +44,7 @@ describe('verifier and core agree byte-for-byte', () => {
       record_id: 'a-b-c', timestamp: '2026-09-03T12:00:00.000Z',
       action_detail: { amount_usd: 42.5, nested: { list: [1, 2, 3] } },
       prev_hash: null, parent_record_id: null,
-      provenant: { v: '1', seq: 0, side_effect_class: 'irreversible' },
+      lacre: { v: '1', seq: 0, side_effect_class: 'irreversible' },
     },
   ];
 
@@ -100,7 +100,7 @@ describe('verifier and core agree byte-for-byte', () => {
           trust_level: 'L1',
           parent_record_id: null,
           prev_hash: i === 0 ? null : 'a'.repeat(64),
-          provenant: {
+          lacre: {
             v: '1', action: 'refund.issue', side_effect_class: 'irreversible',
             seq: i, signature_alg: 'ed25519', key_id: kp.keyId,
           },
@@ -129,7 +129,7 @@ describe('verifier and core agree byte-for-byte', () => {
         trust_level: 'L1',
         parent_record_id: null,
         prev_hash: null,
-        provenant: {
+        lacre: {
           v: '1', action: 'refund.issue', side_effect_class: 'irreversible',
           seq: 0, signature_alg: 'ed25519', key_id: kp.keyId,
         },

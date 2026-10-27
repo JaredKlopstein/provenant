@@ -65,7 +65,7 @@ describe('the verifier is offline by construction', () => {
     delete globalThis.fetch;
     try {
       const verdict = verifyBundle({
-        format: 'provenant-bundle-v1',
+        format: 'lacre-bundle-v1',
         chain_id: 'c1',
         generated_at: '2026-09-03T00:00:00.000Z',
         range: { from_seq: 0, to_seq: 0 },
@@ -90,20 +90,31 @@ describe('bundle schema validation', () => {
   it('rejects an unknown format rather than guessing', () => {
     const v = verifyBundle({ format: 'something-else' });
     expect(v.ok).toBe(false);
-    expect(v.failures[0]!.message).toMatch(/unsupported bundle format/);
+    expect(v.failures[0]!.message).toMatch(/unknown bundle format/);
+    expect(v.conclusion).toMatch(/unknown bundle format/);
+  });
+
+  it('rejects the previous bundle format as an unknown format', () => {
+    const legacy = 'provenant-bundle-v1';
+    const v = verifyBundle({ format: legacy, receipts: [], agents: {}, anchors: [] });
+    expect(v.ok).toBe(false);
+    expect(v.format).toBe(legacy);
+    expect(v.failures[0]).toMatchObject({ kind: 'BUNDLE_MALFORMED' });
+    expect(v.failures[0]!.message).toBe(`unknown bundle format '${legacy}'; this verifier reads 'lacre-bundle-v1'`);
+    expect(v.conclusion).toBe('Nothing could be verified: unknown bundle format.');
   });
 
   it('rejects a structurally incomplete bundle', () => {
-    const v = verifyBundle({ format: 'provenant-bundle-v1', receipts: [] });
+    const v = verifyBundle({ format: 'lacre-bundle-v1', receipts: [] });
     expect(v.ok).toBe(false);
     expect(v.failures[0]!.message).toMatch(/missing one of/);
   });
 
   it('never throws on adversarial input', () => {
     const inputs = [
-      undefined, 0, [], { format: 'provenant-bundle-v1', receipts: 'no', agents: {}, anchors: [] },
-      { format: 'provenant-bundle-v1', receipts: [{ seq: 'x', canonical_json: '{', self_hash: 1 }], agents: {}, anchors: [] },
-      { format: 'provenant-bundle-v1', receipts: [], agents: {}, anchors: [{ nonsense: true }] },
+      undefined, 0, [], { format: 'lacre-bundle-v1', receipts: 'no', agents: {}, anchors: [] },
+      { format: 'lacre-bundle-v1', receipts: [{ seq: 'x', canonical_json: '{', self_hash: 1 }], agents: {}, anchors: [] },
+      { format: 'lacre-bundle-v1', receipts: [], agents: {}, anchors: [{ nonsense: true }] },
     ];
     for (const bad of inputs) {
       expect(() => verifyBundle(bad)).not.toThrow();
@@ -129,7 +140,7 @@ function signedChain(length: number): { receipts: BundleReceipt[]; agents: Recor
       timestamp: `2026-09-03T00:00:0${seq}.000Z`,
       action: 'test.action',
       prev_hash: prev,
-      provenant: { v: '1', seq },
+      lacre: { v: '1', seq },
     };
     const signature = Buffer.from(ed.sign(canonicalBytes(unsigned), secret)).toString('base64url');
     const full = { ...unsigned, signature };
@@ -152,7 +163,7 @@ function anchorAt(receipt: BundleReceipt, receiptCount: number): BundleAnchor {
 
 function bundleOf(receipts: BundleReceipt[], agents: Record<string, unknown>, anchors: BundleAnchor[]) {
   return {
-    format: 'provenant-bundle-v1',
+    format: 'lacre-bundle-v1',
     chain_id: 'c1',
     generated_at: '2026-09-03T00:02:00.000Z',
     range: { from_seq: receipts[0]!.seq, to_seq: receipts[receipts.length - 1]!.seq },

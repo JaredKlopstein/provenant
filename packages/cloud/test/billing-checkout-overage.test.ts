@@ -27,7 +27,7 @@ const PRICES: Record<CatalogKey, string> = {
   payg_bundle: u('price', 'testpaygbundle'),
   overage_bundle: u('price', 'testoveragebundle'),
 };
-const ACCOUNT = 'urn:provenant:agent:test-overage-account';
+const ACCOUNT = 'urn:lacre:agent:test-overage-account';
 const CUSTOMER = 'cus_test_overage';
 const URLS = {
   successUrl: 'https://provenant.test/billing/ok',

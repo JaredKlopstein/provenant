@@ -26,7 +26,7 @@ function makeUnsigned(over: Partial<UnsignedReceipt> = {}): UnsignedReceipt {
     parent_record_id: null,
     prev_hash: null,
     input_hash: 'a'.repeat(64),
-    provenant: {
+    lacre: {
       v: '1',
       action: 'refund.issue',
       side_effect_class: 'irreversible',
@@ -70,12 +70,12 @@ describe('receipt schema -- tool-call fields (ADR 0004)', () => {
 
   function withToolCall(extra: Record<string, unknown>): UnsignedReceipt {
     const base = makeUnsigned();
-    return { ...base, provenant: { ...base.provenant, ...extra } } as UnsignedReceipt;
+    return { ...base, lacre: { ...base.lacre, ...extra } } as UnsignedReceipt;
   }
 
   it('accepts a receipt carrying all tool-call fields and keeps them through a parse', () => {
     const parsed = UnsignedReceipt.parse(withToolCall(toolCallFields));
-    expect(parsed.provenant).toMatchObject(toolCallFields);
+    expect(parsed.lacre).toMatchObject(toolCallFields);
   });
 
   it('hashes a receipt with tool-call fields deterministically, and the fields are signed', () => {
@@ -94,7 +94,7 @@ describe('receipt schema -- tool-call fields (ADR 0004)', () => {
       attempt_id: 'attempt-other',
       provenance_class: 'attested',
     })) {
-      const mutated: Receipt = { ...receipt, provenant: { ...receipt.provenant, [field]: value } };
+      const mutated: Receipt = { ...receipt, lacre: { ...receipt.lacre, [field]: value } };
       expect(verifyReceiptSignature(mutated, kp.publicKey), `mutation of ${field} went undetected`).toBe(
         false,
       );
@@ -131,7 +131,7 @@ describe('receipt schema -- tool-call fields (ADR 0004)', () => {
     const r = makeUnsigned();
     const parsed = UnsignedReceipt.parse(r);
     for (const field of Object.keys(toolCallFields)) {
-      expect(field in parsed.provenant).toBe(false);
+      expect(field in parsed.lacre).toBe(false);
     }
   });
 });
@@ -179,15 +179,15 @@ describe('signing', () => {
       ['action_detail', { ...receipt, action_detail: { tool: 'refund.issue', amount_usd: 4200 } }],
       ['outcome', { ...receipt, outcome: 'failure' }],
       ['timestamp', { ...receipt, timestamp: '2020-01-01T00:00:00.000Z' }],
-      ['agent_id', { ...receipt, agent_id: 'urn:provenant:agent:someone-else' }],
+      ['agent_id', { ...receipt, agent_id: 'urn:lacre:agent:someone-else' }],
       ['trust_level', { ...receipt, trust_level: 'L4' }],
       ['input_hash', { ...receipt, input_hash: 'b'.repeat(64) }],
       ['prev_hash', { ...receipt, prev_hash: 'c'.repeat(64) }],
       [
-        'provenant.side_effect_class',
-        { ...receipt, provenant: { ...receipt.provenant, side_effect_class: 'read' } },
+        'lacre.side_effect_class',
+        { ...receipt, lacre: { ...receipt.lacre, side_effect_class: 'read' } },
       ],
-      ['provenant.seq', { ...receipt, provenant: { ...receipt.provenant, seq: 99 } }],
+      ['lacre.seq', { ...receipt, lacre: { ...receipt.lacre, seq: 99 } }],
     ];
 
     for (const [field, mutated] of mutations) {

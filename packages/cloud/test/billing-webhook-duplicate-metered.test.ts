@@ -39,7 +39,7 @@ const ENV: Record<string, string> = {
   ...Object.fromEntries((Object.entries(PRICE_ENV) as Array<[CatalogKey, string]>).map(([k, name]) => [name, PRICES[k]])),
 };
 
-const ACCOUNT = 'urn:provenant:agent:test-racing-account';
+const ACCOUNT = 'urn:lacre:agent:test-racing-account';
 const CUSTOMER = 'cus_test_racer';
 const FIRST = 'sub_test_first';
 const SECOND = 'sub_test_second';

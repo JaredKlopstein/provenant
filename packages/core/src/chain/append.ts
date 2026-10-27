@@ -181,7 +181,7 @@ export function appendReceipt(db: Db, input: AppendInput): AppendResult {
       ...(input.riskScore !== undefined ? { risk_score: input.riskScore } : {}),
       ...(input.latencyMs !== undefined ? { latency_ms: input.latencyMs } : {}),
 
-      provenant: {
+      lacre: {
         v: LACRE_RECEIPT_VERSION,
         action: input.action,
         side_effect_class: input.sideEffectClass,
@@ -210,14 +210,14 @@ export function appendReceipt(db: Db, input: AppendInput): AppendResult {
           sessionId: receipt.session_id,
           timestamp: receipt.timestamp,
           receivedAt: nowRfc3339(),
-          action: receipt.provenant.action,
+          action: receipt.lacre.action,
           actionType: receipt.action_type,
           outcome: receipt.outcome,
-          sideEffectClass: receipt.provenant.side_effect_class,
+          sideEffectClass: receipt.lacre.side_effect_class,
           trustLevel: receipt.trust_level,
           prevHash: receipt.prev_hash,
           selfHash,
-          keyId: receipt.provenant.key_id,
+          keyId: receipt.lacre.key_id,
           signature: receipt.signature,
           idempotencyKey: input.idempotencyKey ?? null,
           idempotencyArgsHash: argsHash,

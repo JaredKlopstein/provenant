@@ -98,7 +98,7 @@ describe('checkRun', () => {
     // Relabel seq 0 as signed by key b: the signature is now checked under the
     // wrong key, and the edit also breaks the link into seq 1.
     const rs = receipts('valid');
-    (rs[0]!.provenant as Record<string, unknown>).key_id = 'test-key-b';
+    (rs[0]!.lacre as Record<string, unknown>).key_id = 'test-key-b';
     const r = checkRun(rs, keys);
     expect(r.brokenLinks.map((b) => [b.seq, b.kind])).toEqual([
       [0, 'SIGNATURE_INVALID'],
@@ -131,8 +131,8 @@ describe('checkRun', () => {
 
   it('never throws on adversarial input', () => {
     const bad: unknown[] = [
-      [null], [1, 'x'], [{}], [{ provenant: null }], [{ provenant: { seq: 'zero' } }],
-      [{ prev_hash: null, provenant: { seq: 0, key_id: 'test-key-a' }, signature: 7 }],
+      [null], [1, 'x'], [{}], [{ lacre: null }], [{ lacre: { seq: 'zero' } }],
+      [{ prev_hash: null, lacre: { seq: 0, key_id: 'test-key-a' }, signature: 7 }],
     ];
     for (const b of bad) {
       expect(() => checkRun(b as Record<string, unknown>[], keys)).not.toThrow();
@@ -248,7 +248,7 @@ describe('lacre-verify bundle invocation is unchanged', () => {
     try {
       const file = join(dir, 'bundle.json');
       writeFileSync(file, JSON.stringify({
-        format: 'provenant-bundle-v1', chain_id: 'c1', generated_at: '2026-10-16T00:00:00.000Z',
+        format: 'lacre-bundle-v1', chain_id: 'c1', generated_at: '2026-10-16T00:00:00.000Z',
         range: { from_seq: 0, to_seq: 0 }, receipts: [], agents: {}, anchors: [],
       }));
       const r = cli([file, '--json']);

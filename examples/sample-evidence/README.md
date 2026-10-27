@@ -1,8 +1,8 @@
 # A real anchored evidence bundle
 
-`evidence.json` is a genuine Provenant bundle: 3 receipts, hash-chained and
-Ed25519-signed, with the chain head timestamped by **DigiCert's production
-RFC 3161 authority** on 2026-09-03.
+`evidence.json` is a genuine Lacre bundle (`lacre-bundle-v1`): 3 receipts,
+hash-chained and Ed25519-signed, with the chain head timestamped by
+**DigiCert's production RFC 3161 authority** on 2026-10-27.
 
 Nothing here is mocked. You can check it yourself, offline, right now:
 

@@ -93,7 +93,7 @@ describe('wrapMcpClient', () => {
 
     const receipts = storedReceipts();
     expect(receipts).toHaveLength(2);
-    expect(receipts.map((r) => r.provenant.action)).toEqual(['mcp.read_file', 'mcp.write_file']);
+    expect(receipts.map((r) => r.lacre.action)).toEqual(['mcp.read_file', 'mcp.write_file']);
     expect(receipts[1]!.prev_hash).not.toBeNull();
 
     const [first] = receipts;
@@ -105,7 +105,7 @@ describe('wrapMcpClient', () => {
       input_hash: payloadHash(args),
       output_hash: payloadHash(r1),
     });
-    expect(first!.provenant).toMatchObject({
+    expect(first!.lacre).toMatchObject({
       issuer_kind: 'sdk',
       provenance_class: 'observed',
       run_id: 'run-test-1',
@@ -122,8 +122,8 @@ describe('wrapMcpClient', () => {
   it('omits turn_id and attempt_id when not supplied', async () => {
     await wrap(new FakeMcpClient()).callTool({ name: 'read_file', arguments: {} });
     const [r] = storedReceipts();
-    expect('turn_id' in r!.provenant).toBe(false);
-    expect('attempt_id' in r!.provenant).toBe(false);
+    expect('turn_id' in r!.lacre).toBe(false);
+    expect('attempt_id' in r!.lacre).toBe(false);
   });
 
   it('defaults the side-effect class to write, and a per-tool map overrides it', async () => {
@@ -134,7 +134,7 @@ describe('wrapMcpClient', () => {
     // A tool named after an Object.prototype key is still unknown, not a function.
     await wrapped.callTool({ name: 'constructor', arguments: {} });
 
-    expect(storedReceipts().map((r) => r.provenant.side_effect_class)).toEqual([
+    expect(storedReceipts().map((r) => r.lacre.side_effect_class)).toEqual([
       'read',
       'irreversible',
       'write',
@@ -145,7 +145,7 @@ describe('wrapMcpClient', () => {
   it('defaults to write with no option, and a single class applies to every tool', async () => {
     await wrap(new FakeMcpClient()).callTool({ name: 'a', arguments: {} });
     await wrap(new FakeMcpClient(), { sideEffectClass: 'read' }).callTool({ name: 'b', arguments: {} });
-    expect(storedReceipts().map((r) => r.provenant.side_effect_class)).toEqual(['write', 'read']);
+    expect(storedReceipts().map((r) => r.lacre.side_effect_class)).toEqual(['write', 'read']);
   });
 
   it('stores no plain-text argument by default, only its hash', async () => {
@@ -187,7 +187,7 @@ describe('wrapMcpClient', () => {
       action_detail: { tool: 'explode' },
       input_hash: payloadHash(args),
     });
-    expect(r!.provenant.action).toBe('mcp.explode');
+    expect(r!.lacre.action).toBe('mcp.explode');
     expect('output_hash' in r!).toBe(false);
     expect(storedText()).not.toContain('should-not-be-stored');
 

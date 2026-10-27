@@ -128,7 +128,7 @@ export const recordAction = defineAction({
       ...(input.model_id !== undefined ? { model_id: input.model_id } : {}),
       ...(input.risk_score !== undefined ? { risk_score: input.risk_score } : {}),
       ...(input.latency_ms !== undefined ? { latency_ms: input.latency_ms } : {}),
-      provenant: {
+      lacre: {
         v: LACRE_RECEIPT_VERSION,
         action: input.action,
         side_effect_class: input.side_effect_class,
