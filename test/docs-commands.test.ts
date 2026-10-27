@@ -7,6 +7,10 @@ import { join } from 'node:path';
  * product. Neither package is on npm yet, so an `npx @provenant/...` line that
  * does not say so fails on the first command, and a `node packages/.../bin/...`
  * path that does not exist fails just as fast. These tests keep both out.
+ *
+ * The Pages landing page is HTML, not markdown. Tags are stripped before the
+ * scan so a command inside `<pre>` or `<code>` is judged the same way as one
+ * inside a markdown fence.
  */
 
 const ROOT = new URL('../', import.meta.url).pathname;
@@ -17,6 +21,7 @@ const DOCS = [
   'packages/verifier/README.md',
   'examples/sample-evidence/README.md',
   'docs/getting-started.md',
+  'docs/index.html',
 ];
 
 /** The note that has to sit near any npx line: it only works once published. */
@@ -24,9 +29,20 @@ const PUBLISHED_NOTE = /\bonce\b[^\n]*\bpublished\b/i;
 /** How many lines either side of an npx line the note may sit. */
 const NOTE_WINDOW = 6;
 
+/**
+ * Drop HTML tags without joining lines. A tag that spans lines is left alone
+ * rather than eating the newline and shifting the line numbers the test reports.
+ */
+function stripTags(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => line.replace(/<[^>\n]*>/g, ''))
+    .join('\n');
+}
+
 /** 1-based numbers of lines that start with `npx @provenant/` and have no note nearby. */
 function unnotedNpxLines(markdown: string): number[] {
-  const lines = markdown.split('\n');
+  const lines = stripTags(markdown).split('\n');
   const found: number[] = [];
   lines.forEach((line, i) => {
     if (!line.trimStart().startsWith('npx @provenant/')) return;
@@ -36,9 +52,9 @@ function unnotedNpxLines(markdown: string): number[] {
   return found;
 }
 
-/** Every `node packages/<pkg>/bin/<name>.mjs` path the markdown tells the reader to run. */
+/** Every `node packages/<pkg>/bin/<name>.mjs` path the doc tells the reader to run. */
 function binPaths(markdown: string): string[] {
-  return [...markdown.matchAll(/\bnode\s+(packages\/[^\s`'"]+\/bin\/[^\s`'"]+\.mjs)/g)].map((m) => m[1]!);
+  return [...stripTags(markdown).matchAll(/\bnode\s+(packages\/[^\s`'"]+\/bin\/[^\s`'"]+\.mjs)/g)].map((m) => m[1]!);
 }
 
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
@@ -78,6 +94,29 @@ describe('the checks themselves', () => {
 
   it('flag an indented npx line too', () => {
     expect(unnotedNpxLines('    npx @provenant/verifier evidence.json')).toEqual([1]);
+  });
+
+  it('flag an npx line hidden inside a pre tag', () => {
+    const html = '<pre class="cmd"><span class="c"># verify</span>\nnpx @provenant/verifier evidence.json</pre>';
+    expect(unnotedNpxLines(html)).toEqual([2]);
+  });
+
+  it('flag an npx line that shares its line with the pre tag', () => {
+    const html = '<pre class="cmd">npx @provenant/core init</pre>';
+    expect(unnotedNpxLines(html)).toEqual([1]);
+  });
+
+  it('accept an npx line in a pre block when the note is nearby', () => {
+    const html = [
+      '<pre class="cmd">npx @provenant/verifier evidence.json</pre>',
+      '<p>This works once the package is published to npm.</p>',
+    ].join('\n');
+    expect(unnotedNpxLines(html)).toEqual([]);
+  });
+
+  it('find a bin path inside a pre tag', () => {
+    const html = '<pre class="cmd">node packages/core/bin/provenant.mjs init</pre>';
+    expect(binPaths(html)).toEqual(['packages/core/bin/provenant.mjs']);
   });
 
   it('accept an npx line with the note nearby', () => {

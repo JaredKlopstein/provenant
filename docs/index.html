@@ -325,17 +325,23 @@ forge a replacement timestamp.
   <section id="start">
     <span class="eyebrow">Start</span>
     <h3>Sixty seconds to a verified receipt</h3>
-<pre class="cmd"><span class="c"># record what your agent just did</span>
-npx @provenant/core init
-npx @provenant/core record --action refund.issue \
+<pre class="cmd"><span class="c"># from source — these packages are not on npm yet</span>
+git clone https://github.com/JaredKlopstein/provenant.git
+cd provenant
+pnpm install
+pnpm run build
+
+<span class="c"># record what your agent just did</span>
+node packages/core/bin/provenant.mjs init
+node packages/core/bin/provenant.mjs record --action refund.issue \
   --action-detail '{"customer_id":"c_8812","amount_usd":42.50}' \
   --side-effect-class irreversible
 
 <span class="c"># prove the local chain is intact</span>
-npx @provenant/core chain verify
+node packages/core/bin/provenant.mjs chain verify
 
 <span class="c"># check a bundle someone hands you — offline, no account</span>
-npx @provenant/verifier evidence.json</pre>
+node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidence.json</pre>
     <div class="prose">
       <p>
         There is a real DigiCert-anchored sample bundle in the repository. Verify it before you
