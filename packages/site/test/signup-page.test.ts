@@ -72,7 +72,8 @@ describe('signin confirm page', () => {
   });
 
   it('uses the same sign-in layout as the signup page', async () => {
-    const html = renderToStaticMarkup(await SigninPage({ searchParams: Promise.resolve({}) }));
+    // No token redirects to signup. A token with auth unset still renders this page.
+    const html = renderToStaticMarkup(await SigninPage({ searchParams: Promise.resolve({ token: 'not-a-real-link' }) }));
     expect(html).toMatch(/^<section aria-label="Sign in"><h1>Sign in<\/h1>/);
   });
 });
