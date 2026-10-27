@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
-import { billingSchema, billingCustomers, billingSubscriptions } from '@provenant/cloud/dist/billing/schema.js';
+import { billingSchema, billingCustomers, billingSubscriptions } from '@lacre/cloud/dist/billing/schema.js';
 import { POST as signOut, GET as signOutGet } from '../app/api/auth/sign-out/route.js';
 import { POST as callback } from '../app/api/auth/callback/route.js';
 import CheckoutPage from '../app/checkout/page.js';

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { writeFileSync, existsSync } from 'node:fs';
-import { defineAction, type NextAction } from '@provenant/core';
-import { verifyBundle } from '@provenant/verifier';
+import { defineAction, type NextAction } from '@lacre/core';
+import { verifyBundle } from '@lacre/verifier';
 import { exportBundle, bundleToJson } from '../bundle/export.js';
 import { bundleToPdf } from '../bundle/pdf.js';
 import { bundleToHtml } from '../bundle/html.js';
@@ -103,7 +103,7 @@ export const bundleExportAction = defineAction({
       anchor_count: bundle.anchors.length,
       written,
       ...(input.out ? {} : { bundle: bundle as unknown as Record<string, unknown> }),
-      verify_with: `npx @provenant/verifier ${input.out ?? 'bundle.json'} --trust <authority-root.pem>`,
+      verify_with: `npx @lacre/verifier ${input.out ?? 'bundle.json'} --trust <authority-root.pem>`,
       warning: verdict.anchored
         ? null
         : 'This bundle is NOT externally anchored. It proves internal consistency only -- a recipient has ' +
@@ -137,7 +137,7 @@ export const bundleExportAction = defineAction({
       written: [],
       would_write: would,
       would_overwrite: clobbered,
-      verify_with: `npx @provenant/verifier ${input.out ?? 'bundle.json'} --trust <authority-root.pem>`,
+      verify_with: `npx @lacre/verifier ${input.out ?? 'bundle.json'} --trust <authority-root.pem>`,
       warning: clobbered.length
         ? `DRY RUN: nothing was written. ${clobbered.length} existing file(s) WOULD BE OVERWRITTEN: ${clobbered.join(', ')}.`
         : 'DRY RUN: nothing was written.',

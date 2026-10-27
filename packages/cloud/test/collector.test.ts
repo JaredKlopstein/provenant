@@ -4,7 +4,7 @@ import type { Server } from 'node:http';
 import {
   openDb, closeDb, generateKeypair, deriveAgentId, publicKeyToJwk, signRequest,
   type Db, type Keypair,
-} from '@provenant/core';
+} from '@lacre/core';
 import { createCollector } from '../src/collector/server.js';
 
 let db: Db;

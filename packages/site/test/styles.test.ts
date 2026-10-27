@@ -45,8 +45,8 @@ describe('global stylesheet', () => {
   it('adds no runtime CSS dependency', () => {
     const pkg = JSON.parse(read('../package.json')) as { dependencies: Record<string, string> };
     expect(Object.keys(pkg.dependencies).sort()).toEqual([
+      '@lacre/cloud',
       '@neondatabase/serverless',
-      '@provenant/cloud',
       'drizzle-orm',
       'next',
       'react',

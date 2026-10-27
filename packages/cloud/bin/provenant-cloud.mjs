@@ -9,5 +9,5 @@
  * --help, one manifest.
  */
 import '../dist/register.js';
-import { runCli } from '@provenant/core';
+import { runCli } from '@lacre/core';
 process.exit(await runCli(process.argv.slice(2)));

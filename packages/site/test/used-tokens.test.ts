@@ -281,6 +281,6 @@ describe('drizzle-orm', () => {
       };
     const site = manifest('site').dependencies ?? {};
     for (const pkg of ['core', 'cloud']) expect(site['drizzle-orm']).toBe(manifest(pkg).dependencies?.['drizzle-orm']);
-    expect(site['@provenant/core']).toBeUndefined();
+    expect(site['@lacre/core']).toBeUndefined();
   });
 });

@@ -11,7 +11,7 @@ import { getTableConfig, type PgTable } from 'drizzle-orm/pg-core';
 import {
   openDb, closeDb, appendReceipt, generateKeypair, deriveAgentId, ProvenantError,
   type Db, type Keypair, type ActionContext,
-} from '@provenant/core';
+} from '@lacre/core';
 import {
   billingSchema, billingCustomers, billingSubscriptions, billingBundleCredits, billingBundleExports,
   billingUsageReports, billingOverageSubscriptions,

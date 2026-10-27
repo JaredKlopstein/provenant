@@ -23,8 +23,8 @@ worth", and [ADR 0003](docs/adr/0003-anchoring.md)).
 
 - GitHub: https://github.com/JaredKlopstein/provenant
 - pnpm workspace (`packages/*`), TypeScript, Vitest. Node >= 22.5.0, pnpm 11.15.1.
-- Published packages: `@provenant/core`, `@provenant/verifier` (both MIT).
-  `@provenant/cloud` is private and commercial.
+- Published packages: `@lacre/core`, `@lacre/verifier` (both MIT).
+  `@lacre/cloud` is private and commercial.
 - ADRs: `docs/adr/`. Landing page source: `docs/index.html`.
 
 ## Rules
@@ -74,7 +74,7 @@ works with no network and no code from core or cloud). CI runs this on Node
 
 ## Deployment
 
-- npm publish of `@provenant/core` and `@provenant/verifier` via
+- npm publish of `@lacre/core` and `@lacre/verifier` via
   `pnpm run release` (`pnpm run release:dry` to rehearse). Human only.
 - Landing page at https://jaredklopstein.github.io/provenant, served by
   GitHub Pages from `docs/`.

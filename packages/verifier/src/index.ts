@@ -1,12 +1,12 @@
 /**
- * @provenant/verifier -- standalone, offline evidence verifier. MIT.
+ * @lacre/verifier -- standalone, offline evidence verifier. MIT.
  *
  * This package is the credibility anchor of the whole product. Constraints,
  * enforced by scripts/check-boundaries.mjs in CI:
  *
- *   1. No import of @provenant/cloud. The paid package cannot be required to
+ *   1. No import of @lacre/cloud. The paid package cannot be required to
  *      check the paid package's output.
- *   2. No import of @provenant/core either. A verifier sharing its hashing and
+ *   2. No import of @lacre/core either. A verifier sharing its hashing and
  *      canonicalization with the system it audits is not independent -- a bug
  *      there would be invisible to both. JCS, the chain walk and signature
  *      checking are reimplemented here from RFC 8785, RFC 8032 and the AAT

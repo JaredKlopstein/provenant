@@ -22,7 +22,7 @@
  * the cause, which can name environment variables, goes to the server log.
  */
 import { resolve } from 'node:path';
-import { openDb, dbPath, type AnchorBackend, type Db } from '@provenant/core';
+import { openDb, dbPath, type AnchorBackend, type Db } from '@lacre/core';
 import { requireCronAuth } from '../cron/auth.js';
 import { genericError } from '../errors.js';
 import { runAnchorTick, type AnchorTickResult } from './scheduler.js';

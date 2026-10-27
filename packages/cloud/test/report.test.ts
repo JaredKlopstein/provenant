@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Bundle } from '@provenant/verifier';
+import type { Bundle } from '@lacre/verifier';
 import { bundleToHtml } from '../src/bundle/html.js';
 
 const SAMPLE = join(
@@ -52,7 +52,7 @@ describe('HTML evidence report', () => {
   });
 
   it('tells the reader how to check it without trusting the operator', () => {
-    expect(html).toContain('npx @provenant/verifier');
+    expect(html).toContain('npx @lacre/verifier');
     expect(html).toContain('without trusting whoever operates this');
   });
 

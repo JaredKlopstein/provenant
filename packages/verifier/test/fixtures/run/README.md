@@ -1,7 +1,7 @@
 # Run-check fixtures
 
 Signed receipt chains for `test/run.test.ts`, produced once with
-`@provenant/core` (`signReceipt`, `receiptHash`, `payloadHash`) outside the
+`@lacre/core` (`signReceipt`, `receiptHash`, `payloadHash`) outside the
 verifier and committed. The verifier's test suite never imports core here, so
 these prove the verifier's own chain walk accepts what core actually writes.
 

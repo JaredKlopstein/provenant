@@ -62,8 +62,8 @@
 import {
   and, asc, desc, eq, isNull, sha256Hex, deriveAgentId,
   type ActionContext,
-} from '@provenant/core';
-import type { Bundle } from '@provenant/verifier';
+} from '@lacre/core';
+import type { Bundle } from '@lacre/verifier';
 import { PLANS, type PlanId } from '../pricing.js';
 import { bundleToJson } from '../bundle/export.js';
 import { loadBillingConfig, createStripeClient, redact, type BillingConfig, type BillingMode } from './config.js';

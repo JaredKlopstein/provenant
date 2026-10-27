@@ -12,7 +12,7 @@ node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidenc
 
 Run it from the root of a source checkout after `pnpm install && pnpm run build`
 (see [Getting started from source](../../docs/getting-started.md)).
-`npx @provenant/verifier` works in its place once the package is published to npm.
+`npx @lacre/verifier` works in its place once the package is published to npm.
 
 It will report `VERIFIED / ANCHORED` and print DigiCert as the attesting
 authority — while also telling you the authority is **not in your trust list**,
@@ -25,7 +25,7 @@ node packages/verifier/bin/provenant-verify.mjs examples/sample-evidence/evidenc
 ```
 
 The verdict stays `VERIFIED / ANCHORED`, and the anchor now reports `trusted by
-you: yes`. (Again, `npx @provenant/verifier` works in place of the `node` path
+you: yes`. (Again, `npx @lacre/verifier` works in place of the `node` path
 once the package is published to npm.)
 
 That fingerprint is DigiCert Trusted Root G4. Confirm it against DigiCert

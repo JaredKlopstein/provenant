@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { inspect } from 'node:util';
-import { runCli, getAction, ProvenantError } from '@provenant/core';
+import { runCli, getAction, ProvenantError } from '@lacre/core';
 import { loadBillingConfig, redact, PRICE_ENV } from '../src/billing/config.js';
 import { syncCatalog, type CatalogClient, type SyncResult } from '../src/billing/sync.js';
 import { stripeCatalog, OVERAGE_METER_EVENT } from '../src/billing/stripe.js';

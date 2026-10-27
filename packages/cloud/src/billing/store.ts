@@ -11,7 +11,7 @@
  * Nothing here logs: callers decide what to say, and say it redacted.
  */
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
-import { eq } from '@provenant/core';
+import { eq } from '@lacre/core';
 import {
   billingSchema, billingCustomers, billingSubscriptions, billingBundleCredits, billingWebhookEvents,
 } from './schema.js';

@@ -1,5 +1,5 @@
 {
-  "name": "@provenant/cloud",
+  "name": "@lacre/cloud",
   "version": "0.1.0",
   "description": "Provenant Cloud: anchoring, evidence bundles, hosted collector, billing. Commercial -- not MIT.",
   "license": "UNLICENSED",
@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
-    "@provenant/core": "workspace:*",
-    "@provenant/verifier": "workspace:*",
+    "@lacre/core": "workspace:*",
+    "@lacre/verifier": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "pdfkit": "^0.20.2",
     "stripe": "22.6.2",

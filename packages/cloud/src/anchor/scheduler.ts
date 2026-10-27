@@ -27,7 +27,7 @@ import {
   and, asc, desc, eq, gt,
   createAnchor, dbSchema, getAnchorBackend, registerAnchorBackend, ProvenantError,
   type AnchorBackend, type AnchorRecord, type Db,
-} from '@provenant/core';
+} from '@lacre/core';
 import { PLANS } from '../pricing.js';
 
 export interface AnchorRetryPolicy {

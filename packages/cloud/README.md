@@ -1,4 +1,4 @@
-# @provenant/cloud
+# @lacre/cloud
 
 **Commercial. Not MIT.** See `LICENSE.commercial`.
 

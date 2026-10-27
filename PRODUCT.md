@@ -10,8 +10,8 @@ agents are in [AGENTS.md](AGENTS.md).
 - Tagline: tamper-evident receipts for autonomous agents
 - Repository: https://github.com/JaredKlopstein/provenant
 - Site: https://jaredklopstein.github.io/provenant
-- Packages: `@provenant/core` (MIT), `@provenant/verifier` (MIT),
-  `@provenant/cloud` (commercial, private, not published)
+- Packages: `@lacre/core` (MIT), `@lacre/verifier` (MIT),
+  `@lacre/cloud` (commercial, private, not published)
 - Owner: Jared Klopstein
 
 ## Status

@@ -12,10 +12,10 @@
  * selling evidence that fails at audit time, which is worse than selling
  * nothing. If it does not verify we throw and record no anchor.
  */
-import { verifyTimestampToken } from '@provenant/verifier';
-import type { AnchorBackend, AnchorProof, AnchorStatement } from '@provenant/core';
+import { verifyTimestampToken } from '@lacre/verifier';
+import type { AnchorBackend, AnchorProof, AnchorStatement } from '@lacre/core';
 import { buildTimeStampReq } from './der.js';
-import { parseDer } from '@provenant/verifier';
+import { parseDer } from '@lacre/verifier';
 import { randomBytes } from 'node:crypto';
 
 export interface TsaConfig {

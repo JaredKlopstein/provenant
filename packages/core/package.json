@@ -1,5 +1,5 @@
 {
-  "name": "@provenant/core",
+  "name": "@lacre/core",
   "version": "0.1.0",
   "description": "Tamper-evident receipts for autonomous agents. Hash-chained, signed, locally verifiable. MIT.",
   "license": "MIT",

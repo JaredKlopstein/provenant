@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import * as core from '@provenant/core';
+import * as core from '@lacre/core';
 import { createTestAuthority } from '../src/anchor/test-authority.js';
 import { runAnchorTick } from '../src/anchor/scheduler.js';
 import { exportBundle } from '../src/bundle/export.js';
@@ -25,8 +25,8 @@ type Operator = (typeof OPERATORS)[number];
 
 // Replace core's re-exported operators with pass-through spies. A cloud module
 // that took its operator from anywhere else would never reach these.
-vi.mock('@provenant/core', async (importOriginal) => {
-  const real = await importOriginal<typeof import('@provenant/core')>();
+vi.mock('@lacre/core', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@lacre/core')>();
   const spies = Object.fromEntries(
     (['and', 'asc', 'desc', 'eq', 'gt', 'gte', 'lte'] as const).map((op) => [op, vi.fn(real[op])]),
   );
@@ -116,9 +116,9 @@ describe('cloud uses the drizzle-orm operators core re-exports', () => {
   it.each([
     ['bundle/export.ts', ['and', 'asc', 'gte', 'lte']],
     ['anchor/scheduler.ts', ['and', 'asc', 'desc', 'eq', 'gt']],
-  ])('%s imports its operators from @provenant/core', (file, ops) => {
+  ])('%s imports its operators from @lacre/core', (file, ops) => {
     const imports = importedNames(join(SRC, file));
-    expect(imports.get('@provenant/core')).toEqual(expect.arrayContaining(ops));
+    expect(imports.get('@lacre/core')).toEqual(expect.arrayContaining(ops));
     expect(imports.get('drizzle-orm') ?? []).toEqual([]);
   });
 

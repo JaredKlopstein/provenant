@@ -102,7 +102,7 @@ describe('site app folder', () => {
       );
       expect(specifiers.length, file).toBeGreaterThan(0);
       for (const spec of specifiers) {
-        expect(spec, file).not.toMatch(/@provenant\/(core|verifier|cloud)|packages\/(core|verifier|cloud)/);
+        expect(spec, file).not.toMatch(/@lacre\/(core|verifier|cloud)|packages\/(core|verifier|cloud)/);
       }
     }
   });

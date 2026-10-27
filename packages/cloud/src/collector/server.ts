@@ -16,7 +16,7 @@ import {
   registerAgent, keyDirectory, requireAgent,
   ProvenantError, toProvenantError, jwkToPublicKey, jwkThumbprint,
   type Db, type AgentJwk, type RequestLike, type SignatureVerifyResult,
-} from '@provenant/core';
+} from '@lacre/core';
 import { createAnchorScheduler, type AnchorSchedulerOptions } from '../anchor/scheduler.js';
 import {
   createBillingRoutes, BILLING_PATHS, type BillingRoutes, type BillingRoutesOptions,

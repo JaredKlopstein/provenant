@@ -3,7 +3,7 @@
  * into core's registry. Imported by the cloud CLI and by tests that need the
  * paid surface.
  */
-import { registerAnchorBackend } from '@provenant/core';
+import { registerAnchorBackend } from '@lacre/core';
 import { createTsaBackend, PUBLIC_TSAS } from './anchor/tsa.js';
 import './actions/bundle.js';
 import './billing/sync.js';

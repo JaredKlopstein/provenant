@@ -19,7 +19,7 @@
 import { inspect } from 'node:util';
 import Stripe from 'stripe';
 import { z } from 'zod';
-import { ProvenantError } from '@provenant/core';
+import { ProvenantError } from '@lacre/core';
 import type { StripeLike } from './stripe.js';
 import type { CatalogClient } from './sync.js';
 

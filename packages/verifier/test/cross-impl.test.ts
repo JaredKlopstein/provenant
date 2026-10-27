@@ -5,10 +5,10 @@ import { receiptHash as verifierHash, verifyReceiptSignature as verifierVerify }
 // The ONE place the verifier's test suite is allowed to reference core, and only
 // to prove the two implementations agree. The runtime code in src/ never imports
 // it -- scripts/check-boundaries.mjs fails the build if it ever does.
-import { canonicalize as coreJcs } from '@provenant/core';
+import { canonicalize as coreJcs } from '@lacre/core';
 import {
   receiptHash as coreHash, signReceipt, generateKeypair, deriveAgentId,
-} from '@provenant/core';
+} from '@lacre/core';
 
 /**
  * THE ANTI-DRIFT GUARD.

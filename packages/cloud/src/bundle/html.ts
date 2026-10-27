@@ -15,8 +15,8 @@
  * model that matters: an agent chooses its own action names and detail, and a
  * hosted verifier page renders bundles uploaded by strangers.
  */
-import type { Bundle } from '@provenant/verifier';
-import { verifyBundle, type VerifyOptions, type BundleVerdict } from '@provenant/verifier';
+import type { Bundle } from '@lacre/verifier';
+import { verifyBundle, type VerifyOptions, type BundleVerdict } from '@lacre/verifier';
 
 export interface HtmlOptions extends VerifyOptions {
   title?: string;
@@ -153,7 +153,7 @@ export function bundleToHtml(bundle: Bundle, opts: HtmlOptions = {}): string {
     check that bundle independently &mdash; without trusting whoever operates this
     system, and with no network connection:
   </p>
-  <pre>npx @provenant/verifier bundle.json --trust &lt;authority-root.pem&gt;</pre>
+  <pre>npx @lacre/verifier bundle.json --trust &lt;authority-root.pem&gt;</pre>
   <p class="note">
     The verifier is MIT licensed, makes no network connections, and shares no code
     with the software that produced this bundle. It re-derives every hash and
