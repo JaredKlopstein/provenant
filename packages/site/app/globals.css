@@ -1,7 +1,14 @@
 /*
  * The site's one global stylesheet, loaded by app/layout.tsx. Plain CSS with no
- * runtime dependency. Pages carry no class names: rules target the elements and
- * the aria-labels the pages already render, so page markup and its tests stay put.
+ * runtime dependency. Pages stay classless where they can: rules target the
+ * elements and the aria-labels the pages already render, so page markup and its
+ * tests stay put. New components in src/ may use co-located CSS Modules
+ * (component.module.css) for anything page selectors cannot reach.
+ *
+ * The look is "evidence, not logs": paper and ink, IBM Plex Serif for headings,
+ * Plex Sans for text and Plex Mono for hashes, code and eyebrows (loaded by
+ * src/fonts.ts, self-hosted at build time). Seal red and seal green are reserved
+ * for broken and intact states; nothing else uses them.
  *
  * Dark mode is deferred: everything colour-related reads from the tokens below,
  * so a later `prefers-color-scheme: dark` block only has to redefine them.
@@ -10,23 +17,47 @@
 :root {
   color-scheme: light;
 
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-serif: var(--font-plex-serif), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
-  --color-text: #1b1f24;
-  --color-muted: #57606a;
-  --color-bg: #ffffff;
-  --color-surface: #f6f8fa;
-  --color-border: #d0d7de;
-  --color-accent: #0b57d0;
-  --color-accent-strong: #0842a0;
-  --color-accent-soft: #e8f0fe;
-  --color-on-accent: #ffffff;
-  --color-code-bg: #f3f4f6;
-  --color-focus: #0b57d0;
+  /* Palette. --dim is a shade darker than the Pages landing's #6c6b64, which is
+     4.36:1 on paper; this is 4.55:1 on paper and 5.17:1 on card (WCAG AA). */
+  --ink: #141a22;
+  --ink-2: #2c3542;
+  --dim: #696861;
+  --paper: #e8e8e4;
+  --card: #f6f6f3;
+  --rule: #ccccc4;
+  --seal-red: #a3201b;
+  --seal-green: #2c6449;
+  --plate: #171d26;
+  --plate-ink: #d8dbe0;
+
+  /* Control boundaries (WCAG 1.4.11): 4.33:1 on white, 4.00:1 on card, 3.52:1 on
+     paper. --rule is under 3:1 and is for decorative lines only. */
+  --field-border: #7a7a72;
+  --field-bg: #ffffff;
+
+  /* The names the pages already use, mapped onto the palette. The first four stay
+     literal hex: app/opengraph-image.tsx declares the same values. */
+  --color-text: #141a22;
+  --color-muted: #696861;
+  --color-bg: #e8e8e4;
+  --color-accent: #141a22;
+  --color-surface: var(--card);
+  --color-border: var(--rule);
+  --color-accent-strong: var(--ink-2);
+  --color-accent-soft: var(--card);
+  --color-on-accent: var(--card);
+  --color-code-bg: var(--card);
+  --color-focus: var(--ink);
+  --color-broken: var(--seal-red);
+  --color-intact: var(--seal-green);
 
   --measure: 68ch;
   --wide: 72rem;
+  --wide-grid: 76rem;
   --gutter: 1.25rem;
   --radius: 0.5rem;
   --space-1: 0.25rem;
@@ -68,6 +99,8 @@ svg {
 h1,
 h2,
 h3 {
+  font-family: var(--font-serif);
+  font-weight: 600;
   line-height: 1.25;
   margin: var(--space-8) 0 var(--space-3);
 }
@@ -151,8 +184,10 @@ pre {
   border-radius: var(--radius);
   line-height: 1.5;
   max-width: 100%;
+  /* Long commands and JSON wrap inside the box; scrolling is the fallback. */
   overflow-x: auto;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 pre code {
@@ -160,7 +195,7 @@ pre code {
   padding: 0;
   border-radius: 0;
   font-size: inherit;
-  overflow-wrap: normal;
+  overflow-wrap: inherit;
 }
 
 /* Buttons and form fields */
@@ -203,9 +238,9 @@ textarea {
   max-width: 100%;
   min-height: 2.75rem;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius);
-  background: var(--color-bg);
+  background: var(--field-bg);
 }
 
 textarea {
@@ -248,7 +283,8 @@ form {
 }
 
 .site-brand {
-  font-weight: 700;
+  font-family: var(--font-serif);
+  font-weight: 600;
   font-size: 1.125rem;
   color: var(--color-text);
   text-decoration: none;
@@ -288,12 +324,12 @@ form {
   padding: var(--space-1) var(--space-4);
   background: var(--color-bg);
   color: var(--color-text);
-  border-color: var(--color-border);
+  border-color: var(--field-border);
 }
 
 .nav-toggle:hover {
   background: var(--color-surface);
-  border-color: var(--color-border);
+  border-color: var(--field-border);
 }
 
 /*
@@ -331,6 +367,65 @@ form {
     display: block;
     padding: var(--space-3) 0;
     border-top: 1px solid var(--color-border);
+  }
+}
+
+/* Utilities for the page sections later work builds: a mono eyebrow, full-bleed
+   bands and a 12-column grid at 960px and up. */
+
+.eyebrow {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* The band's colour bleeds to the viewport edges without widening the layout. */
+.band {
+  --band-bg: var(--paper);
+  padding-block: var(--space-12);
+  background: var(--band-bg);
+  box-shadow: 0 0 0 100vmax var(--band-bg);
+  clip-path: inset(0 -100vmax);
+}
+
+.band--card {
+  --band-bg: var(--card);
+}
+
+.band--plate {
+  --band-bg: var(--plate);
+  color: var(--plate-ink);
+}
+
+.band--plate :is(a, .eyebrow) {
+  color: var(--plate-ink);
+}
+
+.band--plate :focus-visible {
+  outline-color: var(--plate-ink);
+}
+
+.band--plate :is(code, pre) {
+  background: transparent;
+  border-color: var(--ink-2);
+}
+
+main > :is(.band, .grid-12) {
+  max-width: var(--wide-grid);
+}
+
+.grid-12 {
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (min-width: 960px) {
+  .grid-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 }
 
@@ -431,7 +526,7 @@ section[aria-label='Plans'] > article {
   padding: var(--space-6);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  background: var(--color-bg);
+  background: var(--color-surface);
 }
 
 section[aria-label='Plans'] > article > h2 {
@@ -459,7 +554,7 @@ section[aria-label='Plans'] > article > p[role='note'] {
 section[aria-label='Plans'] > article[data-tier='cloud'] {
   border: 2px solid var(--color-accent);
   background: var(--color-accent-soft);
-  box-shadow: 0 0.5rem 1.5rem rgb(11 87 208 / 0.12);
+  box-shadow: 0 0.5rem 1.5rem rgb(20 26 34 / 0.12);
 }
 
 section[aria-label='Plans'] > article[data-tier='cloud']::before {

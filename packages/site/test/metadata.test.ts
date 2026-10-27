@@ -56,6 +56,14 @@ describe('share image (app/opengraph-image.tsx)', () => {
       expect(src, name).toContain(`const ${constant} = '${token(name)}'`);
     }
   });
+
+  it('draws its top rule in seal red, the paper-and-ink palette\'s one accent', () => {
+    const css = source('globals.css');
+    const seal = css.match(/--seal-red:\s*(#[0-9a-f]{6})/i)?.[1];
+    const src = source('opengraph-image.tsx');
+    expect(src).toContain(`const SEAL_RED = '${seal}'`);
+    expect(src).toContain('borderTop: `16px solid ${SEAL_RED}`');
+  });
 });
 
 describe('favicon (app/icon.svg)', () => {
