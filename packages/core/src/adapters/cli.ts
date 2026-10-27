@@ -21,7 +21,7 @@ import type { Keypair } from '../crypto/keys.js';
 
 // Registering the action modules IS what populates the CLI. This list must stay
 // in step with src/index.ts -- when it drifted, `anchor now` and `anchor list`
-// vanished from the shipped `provenant` binary while the registry test (which
+// vanished from the shipped `lacre` binary while the registry test (which
 // imports index.ts) still asserted they existed. cli.test.ts now asserts the
 // binary's own action set, so that cannot recur silently.
 import '../actions/identity.js';
@@ -210,7 +210,7 @@ function renderActionHelp(action: ActionDef<never, never>): string {
   const shape = getObjectShape(action.input as z.ZodType) ?? {};
   const lines: string[] = [];
 
-  lines.push(`provenant ${action.name.replace('.', ' ')} -- ${action.summary}`);
+  lines.push(`lacre ${action.name.replace('.', ' ')} -- ${action.summary}`);
   lines.push('');
   lines.push(`WHAT      ${wrap(d.what)}`);
   lines.push(`WHEN      ${wrap(d.when)}`);
@@ -243,7 +243,7 @@ function renderActionHelp(action: ActionDef<never, never>): string {
   if (action.dryRun) lines.push('  --dry-run       Show the exact effect, apply nothing');
   lines.push('  --store <dir>   Override the store location');
   lines.push('');
-  lines.push("EXIT CODES: 0 success, 1 any error. See 'provenant --help'.");
+  lines.push("EXIT CODES: 0 success, 1 any error. See 'lacre --help'.");
 
   if (action.examples?.length) {
     lines.push('');
@@ -263,7 +263,7 @@ function renderExample(name: string, args: Record<string, unknown>): string {
     if (typeof v === 'object') return `${flag} '${JSON.stringify(v)}'`;
     return `${flag} ${JSON.stringify(String(v))}`;
   });
-  return `provenant ${name.replace('.', ' ')} ${parts.filter(Boolean).join(' ')}`;
+  return `lacre ${name.replace('.', ' ')} ${parts.filter(Boolean).join(' ')}`;
 }
 
 function isOptional(field: z.ZodType): boolean {
@@ -288,10 +288,10 @@ function wrap(text: string, indent = 10): string {
 
 function renderRootHelp(): string {
   const lines: string[] = [];
-  lines.push('provenant -- tamper-evident receipts for autonomous agents');
+  lines.push('lacre -- tamper-evident receipts for autonomous agents');
   lines.push('');
   lines.push('USAGE');
-  lines.push('  provenant <command> [options] [--json]');
+  lines.push('  lacre <command> [options] [--json]');
   lines.push('');
   lines.push('COMMANDS');
   const width = Math.max(...allActions().map((a) => a.name.length)) + 2;
@@ -312,10 +312,10 @@ function renderRootHelp(): string {
   }
   lines.push('');
   lines.push('START HERE');
-  lines.push('  provenant init --json');
-  lines.push('  provenant discover --json     # full schemas, errors, quickstart');
+  lines.push('  lacre init --json');
+  lines.push('  lacre discover --json     # full schemas, errors, quickstart');
   lines.push('');
-  lines.push('Agents: `provenant discover --json` returns everything needed to operate');
+  lines.push('Agents: `lacre discover --json` returns everything needed to operate');
   lines.push('this service, including input/output JSON Schemas and a literal quickstart.');
   return lines.join('\n');
 }
@@ -344,7 +344,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
       if (pe.fix) {
         io.err(`  fix: ${pe.fix.note}`);
         if (pe.fix.action) {
-          io.err(`  next: provenant ${pe.fix.action.replace('.', ' ')} ${
+          io.err(`  next: lacre ${pe.fix.action.replace('.', ' ')} ${
             pe.fix.arguments ? JSON.stringify(pe.fix.arguments) : ''
           }`);
         }
@@ -391,7 +391,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
         fix: {
           action: 'discover',
           arguments: {},
-          note: `Run 'provenant discover --json' for the full action list with schemas. Available: ${allActions()
+          note: `Run 'lacre discover --json' for the full action list with schemas. Available: ${allActions()
             .map((a) => a.name)
             .join(', ')}.`,
         },
@@ -453,12 +453,12 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
           details: { unknown: unknownFlags },
           fix: {
             action: matched.name,
-            note: `Run 'provenant ${matched.name.replace('.', ' ')} --help' for the exact option names, or 'provenant discover --json' for the full input schema.`,
+            note: `Run 'lacre ${matched.name.replace('.', ' ')} --help' for the exact option names, or 'lacre discover --json' for the full input schema.`,
           },
         }),
       );
     }
-    // Allow `provenant record refund.issue` as shorthand for --action.
+    // Allow `lacre record refund.issue` as shorthand for --action.
     if (rest[0] && matched.name === 'record' && rawInput.action === undefined) {
       rawInput.action = rest[0];
     }
@@ -475,7 +475,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
           details: { issues: parsed.error.issues as unknown as Record<string, unknown>[] },
           fix: {
             action: matched.name,
-            note: `Run 'provenant ${matched.name.replace('.', ' ')} --help' for every option, or 'provenant discover --json' for the full input schema.`,
+            note: `Run 'lacre ${matched.name.replace('.', ' ')} --help' for every option, or 'lacre discover --json' for the full input schema.`,
           },
         }),
       );

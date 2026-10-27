@@ -151,7 +151,7 @@ describe('checkRun', () => {
   });
 });
 
-describe('provenant-verify run', () => {
+describe('lacre-verify run', () => {
   let dir: string;
   const path = (name: string) => join(dir, name);
 
@@ -225,11 +225,11 @@ describe('provenant-verify run', () => {
   it('prints its own help', () => {
     const r = cli(['run', '--help']);
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/provenant-verify run RECEIPTS --keys KEYS/);
+    expect(r.out).toMatch(/lacre-verify run RECEIPTS --keys KEYS/);
   });
 });
 
-describe('provenant-verify bundle invocation is unchanged', () => {
+describe('lacre-verify bundle invocation is unchanged', () => {
   function cli(argv: string[]) {
     const out: string[] = [];
     const err: string[] = [];
@@ -239,7 +239,7 @@ describe('provenant-verify bundle invocation is unchanged', () => {
 
   it('still shows the bundle help and exit codes', () => {
     expect(cli([]).code).toBe(2);
-    expect(cli([]).out).toMatch(/provenant-verify <bundle\.json> \[options\]/);
+    expect(cli([]).out).toMatch(/lacre-verify <bundle\.json> \[options\]/);
     expect(cli(['--help']).code).toBe(0);
   });
 

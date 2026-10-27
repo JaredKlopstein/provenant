@@ -32,7 +32,7 @@ beforeAll(() => {
 });
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-describe('provenant-verify bundle mode: existing behavior', () => {
+describe('lacre-verify bundle mode: existing behavior', () => {
   it('exits 0 on the valid sample bundle', () => {
     const r = cli([SAMPLE]);
     expect(r.code).toBe(0);
@@ -80,11 +80,11 @@ describe('provenant-verify bundle mode: existing behavior', () => {
     expect(help.out).toMatch(/0 verified\s+1 verification failed\s+2 bundle unreadable or bad arguments/);
     const none = cli([]);
     expect(none.code).toBe(2);
-    expect(none.out).toMatch(/provenant-verify <bundle\.json> \[options\]/);
+    expect(none.out).toMatch(/lacre-verify <bundle\.json> \[options\]/);
   });
 });
 
-describe('provenant-verify bundle mode: usage errors exit 2 without a verdict', () => {
+describe('lacre-verify bundle mode: usage errors exit 2 without a verdict', () => {
   const cases: { name: string; argv: string[]; names: RegExp }[] = [
     { name: 'an unknown option', argv: [SAMPLE, '--trusted', 'x.pem'], names: /unknown option '--trusted'.*--trust,/ },
     { name: '--trust with no value', argv: [SAMPLE, '--trust'], names: /--trust needs a value/ },

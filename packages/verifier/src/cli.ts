@@ -1,5 +1,5 @@
 /**
- * provenant-verify -- verify an evidence bundle offline.
+ * lacre-verify -- verify an evidence bundle offline.
  *
  * Exit codes are the contract for CI and scripts:
  *   0  verified
@@ -25,10 +25,10 @@ const defaultIO: VerifyIO = {
   err: (s) => process.stderr.write(s + '\n'),
 };
 
-const HELP = `provenant-verify -- verify a Provenant evidence bundle, offline
+const HELP = `lacre-verify -- verify a Lacre evidence bundle, offline
 
 USAGE
-  provenant-verify <bundle.json> [options]
+  lacre-verify <bundle.json> [options]
 
 OPTIONS
   --json              Machine-readable verdict on stdout
@@ -46,7 +46,7 @@ OPTIONS
 EXIT CODES
   0 verified   1 verification failed   2 bundle unreadable or bad arguments
 
-This tool makes no network connections and shares no code with the Provenant
+This tool makes no network connections and shares no code with the Lacre
 server or the commercial package. Everything it needs is in the bundle.`;
 
 export function runVerify(argv: string[], io: VerifyIO = defaultIO): number {
@@ -61,7 +61,7 @@ export function runVerify(argv: string[], io: VerifyIO = defaultIO): number {
   // silently did nothing (say, --trusted for --trust) would report a result
   // checked under options the caller never got.
   const usage = (message: string): number => {
-    io.err(`provenant-verify: ${message}`);
+    io.err(`lacre-verify: ${message}`);
     if (json) io.out(JSON.stringify({ ok: false, error: { code: 'USAGE', message } }, null, 2));
     return 2;
   };
@@ -97,7 +97,7 @@ export function runVerify(argv: string[], io: VerifyIO = defaultIO): number {
   try {
     bundle = JSON.parse(readFileSync(file, 'utf8'));
   } catch (err) {
-    io.err(`provenant-verify: could not read '${file}': ${String(err)}`);
+    io.err(`lacre-verify: could not read '${file}': ${String(err)}`);
     return 2;
   }
 
@@ -109,7 +109,7 @@ export function runVerify(argv: string[], io: VerifyIO = defaultIO): number {
         anchors.push(new X509Certificate(block));
       }
     } catch (err) {
-      io.err(`provenant-verify: could not read trust file '${f}': ${String(err)}`);
+      io.err(`lacre-verify: could not read trust file '${f}': ${String(err)}`);
       return 2;
     }
   }
@@ -177,10 +177,10 @@ function render(v: BundleVerdict): string {
   return L.join('\n');
 }
 
-const RUN_HELP = `provenant-verify run -- check one agent run's receipts, offline
+const RUN_HELP = `lacre-verify run -- check one agent run's receipts, offline
 
 USAGE
-  provenant-verify run RECEIPTS --keys KEYS [--json]
+  lacre-verify run RECEIPTS --keys KEYS [--json]
 
 ARGUMENTS
   RECEIPTS            JSON array of signed receipts in stored form, in chain
@@ -215,17 +215,17 @@ function runCheck(argv: string[], io: VerifyIO): number {
     if (a === '--json') json = true;
     else if (a === '--keys') keysFile = argv[++i] ?? null;
     else if (a.startsWith('--')) {
-      io.err(`provenant-verify run: unknown option '${a}'. Options are --keys, --json and --help.`);
+      io.err(`lacre-verify run: unknown option '${a}'. Options are --keys, --json and --help.`);
       return 2;
     } else if (file === null) file = a;
     else {
-      io.err(`provenant-verify run: unexpected argument '${a}'; give exactly one RECEIPTS file.`);
+      io.err(`lacre-verify run: unexpected argument '${a}'; give exactly one RECEIPTS file.`);
       return 2;
     }
   }
 
   if (!file || !keysFile) {
-    io.err(`provenant-verify run: ${!file ? 'no RECEIPTS file' : 'no --keys file'} given. Usage: provenant-verify run RECEIPTS --keys KEYS`);
+    io.err(`lacre-verify run: ${!file ? 'no RECEIPTS file' : 'no --keys file'} given. Usage: lacre-verify run RECEIPTS --keys KEYS`);
     return 2;
   }
 
@@ -234,21 +234,21 @@ function runCheck(argv: string[], io: VerifyIO): number {
   try {
     receipts = JSON.parse(readFileSync(file, 'utf8'));
   } catch (err) {
-    io.err(`provenant-verify run: could not read '${file}': ${String(err)}`);
+    io.err(`lacre-verify run: could not read '${file}': ${String(err)}`);
     return 2;
   }
   if (!Array.isArray(receipts)) {
-    io.err(`provenant-verify run: '${file}' must hold a JSON array of receipts.`);
+    io.err(`lacre-verify run: '${file}' must hold a JSON array of receipts.`);
     return 2;
   }
   try {
     keys = JSON.parse(readFileSync(keysFile, 'utf8'));
   } catch (err) {
-    io.err(`provenant-verify run: could not read keys file '${keysFile}': ${String(err)}`);
+    io.err(`lacre-verify run: could not read keys file '${keysFile}': ${String(err)}`);
     return 2;
   }
   if (keys === null || typeof keys !== 'object' || Array.isArray(keys)) {
-    io.err(`provenant-verify run: keys file '${keysFile}' must hold a JSON object of key_id to public JWK.`);
+    io.err(`lacre-verify run: keys file '${keysFile}' must hold a JSON object of key_id to public JWK.`);
     return 2;
   }
 

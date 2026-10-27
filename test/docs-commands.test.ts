@@ -77,8 +77,8 @@ describe('docs commands', () => {
 
   it('the getting-started guide runs both CLIs from source', () => {
     const paths = binPaths(read('docs/getting-started.md'));
-    expect(paths).toContain('packages/core/bin/provenant.mjs');
-    expect(paths).toContain('packages/verifier/bin/provenant-verify.mjs');
+    expect(paths).toContain('packages/core/bin/lacre.mjs');
+    expect(paths).toContain('packages/verifier/bin/lacre-verify.mjs');
   });
 
   it('README.md and packages/core/README.md stay byte-identical', () => {
@@ -115,8 +115,8 @@ describe('the checks themselves', () => {
   });
 
   it('find a bin path inside a pre tag', () => {
-    const html = '<pre class="cmd">node packages/core/bin/provenant.mjs init</pre>';
-    expect(binPaths(html)).toEqual(['packages/core/bin/provenant.mjs']);
+    const html = '<pre class="cmd">node packages/core/bin/lacre.mjs init</pre>';
+    expect(binPaths(html)).toEqual(['packages/core/bin/lacre.mjs']);
   });
 
   it('accept an npx line with the note nearby', () => {
@@ -140,8 +140,8 @@ describe('the checks themselves', () => {
   });
 
   it('find bin paths, including one split across a line break', () => {
-    const md = 'Run `node packages/verifier/bin/provenant-verify.mjs x.json` or `node\npackages/core/bin/provenant.mjs init`.';
-    expect(binPaths(md)).toEqual(['packages/verifier/bin/provenant-verify.mjs', 'packages/core/bin/provenant.mjs']);
+    const md = 'Run `node packages/verifier/bin/lacre-verify.mjs x.json` or `node\npackages/core/bin/lacre.mjs init`.';
+    expect(binPaths(md)).toEqual(['packages/verifier/bin/lacre-verify.mjs', 'packages/core/bin/lacre.mjs']);
   });
 
   it('report a bin path that does not exist', () => {

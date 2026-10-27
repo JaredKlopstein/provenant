@@ -72,7 +72,7 @@ provenant-cloud anchor now --backend tsa --json
 provenant-cloud bundle export --format both --out evidence.json --json
 
 # anyone, offline, with no Provenant server and no commercial code
-node packages/verifier/bin/provenant-verify.mjs evidence.json --trust digicert-root.pem
+node packages/verifier/bin/lacre-verify.mjs evidence.json --trust digicert-root.pem
 ```
 
 ## What this is honestly worth

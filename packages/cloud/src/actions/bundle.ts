@@ -20,10 +20,10 @@ export const bundleExportAction = defineAction({
   // around the test that enforces it, leaving the one mutation with no preview.
   sideEffect: 'write',
   description: {
-    what: 'Packages a range of receipts, the agent key directory and every external anchor proof into one self-contained archive that a third party can verify offline, with no access to this system and no Provenant code from the paid package.',
+    what: 'Packages a range of receipts, the agent key directory and every external anchor proof into one self-contained archive that a third party can verify offline, with no access to this system and no Lacre code from the paid package.',
     when: 'When someone outside your organisation needs to check what your agents did: an audit, a customer security questionnaire, an incident postmortem, or a regulatory request. Anchor first (anchor.now) so the bundle carries external proof rather than only your own word.',
     whenNot: 'Not for routine internal inspection -- use receipts.query, which is far cheaper. Do not export an unanchored range expecting it to persuade anyone: without an anchor the bundle is self-attested and the verifier will say so in writing.',
-    cost: 'Reads and re-serializes every receipt in range, so it is linear in range size and the output is roughly 1KB per receipt. A PDF adds a second or two. On Provenant Cloud, bundles are billed per export on Starter and unlimited on Team.',
+    cost: 'Reads and re-serializes every receipt in range, so it is linear in range size and the output is roughly 1KB per receipt. A PDF adds a second or two. On Lacre Cloud, bundles are billed per export on Starter and unlimited on Team.',
     returns: 'The bundle itself (or a path when --out is given), the range covered, whether it is externally anchored, and the verifier command a recipient should run to check it.',
   },
   input: z.object({

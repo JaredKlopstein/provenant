@@ -38,7 +38,7 @@ export function loadKeypair(storeDir: string): Keypair {
       fix: {
         action: 'init',
         arguments: {},
-        note: "Run 'provenant init' once to create a keypair and register this agent. It needs no network and no approval.",
+        note: "Run 'lacre init' once to create a keypair and register this agent. It needs no network and no approval.",
       },
     });
   }
@@ -66,8 +66,8 @@ export const initAction = defineAction({
   summary: 'Create a local store, generate a keypair, and register this agent',
   sideEffect: 'write',
   description: {
-    what: 'Creates the Provenant store directory, generates an Ed25519 keypair, and self-registers this agent so it can immediately begin recording receipts.',
-    when: 'Once, the very first time an agent uses Provenant on a machine. Safe to call again: if a keypair already exists it is reused and this becomes a no-op.',
+    what: 'Creates the Lacre store directory, generates an Ed25519 keypair, and self-registers this agent so it can immediately begin recording receipts.',
+    when: 'Once, the very first time an agent uses Lacre on a machine. Safe to call again: if a keypair already exists it is reused and this becomes a no-op.',
     whenNot: 'Do not call it before every record; it is not a session opener. If you already have an agent_id and a keypair, skip straight to `record`.',
     cost: 'Milliseconds. Writes two files to disk and one row to a local database. No network, no money, no external dependency.',
     returns: 'The agent_id you will use for every subsequent call, the store path, the key fingerprint, and whether a new key was created.',

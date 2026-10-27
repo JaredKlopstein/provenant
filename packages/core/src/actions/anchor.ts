@@ -18,7 +18,7 @@ export const anchorNowAction = defineAction({
   },
   input: z.object({
     backend: z.string().default('noop')
-      .describe('Anchor backend name. The open-source build ships only "noop", which produces no external proof. Real authorities are configured in Provenant Cloud.'),
+      .describe('Anchor backend name. The open-source build ships only "noop", which produces no external proof. Real authorities are configured in Lacre Cloud.'),
   }),
   output: z.object({
     anchor_id: z.string(),

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { actionNames } from '../src/registry/registry.js';
 import '../src/index.js';
 
-const BIN = join(dirname(fileURLToPath(import.meta.url)), '../bin/provenant.mjs');
+const BIN = join(dirname(fileURLToPath(import.meta.url)), '../bin/lacre.mjs');
 
 /**
  * Design law 2 says a test must fail the build if the surfaces expose different
@@ -41,7 +41,7 @@ describe('the shipped binary exposes the same actions as the library', () => {
       // Help renders the space form ("agent list"), so match on that.
       const out = execFileSync('node', [BIN, ...name.split('.'), '--help'], { encoding: 'utf8' });
       expect(out, `${name} advertised but not reachable from the CLI`).toContain(
-        `provenant ${name.replace('.', ' ')}`,
+        `lacre ${name.replace('.', ' ')}`,
       );
     }
   });

@@ -18,7 +18,7 @@ describe('pricing shape', () => {
     // Encoded as data so a change that cripples the funnel has to be deliberate.
     expect(NEVER_PAYWALLED).toContain('writing receipts');
     expect(NEVER_PAYWALLED).toContain('local hash chaining');
-    expect(NEVER_PAYWALLED).toContain('offline bundle verification (provenant-verify)');
+    expect(NEVER_PAYWALLED).toContain('offline bundle verification (lacre-verify)');
   });
 
   it('prices the Cloud plan on the confirmed terms', () => {

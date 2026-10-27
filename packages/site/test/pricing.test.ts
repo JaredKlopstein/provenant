@@ -111,7 +111,7 @@ describe('pricing cards', () => {
     const core = card(await render(), 'core');
     expect(PLANS.free.monthlyUsd).toBe(0);
     expect(core.price).toBe('Free');
-    expect(core.terms).toEqual(PLANS.free.features.map((f) => f.replace(/ \(provenant-verify\)$/, '')));
+    expect(core.terms).toEqual(PLANS.free.features.map((f) => f.replace(/ \(lacre-verify\)$/, '')));
     expect(core.terms).toContain('Offline evidence-bundle verification');
     expect(core.html).not.toMatch(/provenant-/i);
   });

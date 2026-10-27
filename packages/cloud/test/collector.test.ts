@@ -55,7 +55,7 @@ describe('unauthenticated discovery', () => {
     const res = await fetch(`${base}/discover`);
     expect(res.status).toBe(200);
     const m = (await res.json()) as Record<string, unknown>;
-    expect(m.service).toBe('provenant');
+    expect(m.service).toBe('lacre');
     expect(Array.isArray(m.actions)).toBe(true);
     expect(Array.isArray(m.quickstart)).toBe(true);
     expect((m.standards as Record<string, string>).canonicalization).toContain('8785');
