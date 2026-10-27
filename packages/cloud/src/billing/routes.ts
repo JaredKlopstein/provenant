@@ -95,7 +95,7 @@ const PRICE_ID = /\bprice_[A-Za-z0-9]+/g;
 /**
  * Loads billing config from the environment and builds both handlers. Throws,
  * naming the variables and no values, when config is missing or malformed, or
- * when a live key is set without PROVENANT_BILLING_MODE=live. A server that
+ * when a live key is set without LACRE_BILLING_MODE=live. A server that
  * calls this at startup therefore refuses to start rather than charge by
  * accident.
  */

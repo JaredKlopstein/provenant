@@ -41,7 +41,7 @@ export interface CollectorOptions {
   /**
    * Serves POST /billing/checkout (public) and POST /billing/portal (signed)
    * when set. Off by default. Billing config is read from `env` here, so a
-   * missing or unsafe config (a live key without PROVENANT_BILLING_MODE=live)
+   * missing or unsafe config (a live key without LACRE_BILLING_MODE=live)
    * throws and the server never starts.
    */
   billing?: Omit<BillingRoutesOptions, 'authenticate'>;

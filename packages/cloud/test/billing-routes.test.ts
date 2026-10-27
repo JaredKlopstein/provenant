@@ -201,7 +201,7 @@ describe('checkout', () => {
 
     // No environment variable name in the body or headers.
     const headers = [...res.headers].map(([k, v]) => `${k}: ${v}`).join('\n');
-    for (const name of [...Object.values(PRICE_ENV), 'STRIPE_', 'PROVENANT_', 'DATABASE_URL', 'CRON_SECRET']) {
+    for (const name of [...Object.values(PRICE_ENV), 'STRIPE_', 'LACRE_', 'DATABASE_URL', 'CRON_SECRET']) {
       expect(text).not.toContain(name);
       expect(headers).not.toContain(name);
     }
@@ -248,7 +248,7 @@ describe('billing portal', () => {
 });
 
 describe('test mode comes first', () => {
-  it('refuses to build the routes, or start the collector, with a live key and no PROVENANT_BILLING_MODE=live', () => {
+  it('refuses to build the routes, or start the collector, with a live key and no LACRE_BILLING_MODE=live', () => {
     const db = openDb(':memory:');
     try {
       const billing = { env: billingEnv({ STRIPE_SECRET_KEY: LIVE_KEY }), stripe: fakeStripe().stripe, customers: { stripeCustomerId: () => null }, ...URLS };
@@ -259,11 +259,11 @@ describe('test mode comes first', () => {
         err = e;
       }
       expect(err).toBeInstanceOf(LacreError);
-      expect((err as LacreError).message).toMatch(/PROVENANT_BILLING_MODE/);
+      expect((err as LacreError).message).toMatch(/LACRE_BILLING_MODE/);
       expectNoSecrets(JSON.stringify((err as LacreError).toJSON()));
 
       // The owner's explicit opt-in is what allows it.
-      const live = createCollector({ db, billing: { ...billing, env: { ...billing.env, PROVENANT_BILLING_MODE: 'live' } } });
+      const live = createCollector({ db, billing: { ...billing, env: { ...billing.env, LACRE_BILLING_MODE: 'live' } } });
       expect(live.listening).toBe(false);
     } finally {
       closeDb(db);

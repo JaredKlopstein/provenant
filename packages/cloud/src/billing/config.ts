@@ -8,7 +8,7 @@
  *     locally, the owner's shell. Nothing is read from a file in the repo.
  *
  *  2. Test mode comes first. A live key is refused unless the operator has
- *     also set PROVENANT_BILLING_MODE=live, so a live key pasted into the
+ *     also set LACRE_BILLING_MODE=live, so a live key pasted into the
  *     wrong place cannot charge anyone by accident. The reverse mismatch is
  *     refused too: "live" with a test key would report a live sync that never
  *     touched live data.
@@ -19,7 +19,7 @@
 import { inspect } from 'node:util';
 import Stripe from 'stripe';
 import { z } from 'zod';
-import { LacreError } from '@lacre/core';
+import { LacreError, readLacreEnv } from '@lacre/core';
 import type { StripeLike } from './stripe.js';
 import type { CatalogClient } from './sync.js';
 
@@ -129,8 +129,8 @@ const schemas = {
       return false;
     }
   }, 'DATABASE_URL is not a postgres:// connection string'),
-  PROVENANT_BILLING_MODE: z.enum(['test', 'live'], {
-    error: "PROVENANT_BILLING_MODE must be 'test' or 'live'",
+  LACRE_BILLING_MODE: z.enum(['test', 'live'], {
+    error: "LACRE_BILLING_MODE must be 'test' or 'live'",
   }),
   STRIPE_METER_EVENT_NAME: present(METER_EVENT_ENV).regex(
     /^[A-Za-z0-9_.:-]{1,100}$/,
@@ -150,7 +150,7 @@ function configError(problems: string[], variables: string[]): LacreError {
       note:
         `Set ${variables.join(', ')} in the environment: the Vercel project's environment variables ` +
         `for deployed code, or your own shell for a local run. Never put the values in the repo, an ` +
-        `issue or a log. Test mode comes first; PROVENANT_BILLING_MODE=live is for the owner, after ` +
+        `issue or a log. Test mode comes first; LACRE_BILLING_MODE=live is for the owner, after ` +
         `the manual test-mode check.`,
     },
   });
@@ -177,8 +177,8 @@ export function loadBillingConfig(
     return undefined;
   };
 
-  const rawMode = env.PROVENANT_BILLING_MODE;
-  const mode = read('PROVENANT_BILLING_MODE', schemas.PROVENANT_BILLING_MODE, rawMode || 'test') ?? 'test';
+  const rawMode = readLacreEnv('LACRE_BILLING_MODE', env);
+  const mode = read('LACRE_BILLING_MODE', schemas.LACRE_BILLING_MODE, rawMode ?? 'test') ?? 'test';
 
   const stripeSecretKey = needs.includes('stripe')
     ? read('STRIPE_SECRET_KEY', schemas.STRIPE_SECRET_KEY, env.STRIPE_SECRET_KEY)
@@ -207,16 +207,16 @@ export function loadBillingConfig(
     const keyIsLive = LIVE_KEY.test(stripeSecretKey);
     if (keyIsLive && mode !== 'live') {
       problems.push(
-        'STRIPE_SECRET_KEY is a live-mode key but PROVENANT_BILLING_MODE is not live. Test mode ' +
-          'comes first: use a test key, or, as the owner after the manual check, set PROVENANT_BILLING_MODE=live',
+        'STRIPE_SECRET_KEY is a live-mode key but LACRE_BILLING_MODE is not live. Test mode ' +
+          'comes first: use a test key, or, as the owner after the manual check, set LACRE_BILLING_MODE=live',
       );
-      variables.push('PROVENANT_BILLING_MODE');
+      variables.push('LACRE_BILLING_MODE');
     } else if (!keyIsLive && mode === 'live') {
       problems.push(
-        'PROVENANT_BILLING_MODE is live but STRIPE_SECRET_KEY is a test-mode key. Use the live key, ' +
-          'or unset PROVENANT_BILLING_MODE to stay in test mode',
+        'LACRE_BILLING_MODE is live but STRIPE_SECRET_KEY is a test-mode key. Use the live key, ' +
+          'or unset LACRE_BILLING_MODE to stay in test mode',
       );
-      variables.push('PROVENANT_BILLING_MODE');
+      variables.push('LACRE_BILLING_MODE');
     }
   }
 

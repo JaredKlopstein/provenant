@@ -15,6 +15,7 @@ import type { ActionContext, ActionDef, NextAction } from '../registry/types.js'
 import { buildManifest, EXIT_CODES } from '../registry/discover.js';
 import { openDb, closeDb } from '../db/client.js';
 import { resolveStoreDir, dbPath } from '../config.js';
+import { readLacreEnv } from '../env.js';
 import { loadKeypair } from '../actions/identity.js';
 import { LacreError, toLacreError } from '../errors.js';
 import type { Keypair } from '../crypto/keys.js';
@@ -303,7 +304,7 @@ function renderRootHelp(): string {
   lines.push('GLOBAL OPTIONS');
   lines.push('  --json          Machine-readable output. Every command supports it.');
   lines.push('  --dry-run       On mutations: show the exact effect, apply nothing.');
-  lines.push('  --store <dir>   Store location (default: $PROVENANT_HOME or ~/.provenant)');
+  lines.push('  --store <dir>   Store location (default: $LACRE_HOME, ./.lacre, or ~/.lacre)');
   lines.push('  --help          This help, or per-command help.');
   lines.push('');
   lines.push('EXIT CODES');
@@ -412,7 +413,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
     const ctx: ActionContext = {
       db,
       storeDir,
-      sessionId: process.env.PROVENANT_SESSION_ID ?? randomUUID(),
+      sessionId: readLacreEnv('LACRE_SESSION_ID') ?? randomUUID(),
       identity: () => (cached ??= loadKeypair(storeDir)),
     };
 

@@ -530,11 +530,11 @@ describe('configuration: env only, test mode first, never logged', () => {
       .toThrow(/STRIPE_PRICE_BUNDLE_OVERAGE/);
   });
 
-  it('refuses a live key unless PROVENANT_BILLING_MODE=live', () => {
+  it('refuses a live key unless LACRE_BILLING_MODE=live', () => {
     expect(() => createOverageReporter({ env: { ...ENV, STRIPE_SECRET_KEY: LIVE_KEY }, stripe: fake.client, db }))
-      .toThrow(/PROVENANT_BILLING_MODE/);
+      .toThrow(/LACRE_BILLING_MODE/);
     const live = createOverageReporter({
-      env: { ...ENV, STRIPE_SECRET_KEY: LIVE_KEY, PROVENANT_BILLING_MODE: 'live' }, stripe: fake.client, db,
+      env: { ...ENV, STRIPE_SECRET_KEY: LIVE_KEY, LACRE_BILLING_MODE: 'live' }, stripe: fake.client, db,
     });
     expect(live.mode).toBe('live');
   });

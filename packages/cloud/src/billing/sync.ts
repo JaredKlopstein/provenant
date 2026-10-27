@@ -328,16 +328,16 @@ async function run(mode: BillingMode, apply: boolean): Promise<SyncResult> {
     throw new LacreError({
       code: 'INVALID_INPUT',
       message:
-        `billing.sync was asked for ${mode} mode but PROVENANT_BILLING_MODE is ${config.mode}. ` +
+        `billing.sync was asked for ${mode} mode but LACRE_BILLING_MODE is ${config.mode}. ` +
         `Nothing was executed.`,
       retryable: false,
       fix: mode === 'live'
         ? {
             note:
-              'Live mode is for the owner, after the manual test-mode check: set PROVENANT_BILLING_MODE=live ' +
+              'Live mode is for the owner, after the manual test-mode check: set LACRE_BILLING_MODE=live ' +
               'and a live key in your own shell, then re-run with --mode live.',
           }
-        : { action: 'billing.sync', arguments: { mode: config.mode }, note: `Re-run with --mode ${config.mode}, or change PROVENANT_BILLING_MODE.` },
+        : { action: 'billing.sync', arguments: { mode: config.mode }, note: `Re-run with --mode ${config.mode}, or change LACRE_BILLING_MODE.` },
     });
   }
   return syncCatalog(createStripeClient(config), { mode, apply, redact: config.redact });
@@ -356,7 +356,7 @@ export const billingSyncAction = defineAction({
   },
   input: z.object({
     mode: z.enum(['test', 'live']).default('test')
-      .describe('Which Stripe mode to sync. Must match PROVENANT_BILLING_MODE (default test). Live is for the owner only.'),
+      .describe('Which Stripe mode to sync. Must match LACRE_BILLING_MODE (default test). Live is for the owner only.'),
   }),
   output: z.object({
     mode: z.enum(['test', 'live']),

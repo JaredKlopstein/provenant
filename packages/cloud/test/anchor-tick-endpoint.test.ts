@@ -223,7 +223,7 @@ describe('an authorized tick', () => {
     const body = JSON.parse(text);
     expect(body.error.code).toBe('ANCHOR_STORE_NOT_CONFIGURED');
     expect(body.error.retryable).toBe(false);
-    for (const leak of ['PROVENANT_HOME', 'PROVENANT_TSA_URL', 'is not set', TICK_SECRET]) {
+    for (const leak of ['LACRE_HOME', 'LACRE_TSA_URL', 'is not set', TICK_SECRET]) {
       expect(text).not.toContain(leak);
     }
     // Apart from the error code, nothing shaped like an environment variable.
@@ -234,8 +234,8 @@ describe('an authorized tick', () => {
     expect(res.headers.get('x-request-id')).toBe(body.requestId);
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain(body.requestId);
-    expect(lines[0]).toContain('PROVENANT_HOME is not set');
-    expect(lines[0]).toContain('PROVENANT_TSA_URL');
+    expect(lines[0]).toContain('LACRE_HOME is not set');
+    expect(lines[0]).toContain('LACRE_TSA_URL');
   });
 
   it('returns 500 with no raw store error when reading the store fails', async () => {
@@ -261,7 +261,7 @@ describe('an authorized tick', () => {
     const body = JSON.parse(text);
     expect(body.error.code).toBe('ANCHOR_TICK_FAILED');
     expect(body.error.retryable).toBe(true);
-    for (const leak of ['test-raw-store-failure', 'SQLITE_CORRUPT', '/srv/provenant', 'PROVENANT_']) {
+    for (const leak of ['test-raw-store-failure', 'SQLITE_CORRUPT', '/srv/provenant', 'LACRE_']) {
       expect(text).not.toContain(leak);
     }
     expect(state.calls).toBe(0);

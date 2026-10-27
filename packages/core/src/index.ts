@@ -42,6 +42,7 @@ export {
   imprintHex, chainId, toAnchorRecord,
 } from './anchor/store.js';
 export { resolveStoreDir, dbPath, keyPath } from './config.js';
+export { readLacreEnv, type LacreEnvName } from './env.js';
 export {
   signRequest, verifyRequest, signatureBase, serializeParams, contentDigest,
   NonceCache, keyDirectoryDocument, REQUIRED_COMPONENTS,

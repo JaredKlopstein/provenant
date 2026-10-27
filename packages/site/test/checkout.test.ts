@@ -96,7 +96,10 @@ beforeEach(async () => {
   vi.stubEnv('SITE_BASE_URL', SITE);
   vi.stubEnv('VERCEL_URL', '');
   vi.stubEnv('DATABASE_URL', DATABASE_URL);
-  vi.stubEnv('PROVENANT_BILLING_MODE', '');
+  vi.stubEnv('LACRE_BILLING_MODE', '');
+  for (const key of Object.keys(process.env)) {
+    if (key.endsWith('_BILLING_MODE')) vi.stubEnv(key, '');
+  }
   vi.stubEnv('STRIPE_SECRET_KEY', TEST_KEY);
   for (const [key, name] of Object.entries(PRICE_ENV)) vi.stubEnv(name, PRICES[key as keyof typeof PRICE_ENV]);
   pageCookie.value = '';
@@ -367,7 +370,7 @@ describe('configuration and secrets', () => {
     { name: 'no DATABASE_URL', unset: 'DATABASE_URL', status: 503, code: 'CHECKOUT_UNAVAILABLE', handler: route, cause: 'DATABASE_URL' },
     { name: 'no Stripe key', unset: 'STRIPE_SECRET_KEY', status: 503, code: 'BILLING_NOT_CONFIGURED', handler: noStripe, cause: 'STRIPE_SECRET_KEY' },
   ] as const;
-  const NAMES = ['SITE_BASE_URL', 'VERCEL_URL', 'BRAND', 'DATABASE_URL', 'STRIPE', 'PROVENANT_', 'migration', ...Object.values(PRICE_ENV)];
+  const NAMES = ['SITE_BASE_URL', 'VERCEL_URL', 'BRAND', 'DATABASE_URL', 'STRIPE', 'LACRE_', 'migration', ...Object.values(PRICE_ENV)];
 
   /** Every header and the body, as one string to search. */
   async function everything(res: Response): Promise<string> {
@@ -404,7 +407,7 @@ describe('configuration and secrets', () => {
     });
   }
 
-  it('stays in test mode: a live key without PROVENANT_BILLING_MODE=live is refused', async () => {
+  it('stays in test mode: a live key without LACRE_BILLING_MODE=live is refused', async () => {
     vi.stubEnv('STRIPE_SECRET_KEY', LIVE_KEY);
     const res = await postJson({ kind: 'payg_bundle' });
     expect(res.status).toBe(503);

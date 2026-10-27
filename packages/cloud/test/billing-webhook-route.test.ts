@@ -232,7 +232,7 @@ describe('configuration and secrets', () => {
     expect(parsed.error.message).toBe('Billing is not available right now.');
     expect(parsed.error.fix.note).not.toMatch(/Set the named variables/);
     const headers = JSON.stringify([...res.headers]);
-    for (const exposed of [body, headers]) expect(exposed).not.toMatch(/STRIPE_|PROVENANT_|DATABASE_URL|CRON_SECRET/);
+    for (const exposed of [body, headers]) expect(exposed).not.toMatch(/STRIPE_|LACRE_|DATABASE_URL|CRON_SECRET/);
     const requestId = res.headers.get('x-request-id');
     expect(requestId).toBeTruthy();
     expect(parsed.requestId).toBe(requestId);
@@ -246,7 +246,7 @@ describe('configuration and secrets', () => {
     expect((await handler(signed(JSON.stringify(subscriptionEvent('customer.subscription.created', 'active'))))).status).toBe(200);
   });
 
-  it('stays in test mode: a live key without PROVENANT_BILLING_MODE=live is refused, and nothing is processed', async () => {
+  it('stays in test mode: a live key without LACRE_BILLING_MODE=live is refused, and nothing is processed', async () => {
     const { handler, connect } = route({ env: { ...ENV, STRIPE_SECRET_KEY: LIVE_KEY } });
     const res = await handler(signed(JSON.stringify(subscriptionEvent('customer.subscription.created', 'active'))));
     expect(res.status).toBe(500);
