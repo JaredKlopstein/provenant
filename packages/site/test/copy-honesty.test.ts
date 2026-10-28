@@ -80,7 +80,7 @@ describe('the evidence bundle, described one way', () => {
 describe('small fixes', () => {
   it('leaves the step numbers to the <ol> on /how-it-works', () => {
     expect(pages.howItWorks).not.toMatch(/<h2>\d+\. /);
-    expect(pages.howItWorks).toContain('<ol><li><h2>Record</h2>');
+    expect(pages.howItWorks).toContain('<ol role="list"><li data-reveal="true"><h2>Record</h2>');
   });
 
   it('spells behavior the US way, like the rest of the site', () => {

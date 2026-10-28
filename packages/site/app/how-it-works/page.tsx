@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BRAND } from '../../src/brand';
+import { ChainDiagram } from '../../src/chain-diagram';
 import { BUNDLE_FORMAT, CLOUD_MAX_ANCHOR_MINUTES, EARLY_ACCESS_LABEL } from '../../src/plans';
+import { Reveal } from '../../src/reveal';
 
 const CLOUD_EARLY = `Cloud (${EARLY_ACCESS_LABEL.toLowerCase()}, not available yet)`;
 
@@ -13,22 +15,27 @@ export const metadata: Metadata = {
 const STEPS = [
   {
     title: 'Record',
+    snippet: 'signature = Ed25519(agent key, JCS(receipt))',
     body: 'An agent records each consequential action as a receipt: what it did, the action detail, its side-effect class and an idempotency key. The receipt is canonicalized with RFC 8785 and signed with the agent’s own Ed25519 key. Recording the same idempotency key again returns the original receipt and writes nothing new, and a dry run returns the exact receipt that would be written.',
   },
   {
     title: 'Hash chain',
+    snippet: 'prev_hash = SHA-256(JCS(previous receipt))',
     body: 'Every receipt carries the SHA-256 hash of the complete receipt before it, so the receipts form one chain. Altering, removing or reordering any receipt breaks the chain at that receipt, and local verification names the exact receipt that broke and the ranges that are still intact.',
   },
   {
     title: 'Anchor',
+    snippet: 'RFC 3161 token over JCS({ v, chain_id, seq, head_hash, receipt_count })',
     body: `The chain head is timestamped with RFC 3161 by an authority the operator does not control. Today that happens when you buy an evidence bundle: we anchor the head of the chain you send us. ${CLOUD_EARLY} is planned to anchor automatically, at most every ${CLOUD_MAX_ANCHOR_MINUTES} minutes. The timestamp covers a statement that binds the chain id, position, head hash and receipt count, so a genuine token cannot be replayed against another chain or another position. Re-anchoring a position whose head has changed is refused rather than silently allowed.`,
   },
   {
     title: 'Evidence bundle',
+    snippet: 'receipts + public keys + timestamp tokens → one JSON file',
     body: `An evidence bundle is a range of the chain exported as ${BUNDLE_FORMAT}. Today you get one by buying a bundle; we send it back once the chain is anchored. The bundle is self-contained: the receipts as their exact canonical bytes, the agents’ public keys and the timestamp tokens. The one thing it does not carry is the timestamp authority’s trust anchor, because a bundle that vouched for itself would prove nothing.`,
   },
   {
     title: 'Verify offline',
+    snippet: 'VERIFIED / ANCHORED · VERIFIED / NOT ANCHORED · VERIFICATION FAILED',
     body: 'Anyone checks the bundle with the free MIT verifier, on their own machine, with no network and no account. It recomputes every hash, checks every signature and the full RFC 3161 token, and reports whether the authority is one you trust separately from whether the mathematics holds. It names any receipt that fails and warns about receipts after the last anchor.',
   },
 ] as const;
@@ -43,12 +50,19 @@ export default function HowItWorksPage() {
           in five steps.
         </p>
       </section>
+      <figure>
+        <ChainDiagram />
+      </figure>
       <section aria-label="Steps">
-        <ol>
+        {/* role="list" keeps the list announced as one once the timeline styling removes its markers. */}
+        <ol role="list">
           {STEPS.map((step) => (
-            <li key={step.title}>
+            <li key={step.title} data-reveal>
               <h2>{step.title}</h2>
               <p>{step.body}</p>
+              <p data-snippet>
+                <code>{step.snippet}</code>
+              </p>
             </li>
           ))}
         </ol>
@@ -71,6 +85,7 @@ export default function HowItWorksPage() {
           </li>
         </ul>
       </section>
+      <Reveal />
     </>
   );
 }

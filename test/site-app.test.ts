@@ -140,7 +140,7 @@ describe('how-it-works page', () => {
     const headings = [...howItWorks.matchAll(/<h2>([^<]+)<\/h2>/g)].map((m) => m[1]);
     // The <ol> numbers the steps, so the titles carry no "1. " of their own.
     expect(headings.slice(0, 5)).toEqual(['Record', 'Hash chain', 'Anchor', 'Evidence bundle', 'Verify offline']);
-    expect(howItWorks).toMatch(/<section aria-label="Steps"><ol><li><h2>Record<\/h2>/);
+    expect(howItWorks).toMatch(/<section aria-label="Steps"><ol role="list"><li data-reveal="true"><h2>Record<\/h2>/);
   });
 
   it('states the anchoring cadence the Cloud scheduler will enforce, as planned', () => {
