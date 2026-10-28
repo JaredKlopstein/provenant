@@ -4,6 +4,8 @@ import { BRAND } from '../src/brand';
 import { GETTING_STARTED_URL } from '../src/plans';
 import { PROOF_TABLE } from '../src/proof-table';
 import { CodeBlock } from '../src/code-block';
+import { StandardsStrip } from '../src/standards-strip';
+import styles from '../src/hero.module.css';
 
 export const metadata: Metadata = {
   description: `${BRAND.name}: tamper-evident receipts for AI agents.`,
@@ -16,7 +18,7 @@ const PROOF_POINTS = [
   },
   {
     title: 'RFC 3161 anchoring',
-    body: 'The chain head is timestamped by an RFC 3161 timestamp authority the operator does not control, so the record cannot be quietly rewritten or backdated.',
+    body: 'When you anchor (with an evidence bundle), the chain head is timestamped by an RFC 3161 timestamp authority the operator does not control, so the record up to that point cannot be quietly rewritten or backdated.',
   },
   {
     title: 'Free offline verifier',
@@ -54,21 +56,36 @@ const EXAMPLE_RECEIPT = `{
 export default function HomePage() {
   return (
     <>
-      <section>
-        <h1>Prove what your AI agents did.</h1>
-        <p>
-          Every consequential action gets a signed, hash-chained receipt, timestamped by an authority
-          you don’t control. Anyone can verify the record offline, without trusting you.
-        </p>
-        <ul aria-label="Get started">
-          <li>
-            <a href={GETTING_STARTED_URL}>Start free</a>
-          </li>
-          <li>
-            <Link href="/pricing">See pricing</Link>
-          </li>
-        </ul>
+      <section aria-label="Hero" className={styles.hero}>
+        <div className={styles.copy}>
+          <span className="eyebrow">For teams running AI agents that touch money, mail or customer data</span>
+          <h1>Your agent says it refunded $42.50. Prove it.</h1>
+          <p className={styles.lede}>
+            Every consequential action gets a signed, hash-chained receipt. Anchor the chain with a timestamp from
+            an authority you don’t control, and anyone can verify the record offline, without trusting you.
+          </p>
+          {/* Links styled as buttons through this wrapper, so the anchors themselves stay plain. */}
+          <p className={styles.ctas}>
+            <a href={GETTING_STARTED_URL}>Start free</a> <Link href="/pricing">See pricing</Link>
+          </p>
+          <p className={styles.note}>Open source (MIT). Packages are not on npm yet: run from source.</p>
+        </div>
+        {/* Exhibit A (src/exhibit-chain.tsx) mounts here; until then the static example stays. */}
+        <div data-slot="exhibit" className={styles.slot}>
+          <section aria-label="Example receipt">
+            <h2>Example receipt</h2>
+            <p>
+              An illustrative example, not a real receipt: the hashes and signature are shortened
+              placeholders, so it will not verify.
+            </p>
+            <figure>
+              <CodeBlock label="Example receipt JSON">{EXAMPLE_RECEIPT}</CodeBlock>
+              <figcaption>Example only. One receipt for one agent action.</figcaption>
+            </figure>
+          </section>
+        </div>
       </section>
+      <StandardsStrip />
       <section aria-label="Proof points">
         <ul>
           {PROOF_POINTS.map((point) => (
@@ -78,17 +95,6 @@ export default function HomePage() {
             </li>
           ))}
         </ul>
-      </section>
-      <section aria-label="Example receipt">
-        <h2>Example receipt</h2>
-        <p>
-          An illustrative example, not a real receipt: the hashes and signature are shortened
-          placeholders, so it will not verify.
-        </p>
-        <figure>
-          <CodeBlock label="Example receipt">{EXAMPLE_RECEIPT}</CodeBlock>
-          <figcaption>Example only. One receipt for one agent action.</figcaption>
-        </figure>
       </section>
       <section aria-label="What a self-hosted chain proves">
         <h2>An audit trail your agents can’t rewrite, and neither can you.</h2>

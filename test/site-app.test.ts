@@ -16,7 +16,7 @@ import SecurityPage from '../packages/site/app/security/page.js';
 
 const APP = new URL('../packages/site/app/', import.meta.url).pathname;
 const SUB_HEADLINE =
-  'Every consequential action gets a signed, hash-chained receipt, timestamped by an authority you don’t control. Anyone can verify the record offline, without trusting you.';
+  'Every consequential action gets a signed, hash-chained receipt. Anchor the chain with a timestamp from an authority you don’t control, and anyone can verify the record offline, without trusting you.';
 
 // react-dom is a dependency of the site, not of the workspace root.
 const siteRequire = createRequire(new URL('../packages/site/package.json', import.meta.url));
@@ -113,7 +113,7 @@ describe('site app folder', () => {
 
 describe('home page', () => {
   it('leads with the outcome-led headline and the sub-headline', () => {
-    expect(home).toContain('<h1>Prove what your AI agents did.</h1>');
+    expect(home).toContain('<h1>Your agent says it refunded $42.50. Prove it.</h1>');
     expect(text(home)).toContain(SUB_HEADLINE);
   });
 
