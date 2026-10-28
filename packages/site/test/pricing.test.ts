@@ -114,11 +114,11 @@ describe('pricing cards', () => {
     expect(core.price).toBe('Free');
     expect(core.terms).toEqual(PLANS.free.features.map((f) => f.replace(/ \(lacre-verify\)$/, '')));
     expect(core.terms).toContain('Offline evidence-bundle verification');
-    expect(core.html).not.toMatch(/provenant-/i);
+    expect(core.html).not.toMatch(/lacre-/i);
   });
 
   it('strips only a parenthesised CLI name from the Core terms (#100)', () => {
-    const terms = coreTerms({ ...PLANS.free, features: ['Verify offline (provenant-verify)', 'Batched (at most hourly)'] });
+    const terms = coreTerms({ ...PLANS.free, features: ['Verify offline (lacre-verify)', 'Batched (at most hourly)'] });
     expect(terms).toEqual(['Verify offline', 'Batched (at most hourly)']);
   });
 

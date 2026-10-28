@@ -28,6 +28,8 @@ const FILLED: LegalFacts = {
   governingLaw: 'the laws of the State of Delaware',
   emailProvider: 'Example Mail',
   contactRetention: '12 months',
+  bundleRetention: '12 months',
+  mailboxProvider: 'Example Mailbox',
 };
 
 const terms = () => renderToStaticMarkup(TermsPage());
@@ -75,6 +77,18 @@ describe('Terms and Privacy pages', () => {
     expect(html).toContain('[refund window in days: owner to supply]');
     expect(html).toMatch(/cancelled at any time in the billing portal/);
     expect(html).toMatch(/does not show that an\s+action happened as described/);
+  });
+
+  it('Privacy says a bundle buyer\'s chain file is received, never a key, kept for an owner-set period (D5)', () => {
+    const html = privacy();
+    expect(html).toContain('Your chain file, if you buy an evidence bundle.');
+    expect(html).toContain('It never holds a signing key, and we never ask for one.');
+    expect(html).toContain('[chain file and bundle retention: owner to supply]');
+    expect(html).toContain('[mailbox provider for chain files: owner to supply]');
+    expect(html).toContain('We receive them only if you send us your chain file');
+    expect(html).not.toContain('we never receive them');
+    expect(REQUIRED_FACTS).toContain('bundleRetention');
+    expect(REQUIRED_FACTS).toContain('mailboxProvider');
   });
 
   it('Privacy names what is collected, the processors, and the one essential cookie', () => {

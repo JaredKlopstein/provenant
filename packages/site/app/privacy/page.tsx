@@ -44,6 +44,13 @@ export default function PrivacyPage() {
           for {fact('contactRetention')}.
         </li>
         <li>
+          <strong>Your chain file, if you buy an evidence bundle.</strong> To make the bundle we ask you to email us
+          your chain file. It holds your receipts, including the action details your agents recorded, and your
+          agents’ public keys. It never holds a signing key, and we never ask for one. We use it only to timestamp
+          the chain and build your bundle, and we keep the chain file and the bundle for{' '}
+          {fact('bundleRetention')}, so a copy exists if you need it again.
+        </li>
+        <li>
           <strong>Abuse protection.</strong> To limit how often sign-in links and messages can be sent, we count
           requests per email address and per IP address. Only one-way hashes are stored, never the address
           itself, and the counts are deleted after 15 minutes.
@@ -57,7 +64,8 @@ export default function PrivacyPage() {
       <h2>What we do not collect</h2>
       <p>
         No analytics or advertising cookies, and no tracking across sites. Receipts you record with{' '}
-        {BRAND.name} Core stay on your own systems; we never receive them. The offline verifier makes no network
+        {BRAND.name} Core stay on your own systems. We receive them only if you send us your chain file for an
+        evidence bundle, as described above. The offline verifier makes no network
         requests.
       </p>
 
@@ -74,6 +82,7 @@ export default function PrivacyPage() {
         <li>Neon, which hosts our database.</li>
         <li>Stripe, which takes payments.</li>
         <li>{fact('emailProvider')}, which delivers sign-in emails.</li>
+        <li>{fact('mailboxProvider')}, which hosts the inbox that receives chain files for evidence bundles.</li>
       </ul>
 
       <h2>Your choices and rights</h2>

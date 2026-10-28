@@ -29,6 +29,10 @@ export interface LegalFacts {
   readonly emailProvider: string | null;
   /** How long contact-form messages are kept, e.g. "12 months". */
   readonly contactRetention: string | null;
+  /** How long a bundle buyer's chain file and the bundle made from it are kept, e.g. "12 months". */
+  readonly bundleRetention: string | null;
+  /** The mailbox provider whose inbox receives chain files by email, named in the Privacy Policy. */
+  readonly mailboxProvider: string | null;
 }
 
 export const LEGAL: LegalFacts = {
@@ -42,6 +46,8 @@ export const LEGAL: LegalFacts = {
   governingLaw: null,
   emailProvider: null,
   contactRetention: null,
+  bundleRetention: null,
+  mailboxProvider: null,
 };
 
 /** Facts the documents cannot take effect without. The postal address is optional. */
@@ -55,6 +61,8 @@ export const REQUIRED_FACTS = [
   'governingLaw',
   'emailProvider',
   'contactRetention',
+  'bundleRetention',
+  'mailboxProvider',
 ] as const satisfies readonly (keyof LegalFacts)[];
 
 export const TERMS_PATH = '/terms';
@@ -82,4 +90,6 @@ const PLACEHOLDERS: Record<keyof LegalFacts, string> = {
   governingLaw: 'governing law and venue: owner to supply',
   emailProvider: 'sign-in email provider: owner to supply',
   contactRetention: 'contact message retention: owner to supply',
+  bundleRetention: 'chain file and bundle retention: owner to supply',
+  mailboxProvider: 'mailbox provider for chain files: owner to supply',
 };
