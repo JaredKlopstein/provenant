@@ -1,6 +1,6 @@
-# Landing page for Provenant — https://jaredklopstein.github.io/provenant
+# Landing page for Lacre — https://jaredklopstein.github.io/lacre
 # Nothing here is private: the page is a public explainer with a demo chain.
 User-agent: *
 Allow: /
 
-Sitemap: https://jaredklopstein.github.io/provenant/sitemap.xml
+Sitemap: https://jaredklopstein.github.io/lacre/sitemap.xml

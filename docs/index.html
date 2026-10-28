@@ -14,10 +14,13 @@
      GitHub Pages cannot send X-Frame-Options. If we are framed, leave the frame. */
   if (self !== top) { try { top.location = self.location; } catch (e) {} }
 </script>
-<title>Provenant — prove what your agents did</title>
+<title>Lacre — prove what your agents did</title>
 <meta name="description" content="Signed, hash-chained receipts of what your AI agents actually did. Anyone can verify them offline, without trusting you.">
-<meta property="og:title" content="Provenant — prove what your agents did">
-<meta property="og:description" content="An agent's log is only as honest as whoever holds the disk. Provenant makes it evidence.">
+<meta property="og:title" content="Lacre — prove what your agents did">
+<meta property="og:description" content="An agent's log is only as honest as whoever holds the disk. Lacre makes it evidence.">
+<!-- MAIN_SITE: the main site, named here and in the notice below. Change both
+     together (revamp 11b moves them to lacre.dev); test/site.test.ts pins them. -->
+<link rel="canonical" href="https://lacre-site.vercel.app/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
@@ -167,17 +170,23 @@
   footer a{text-decoration:underline;text-underline-offset:3px}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .moved{background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:13px;line-height:1.5;padding:10px 0}
+  .moved a{color:var(--paper);text-decoration:underline;text-underline-offset:3px}
 </style>
 </head>
 <body>
 
+<div class="moved">
+  <p class="wrap">Provenant is now Lacre. The main site is <a href="https://lacre-site.vercel.app/">lacre-site.vercel.app</a>.</p>
+</div>
+
 <header>
   <div class="wrap masthead">
-    <div class="logo">Provenant <span>TAMPER-EVIDENT RECEIPTS</span></div>
+    <div class="logo">Lacre <span>TAMPER-EVIDENT RECEIPTS</span></div>
     <nav>
       <a href="#gap">The gap</a>
       <a href="#start">Start</a>
-      <a href="https://github.com/JaredKlopstein/provenant">GitHub</a>
+      <a href="https://github.com/JaredKlopstein/lacre">GitHub</a>
     </nav>
   </div>
 </header>
@@ -188,7 +197,7 @@
     <span class="eyebrow">For teams running AI agents that touch money, mail, or customer data</span>
     <h1>Your agent says it refunded&nbsp;$42.50.<em>Prove it.</em></h1>
     <p class="lede">
-      Provenant writes signed, hash-chained receipts of what your agents actually did.
+      Lacre writes signed, hash-chained receipts of what your agents actually did.
       Anyone can verify them offline — with no access to your systems and no reason to trust you.
     </p>
   </div>
@@ -214,7 +223,7 @@
     </div>
     <p class="step-note" id="step-note">
       These are three real receipts, with the hashes recomputed from their bytes as you change them.
-      The last one was timestamped by DigiCert on 3&nbsp;September&nbsp;2026.
+      The last one was timestamped by DigiCert on 27&nbsp;October&nbsp;2026.
     </p>
   </div>
 
@@ -228,7 +237,7 @@
         The result is a chain that is internally flawless.
       </p>
       <p>
-        Below is that exact attack, run against a real store. On the left, Provenant's own local
+        Below is that exact attack, run against a real store. On the left, Lacre's own local
         verification. On the right, the same forged chain checked against its external timestamp.
         <strong>Both outputs are copied verbatim from the tool.</strong>
       </p>
@@ -237,7 +246,7 @@
     <div class="plates">
       <div class="plate">
         <div class="plate-cap"><span>Local verification</span><span>free</span></div>
-<pre>$ provenant chain verify
+<pre>$ lacre chain verify
 
 <span class="g">ok: true</span>
 failures: <span class="g">0</span>
@@ -248,7 +257,7 @@ receipts_checked: 3
       </div>
       <div class="plate">
         <div class="plate-cap"><span>Anchored bundle</span><span>paid</span></div>
-<pre>$ provenant-verify evidence.json
+<pre>$ lacre-verify evidence.json
 
 <span class="r">FORGERY DETECTED.</span> The receipts in
 this bundle do not produce the head
@@ -275,12 +284,12 @@ forge a replacement timestamp.
 
     <div class="tiers">
       <div class="tier" data-tier="core">
-        <h4>Provenant Core</h4>
+        <h4>Lacre Core</h4>
         <div class="price">MIT · free forever</div>
         <ul>
           <li>Unlimited receipts and agents, self-hosted</li>
           <li>Hash chain, Ed25519 signatures, local verification</li>
-          <li><code>provenant-verify</code> — offline bundle verification, never paywalled</li>
+          <li><code>lacre-verify</code> — offline bundle verification, never paywalled</li>
           <li>CLI with <code>--json</code> on every command</li>
           <li>No time limit, no agent cap</li>
         </ul>
@@ -326,8 +335,8 @@ forge a replacement timestamp.
     <span class="eyebrow">Start</span>
     <h3>Sixty seconds to a verified receipt</h3>
 <pre class="cmd"><span class="c"># from source — these packages are not on npm yet</span>
-git clone https://github.com/JaredKlopstein/provenant.git
-cd provenant
+git clone https://github.com/JaredKlopstein/lacre.git
+cd lacre
 pnpm install
 pnpm run build
 
@@ -352,7 +361,7 @@ node packages/verifier/bin/lacre-verify.mjs examples/sample-evidence/evidence.js
 
   <section>
     <span class="eyebrow">Before you rely on this</span>
-    <h3>What Provenant does not do</h3>
+    <h3>What Lacre does not do</h3>
     <ul class="limits">
       <li>
         <strong>It does not make you compliant with anything.</strong> It produces tamper-evident
@@ -378,14 +387,14 @@ node packages/verifier/bin/lacre-verify.mjs examples/sample-evidence/evidence.js
 
 <footer>
   <div class="wrap">
-    Provenant — MIT licensed core and verifier ·
-    <a href="https://github.com/JaredKlopstein/provenant">Source on GitHub</a><br>
+    Lacre — MIT licensed core and verifier ·
+    <a href="https://github.com/JaredKlopstein/lacre">Source on GitHub</a><br>
     The chain above is real. Break it, then check the arithmetic yourself.
   </div>
 </footer>
 
 <script>
-const DATA = {"anchor":{"seq":2,"head":"c0a8511d1106d3c12e8fdf3dc715acbc0e4e06a89487f5c10ac1de5f5bc82476","time":"2026-09-03T19:09:57.000Z","authority":"DigiCert SHA256 RSA4096 Timestamp Responder 2026 1"},"receipts":[{"seq":0,"canonical":"{\"action_detail\":{\"amount_usd\":42.5,\"customer_id\":\"c_8812\"},\"action_type\":\"tool_call\",\"agent_id\":\"urn:provenant:agent:_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"agent_version\":\"0.0.0\",\"outcome\":\"success\",\"parent_record_id\":null,\"prev_hash\":null,\"provenant\":{\"action\":\"refund.issue\",\"idempotency_key\":\"refund-8812\",\"key_id\":\"_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"seq\":0,\"side_effect_class\":\"irreversible\",\"signature_alg\":\"ed25519\",\"v\":\"1\"},\"record_id\":\"e6a5a93e-4389-451a-8f73-d12ce06f31ad\",\"session_id\":\"97e87eea-856d-4fbc-95a0-c19d9ea68429\",\"signature\":\"raRdEO8HaKzxJP0yZVH_15bk4rrQFLbDy-Tec3DKfSbdkPAgDEKMM3L6j1rW4QG0Fvfhi9pUOML-VTc7ZqUiCA\",\"timestamp\":\"2026-09-03T19:09:56.557Z\",\"trust_level\":\"L1\"}","self_hash":"906cb6f7ce1082f73139822c8fad8eb36019dbd44d98883876d47068fb5e5951"},{"seq":1,"canonical":"{\"action_detail\":{\"template\":\"refund_confirmation\",\"to\":\"c_8812\"},\"action_type\":\"tool_call\",\"agent_id\":\"urn:provenant:agent:_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"agent_version\":\"0.0.0\",\"outcome\":\"success\",\"parent_record_id\":null,\"prev_hash\":\"906cb6f7ce1082f73139822c8fad8eb36019dbd44d98883876d47068fb5e5951\",\"provenant\":{\"action\":\"email.send\",\"key_id\":\"_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"seq\":1,\"side_effect_class\":\"write\",\"signature_alg\":\"ed25519\",\"v\":\"1\"},\"record_id\":\"61a9657e-d7b9-4377-85d3-114521891729\",\"session_id\":\"c726a1cb-cd90-41bc-a6b6-f399ac1cdd8e\",\"signature\":\"QZbYI_n7A6e-7LgGY6w2x8wnYDygqRFJ3IY2b8MONVMKZsoHQcVceHrNFzeRMG1vc7JnDLq8T0BYzBdBNQWXDQ\",\"timestamp\":\"2026-09-03T19:09:56.816Z\",\"trust_level\":\"L1\"}","self_hash":"37a49e270eaa365a144ddb215bb738377a06ffb97ffe384303053bef6c89ab72"},{"seq":2,"canonical":"{\"action_detail\":{\"amount_usd\":180,\"customer_id\":\"c_9001\"},\"action_type\":\"tool_call\",\"agent_id\":\"urn:provenant:agent:_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"agent_version\":\"0.0.0\",\"outcome\":\"success\",\"parent_record_id\":null,\"prev_hash\":\"37a49e270eaa365a144ddb215bb738377a06ffb97ffe384303053bef6c89ab72\",\"provenant\":{\"action\":\"refund.issue\",\"key_id\":\"_uWLRQS-Se0atEqM-YkqGbMxbFm7YOqvrILaJKvZFHQ\",\"seq\":2,\"side_effect_class\":\"irreversible\",\"signature_alg\":\"ed25519\",\"v\":\"1\"},\"record_id\":\"baa362af-681a-4254-9d39-ad1576d15307\",\"session_id\":\"c3ebfdd6-8ca4-4a2c-b3a3-fa605fa334c4\",\"signature\":\"-TIB0zmTzv0RiNEBNnrByPQTUNTnGRn1pI-RZlGxRfVetVAXddz0qTzYT-yV6L98FqvtAIBVF5h1g-AtJMFgCA\",\"timestamp\":\"2026-09-03T19:09:57.072Z\",\"trust_level\":\"L1\"}","self_hash":"c0a8511d1106d3c12e8fdf3dc715acbc0e4e06a89487f5c10ac1de5f5bc82476"}]};
+const DATA = {"anchor":{"seq":2,"head":"55f1f1fdb63a0c682932087567b8f23c3276212852cd1a9caca037163fdaeb3b","time":"2026-10-27T23:06:52.000Z","authority":"C=US, O=DigiCert\\, Inc., CN=DigiCert SHA256 RSA4096 Timestamp Responder 2026 1"},"receipts":[{"seq":0,"canonical":"{\"action_detail\":{\"amount_usd\":42.5,\"customer_id\":\"c_8812\"},\"action_type\":\"tool_call\",\"agent_id\":\"urn:lacre:agent:-voYUSQoXORSb8ZzzgSzjal_ZU5ea2cVPzuPZ-SS_W8\",\"agent_version\":\"0.0.0\",\"lacre\":{\"action\":\"refund.issue\",\"idempotency_key\":\"refund-8812\",\"key_id\":\"-voYUSQoXORSb8ZzzgSzjal_ZU5ea2cVPzuPZ-SS_W8\",\"seq\":0,\"side_effect_class\":\"irreversible\",\"signature_alg\":\"ed25519\",\"v\":\"1\"},\"outcome\":\"success\",\"parent_record_id\":null,\"prev_hash\":null,\"record_id\":\"a3904040-edcf-434a-b0d7-a03504c5b7da\",\"session_id\":\"312fc583-4110-4474-a159-154b11a1aaea\",\"signature\":\"JxAxrr47qtRRp4tHu9IkUweCRd-ZQRgtX2kOGrVhYRH2oKLCROqswhmmm296COGV17ioQVptHQNIOqE9z56-CQ\",\"timestamp\":\"2026-10-27T23:06:51.223Z\",\"trust_level\":\"L1\"}","self_hash":"d504ed9897848c3bdd3dac886491868e2e001a2f4b0424cb2ed04eff8ec6cf3f"},{"seq":1,"canonical":"{\"action_detail\":{\"template\":\"refund_confirmation\",\"to\":\"c_8812\"},\"action_type\":\"tool_call\",\"agent_id\":\"urn:lacre:agent:-voYUSQoXORSb8ZzzgSzjal_ZU5ea2cVPzuPZ-SS_W8\",\"agent_version\":\"0.0.0\",\"lacre\":{\"action\":\"email.send\",\"key_id\":\"-voYUSQoXORSb8ZzzgSzjal_ZU5ea2cVPzuPZ-SS_W8\",\"seq\":1,\"side_effect_class\":\"write\",\"signature_alg\":\"ed25519\",\"v\":\"1\"},\"outcome\":\"success\",\"parent_record_id\":null,\"prev_hash\":\"d504ed9897848c3bdd3dac886491868e2e001a2f4b0424cb2ed04eff8ec6cf3f\",\"record_id\":\"a322696a-0faf-4b6f-a33d-39b4787036a4\",\"session_id\":\"0636db0a-fb86-4b3c-a174-258931091366\",\"signature\":\"Y6kDhdHt6EYhgsEpETQ_6J08L8DgRnf8R597SRVbhnEtDwSggc5Zmcg71pG7hcoJucqmVH_ffYpJ4hTrpGsuBQ\",\"timestamp\":\"2026-10-27T23:06:51.579Z\",\"trust_level\":\"L1\"}","self_hash":"98536b38d4644e1c600a0d22fd215681250578a5e4402f3b0a7714e076e00bf1"},{"seq":2,"canonical":"{\"action_detail\":{\"amount_usd\":180,\"customer_id\":\"c_9001\"},\"action_type\":\"tool_call\",\"agent_id\":\"urn:lacre:agent:-voYUSQoXORSb8ZzzgSzjal_ZU5ea2cVPzuPZ-SS_W8\",\"agent_version\":\"0.0.0\",\"lacre\":{\"action\":\"refund.issue\",\"key_id\":\"-voYUSQoXORSb8ZzzgSzjal_ZU5ea2cVPzuPZ-SS_W8\",\"seq\":2,\"side_effect_class\":\"irreversible\",\"signature_alg\":\"ed25519\",\"v\":\"1\"},\"outcome\":\"success\",\"parent_record_id\":null,\"prev_hash\":\"98536b38d4644e1c600a0d22fd215681250578a5e4402f3b0a7714e076e00bf1\",\"record_id\":\"306cbac4-8b3b-44ed-baa4-a938548504d6\",\"session_id\":\"018bf4b2-4096-416f-9e02-bc0bcebc851c\",\"signature\":\"5gjvtkyDeXwbV6zRut0yhXaykklQwBxG5b3aoMToxi6PFPPP5MxhLmh1I8IdRNOugGEpo_972LLKyCKRz7niBg\",\"timestamp\":\"2026-10-27T23:06:51.936Z\",\"trust_level\":\"L1\"}","self_hash":"55f1f1fdb63a0c682932087567b8f23c3276212852cd1a9caca037163fdaeb3b"}]};
 
 /* RFC 8785 JSON Canonicalization — the same rule the CLI and the verifier use.
    Keys sorted by UTF-16 code unit, no whitespace, ECMAScript number forms. */
@@ -402,6 +411,7 @@ async function sha256hex(s){
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 const short=h=>h?h.slice(0,20)+'…':'null';
+const anchorDate=new Date(DATA.anchor.time).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
 
 let state='intact';
 const base=DATA.receipts.map(r=>JSON.parse(r.canonical));
@@ -422,7 +432,7 @@ async function computeChain(){
     const self=await sha256hex(jcs(recs[i]));
     out.push({
       seq:i,
-      action:recs[i].provenant.action,
+      action:recs[i].lacre.action,
       amount:recs[i].action_detail.amount_usd,
       prev:recs[i].prev_hash,
       self,
@@ -470,7 +480,7 @@ function render(rows){
   if(state==='intact'){
     v.className='verdict ok'; t.textContent='Intact';
     b.textContent='Every receipt hashes to the value the next one points at, and the head matches the timestamp DigiCert signed. Nothing has been altered.';
-    note.textContent='These are three real receipts, with the hashes recomputed from their bytes as you change them. The last one was timestamped by DigiCert on 3 September 2026.';
+    note.textContent='These are three real receipts, with the hashes recomputed from their bytes as you change them. The last one was timestamped by DigiCert on '+anchorDate+'.';
   } else if(state==='tampered'){
     v.className='verdict bad'; t.textContent='Broken at seq 1';
     b.textContent='Changing the refund changed its hash, so the next receipt now points at a value that no longer exists. This is the crude attack, and a local check catches it.';

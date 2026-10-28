@@ -150,14 +150,14 @@ export const BUNDLE_DEFINITION =
 
 /**
  * The Core card's terms: the free plan's features without the CLI name, which
- * PLANS carries in parentheses after a feature. The bin is `lacre`; the site
- * brand is still stripped too, so either parenthetical stays off the card.
+ * PLANS carries in parentheses after a feature. The bins are named after the
+ * brand, so a parenthetical starting with it stays off the card.
  */
 export function coreTerms(plan: Plan = PLANS.free): string[] {
-  const prefixes = [BRAND.name.toLowerCase(), 'lacre'];
+  const prefix = BRAND.name.toLowerCase();
   return plan.features.map((feature) =>
     feature.replace(/\s*\(([^)]*)\)/g, (match, inner: string) =>
-      prefixes.some((prefix) => inner.toLowerCase().startsWith(prefix)) ? '' : match,
+      inner.toLowerCase().startsWith(prefix) ? '' : match,
     ),
   );
 }

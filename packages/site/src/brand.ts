@@ -1,9 +1,9 @@
 /**
  * The site's brand, in one place.
  *
- * Name, domain and tagline are placeholders until the rename lands. Page copy and
- * metadata read them from here and never hard-code them, so the rename is a
- * one-line change. `domain` stays null until the owner attaches one.
+ * Page copy and metadata read the name, tagline and repository from here and
+ * never hard-code them. `domain` stays null until the owner attaches one; until
+ * then links build from SITE_BASE_URL/VERCEL_URL.
  */
 export interface Brand {
   readonly name: string;
@@ -14,8 +14,8 @@ export interface Brand {
 }
 
 export const BRAND: Brand = {
-  name: 'Provenant',
+  name: 'Lacre',
   domain: null,
   tagline: 'tamper-evident receipts for autonomous agents',
-  repository: 'https://github.com/JaredKlopstein/provenant',
+  repository: 'https://github.com/JaredKlopstein/lacre',
 };
