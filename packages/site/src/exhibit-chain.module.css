@@ -118,6 +118,11 @@
   color: var(--color-text);
 }
 
+/* A hash that changed is set in ink, so it stays readable (AA) on the flash tint and reads as changed. */
+.flash {
+  color: var(--color-text);
+}
+
 .srOnly {
   position: absolute;
   width: 1px;
@@ -191,7 +196,7 @@
 
 @keyframes flash {
   from {
-    background: rgb(163 32 27 / 0.18);
+    background: rgb(163 32 27 / 0.12);
   }
 
   to {
