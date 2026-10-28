@@ -1,0 +1,119 @@
+/*
+ * The home hero and the standards strip under it (app/page.tsx,
+ * src/standards-strip.tsx). Tokens come from app/globals.css.
+ */
+
+/* Wider than the prose column: copy on the left, Exhibit A on the right at 960px and up. */
+.hero {
+  max-width: var(--wide-grid);
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+  padding-top: var(--space-6);
+}
+
+@media (min-width: 960px) {
+  .hero {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--space-12);
+  }
+}
+
+.copy,
+.slot {
+  min-width: 0;
+}
+
+.copy h1 {
+  margin-top: var(--space-3);
+  font-size: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+  line-height: 1.1;
+}
+
+.lede {
+  font-size: 1.125rem;
+}
+
+/* The two links, styled as buttons: primary ink fill, secondary outline. */
+.ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.ctas a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-6);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ctas a:first-child {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.ctas a:first-child:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+  color: var(--color-on-accent);
+}
+
+.ctas a + a {
+  background: transparent;
+  color: var(--color-text);
+}
+
+.ctas a + a:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.note {
+  font-size: 0.9375rem;
+  color: var(--color-muted);
+}
+
+/* The static example sits in the slot with its heading close to the code. */
+.slot h2 {
+  margin-top: 0;
+}
+
+/* Standards strip: one wrapped line of names, ruled above and below. */
+.strip {
+  max-width: var(--wide-grid);
+  margin-top: var(--space-12);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.strip h2 {
+  margin: 0 0 var(--space-2);
+}
+
+.standards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.standards li {
+  margin: 0;
+}
+
+.stripNote {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
