@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { BRAND } from '../src/brand';
 import { GETTING_STARTED_URL } from '../src/plans';
 import { PROOF_TABLE } from '../src/proof-table';
-import { CodeBlock } from '../src/code-block';
+import { ExhibitChain } from '../src/exhibit-chain';
 import { StandardsStrip } from '../src/standards-strip';
 import styles from '../src/hero.module.css';
 
@@ -26,33 +26,6 @@ const PROOF_POINTS = [
   },
 ] as const;
 
-/**
- * Hard-coded, illustrative text only. It is not generated, signed or fetched, and
- * it is not a verifiable receipt: the hashes and signature are shortened placeholders.
- */
-const EXAMPLE_RECEIPT = `{
-  "record_id": "00000000-0000-4000-8000-000000000042",
-  "timestamp": "2026-10-20T14:03:12Z",
-  "agent_id": "support-agent",
-  "agent_version": "1.4.0",
-  "session_id": "00000000-0000-4000-8000-000000000007",
-  "action_type": "tool_call",
-  "action_detail": { "tool": "refund.issue", "order": "example-1001", "amount": "25.00" },
-  "outcome": "success",
-  "trust_level": "L2",
-  "parent_record_id": null,
-  "prev_hash": "9f2c…e41a",
-  "${BRAND.name.toLowerCase()}": {
-    "v": "1",
-    "action": "refund.issue",
-    "side_effect_class": "irreversible",
-    "seq": 42,
-    "signature_alg": "ed25519",
-    "key_id": "example-key"
-  },
-  "signature": "example-signature…"
-}`;
-
 export default function HomePage() {
   return (
     <>
@@ -70,19 +43,9 @@ export default function HomePage() {
           </p>
           <p className={styles.note}>Open source (MIT). Packages are not on npm yet: run from source.</p>
         </div>
-        {/* Exhibit A (src/exhibit-chain.tsx) mounts here; until then the static example stays. */}
+        {/* Exhibit A: three real receipts, hashed in the browser (src/exhibit-chain.tsx). */}
         <div data-slot="exhibit" className={styles.slot}>
-          <section aria-label="Example receipt">
-            <h2>Example receipt</h2>
-            <p>
-              An illustrative example, not a real receipt: the hashes and signature are shortened
-              placeholders, so it will not verify.
-            </p>
-            <figure>
-              <CodeBlock label="Example receipt JSON">{EXAMPLE_RECEIPT}</CodeBlock>
-              <figcaption>Example only. One receipt for one agent action.</figcaption>
-            </figure>
-          </section>
+          <ExhibitChain />
         </div>
       </section>
       <StandardsStrip />
