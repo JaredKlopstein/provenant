@@ -8,6 +8,7 @@ import { BRAND } from '../src/brand.js';
 import { ACCOUNT_PATH, CHECKOUT_PAGE_PATH } from '../src/checkout.js';
 import {
   BUNDLE_DEFINITION,
+  BUNDLE_FORMAT,
   OFF_SALE_PLANS,
   WAITLIST_HREF,
   annualOverageDisclosure,
@@ -321,10 +322,15 @@ describe('billing toggle', () => {
     expect(card(await render('weekly'), 'cloud').price).toBe(`$${cloud.monthlyUsd}/mo`);
   });
 
-  it('shows the pricing-page overage disclosure under Annual, billed to your card (#100)', async () => {
+  it('shows the pricing-page overage disclosure under Annual, in the future tense while Cloud is off sale (#100, 13)', async () => {
     const annualCloud = unescape(card(await render('annual'), 'cloud').html);
     expect(annualCloud).toContain(`<p role="note">${pricingAnnualOverageDisclosure()}</p>`);
     expect(pricingAnnualOverageDisclosure()).toBe(
+      `When Cloud is available, evidence bundles over the ${cloud.includedBundlesPerMonth} included each month ` +
+        `will be charged monthly at $${OVERAGE_BUNDLE_PRICE_USD} per bundle.`,
+    );
+    // Once Cloud is on sale the disclosure is the present-tense card sentence again.
+    expect(pricingAnnualOverageDisclosure({ ...cloud, id: 'enterprise' })).toBe(
       `Evidence bundles over the ${cloud.includedBundlesPerMonth} included each month are charged monthly, ` +
         `at $${OVERAGE_BUNDLE_PRICE_USD} per bundle, billed to your card.`,
     );
@@ -374,7 +380,8 @@ describe('pricing content (#100)', () => {
 
   it('describes the bundle card plainly', async () => {
     const bundle = card(await render(), 'bundle');
-    expect(bundle.terms).toContain('A human-readable report alongside the JSON');
+    expect(bundle.terms).toContain(BUNDLE_FORMAT);
+    expect(BUNDLE_FORMAT).toBe('JSON, with a human-readable PDF and HTML report');
     expect(bundle.terms).toContain('The timestamp proves the chain existed when it was anchored, not earlier');
     expect(bundle.html).not.toMatch(/will not read JSON|whole point/);
   });

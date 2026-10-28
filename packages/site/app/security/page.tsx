@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BRAND } from '../../src/brand';
+import { CLOUD_MAX_ANCHOR_MINUTES, EARLY_ACCESS_LABEL } from '../../src/plans';
 import { PROOF_TABLE } from '../../src/proof-table';
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ const STANDARDS = [
   },
   {
     name: 'RFC 3161',
-    body: 'Trusted timestamps from an authority the operator does not control anchor the chain head on Cloud. The verifier checks the full token offline and reports whether the authority is in your trust list separately from whether the token is sound, because a bundle can embed a self-signed root.',
+    body: 'Trusted timestamps from an authority the operator does not control anchor the chain head when you buy an evidence bundle, and, once Cloud is available, continuously. The verifier checks the full token offline and reports whether the authority is in your trust list separately from whether the token is sound, because a bundle can embed a self-signed root.',
   },
 ] as const;
 
@@ -61,8 +62,8 @@ export default function SecurityPage() {
         <h2>The open-core boundary</h2>
         <p>
           The code is split into three packages. Core (MIT) records, chains and verifies receipts
-          locally. The verifier (MIT) checks evidence bundles offline. Cloud (commercial) anchors and
-          exports bundles. Core never imports Cloud. The verifier imports neither Core nor Cloud, and
+          locally. The verifier (MIT) checks evidence bundles offline. The Cloud package (commercial) holds
+          the anchoring and bundle export. Core never imports Cloud. The verifier imports neither Core nor Cloud, and
           no network module, so checking the paid tier’s output never requires the paid tier, and it
           runs on an air-gapped machine. These rules are a source scan that runs as the first CI
           step, not a convention.
@@ -98,10 +99,10 @@ export default function SecurityPage() {
           </tbody>
         </table>
         <p>
-          The last row is why Cloud anchors continuously: new receipts are batched and the chain head
-          is anchored at most every 15 minutes, which bounds the window in which a truncation goes
-          undetected. Receipts also describe only what an agent chose to record; they make recorded
-          behaviour tamper-evident, not unrecorded behaviour visible.
+          The last row is why Cloud ({EARLY_ACCESS_LABEL.toLowerCase()}, not available yet) is planned to
+          anchor continuously: new receipts would be batched and the chain head anchored at most every{' '}
+          {CLOUD_MAX_ANCHOR_MINUTES} minutes, which bounds the window in which a truncation goes undetected. Receipts also describe only what an agent chose to record; they make recorded
+          behavior tamper-evident, not unrecorded behavior visible.
         </p>
         <p>
           <Link href="/verify">Verify a bundle yourself</Link>
