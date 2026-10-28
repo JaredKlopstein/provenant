@@ -16,12 +16,12 @@ export const metadata: Metadata = {
 // shape is checked so the page can say checkout finished; the id is never shown.
 const CHECKOUT_SESSION_ID = /^cs_(test|live)_[A-Za-z0-9]+$/;
 
-// The checkout directory and the home variable still follow the repository
-// path. The CLI file is lacre.mjs, which is not that name.
+// The checkout directory, the home variable and the CLI file all follow the
+// repository path, so none of them hard-codes the name.
 const REPO_DIR = BRAND.repository.slice(BRAND.repository.lastIndexOf('/') + 1);
 // A path shown in a shell command, not an import: scripts/check-boundaries.mjs rejects
 // any literal path into another package from site source, so it is joined from its parts.
-const CLI = `node ${['packages', 'core', 'bin', 'lacre.mjs'].join('/')}`;
+const CLI = `node ${['packages', 'core', 'bin', `${REPO_DIR}.mjs`].join('/')}`;
 
 // Each block is copied from docs/getting-started.md, sections 1 and 2, and must stay identical.
 const STEPS = [
