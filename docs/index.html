@@ -156,6 +156,8 @@
   .price{font:500 12px/1 var(--mono);letter-spacing:.08em;color:var(--dim);text-transform:uppercase;margin-bottom:15px}
   .tier ul{margin:0;padding-left:17px;font-size:14.5px;color:var(--ink-2)}
   .tier li{margin:7px 0}
+  .tier .status{margin:0 0 12px;font-size:14px;color:var(--ink-2)}
+  .tier .planned{margin:0;font:500 11px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 
   pre.cmd{
     background:var(--plate);color:var(--plate-ink);border-radius:8px;padding:16px 18px;
@@ -294,21 +296,24 @@ forge a replacement timestamp.
           <li>No time limit, no agent cap</li>
         </ul>
       </div>
-      <div class="tier" data-tier="bundle">
+      <div class="tier paid" data-tier="bundle">
         <h4>Evidence bundle</h4>
         <div class="price">$15 each</div>
         <ul>
           <li>Pay as you go, no subscription</li>
           <li>Your chain head timestamped by a public RFC&nbsp;3161 authority</li>
           <li>A self-contained archive an auditor verifies offline</li>
-          <li>Human-readable report for the people who won't read JSON</li>
+          <li>JSON, with a human-readable PDF and HTML report</li>
+          <li>Delivered by email within 2 business days of receiving your chain file; your signing key never leaves you</li>
           <li>We hold a copy, so the evidence exists when you need it</li>
           <li>You cannot anchor retroactively — that's the whole point</li>
         </ul>
       </div>
-      <div class="tier paid" data-tier="cloud">
+      <div class="tier" data-tier="cloud">
         <h4>Cloud</h4>
         <div class="price">$49/mo or $490/yr</div>
+        <p class="status"><strong>Early access</strong>: not on sale yet. The hosted collector and continuous anchoring are still being built.</p>
+        <p class="planned">Planned, not available yet</p>
         <ul>
           <li>Continuous anchoring, batched, at most 15 minutes apart</li>
           <li>5 bundles/month, no rollover</li>

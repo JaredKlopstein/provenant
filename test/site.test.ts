@@ -174,6 +174,23 @@ describe('pricing cards', () => {
     expect(cloud).toContain(`at most ${p.maxAnchorIntervalMinutes} minutes`);
   });
 
+  it('labels Cloud Early access and its terms as planned, since it is off sale', () => {
+    const cloud = cards().get('cloud')!;
+    expect(cloud).toContain('<strong>Early access</strong>: not on sale yet.');
+    expect(cloud).toContain('Planned, not available yet');
+    expect(cloud.indexOf('Planned, not available yet')).toBeLessThan(cloud.indexOf('<ul>'));
+    // The emphasis goes to the plan on sale today, not to one nobody can buy.
+    expect(html).toContain('<div class="tier paid" data-tier="bundle">');
+    expect(html).toContain('<div class="tier" data-tier="cloud">');
+  });
+
+  it('says how a bundle arrives, and that the signing key never leaves the buyer', () => {
+    const bundle = cards().get('bundle')!;
+    expect(bundle).toContain('Delivered by email within 2 business days of receiving your chain file');
+    expect(bundle).toContain('your signing key never leaves you');
+    expect(bundle).toContain('JSON, with a human-readable PDF and HTML report');
+  });
+
   it('shows no price on the Enterprise card', () => {
     expect(cards().get('enterprise')!).not.toMatch(/\$\s*\d/);
   });
