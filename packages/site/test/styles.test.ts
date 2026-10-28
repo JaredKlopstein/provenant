@@ -74,6 +74,8 @@ describe('global stylesheet', () => {
       expect(fontsSrc).toContain(`variable: '${name}'`);
     }
     expect(layoutSrc).toContain("import { FONT_VARIABLES } from '../src/fonts';");
+    // Mono never swaps in late: a late swap re-wraps eyebrows and shifts the layout.
+    expect(fontsSrc).toMatch(/IBM_Plex_Mono\(\{[^}]*display: 'optional'/);
     expect(layoutSrc).toContain('<html lang="en" className={FONT_VARIABLES}>');
   });
 

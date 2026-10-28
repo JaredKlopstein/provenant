@@ -24,10 +24,14 @@ const sans = IBM_Plex_Sans({
   variable: '--font-plex-sans',
 });
 
+// Mono sets short labels (eyebrows, hashes) whose line breaks change when the
+// font swaps in late, which moved the home hero by ~19px on a slow phone (CLS).
+// 'optional' keeps the fallback for that page view instead; Plex Mono is then
+// cached for the next one.
 const mono = IBM_Plex_Mono({
   subsets: ['latin'],
   weight: ['400', '500'],
-  display: 'swap',
+  display: 'optional',
   variable: '--font-plex-mono',
 });
 
