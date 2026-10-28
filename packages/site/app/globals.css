@@ -717,6 +717,173 @@ details[open] > summary {
   margin-bottom: var(--space-3);
 }
 
+/* How it works: a vertical timeline. The <ol> numbers the steps on nodes along a rule. */
+
+section[aria-label='Steps'] > ol {
+  counter-reset: step;
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+}
+
+section[aria-label='Steps'] > ol > li {
+  counter-increment: step;
+  position: relative;
+  margin: 0;
+  padding: 0 0 var(--space-8) var(--space-12);
+}
+
+/* The rule joining the nodes, stopping at the last one. */
+section[aria-label='Steps'] > ol > li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 2.25rem;
+  bottom: 0;
+  left: 1rem;
+  border-left: 2px solid var(--color-border);
+}
+
+section[aria-label='Steps'] > ol > li::before {
+  content: counter(step);
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+section[aria-label='Steps'] > ol > li > h2 {
+  margin-top: 0.15rem;
+}
+
+section[aria-label='Steps'] p[data-snippet] {
+  margin: 0;
+}
+
+section[aria-label='Steps'] p[data-snippet] code {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+}
+
+/* What the steps do not give you: the limits, edged in seal red. */
+section[aria-label='Limits'] {
+  padding: var(--space-4) var(--space-6);
+  border-left: 4px solid var(--seal-red);
+  background: var(--color-surface);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+section[aria-label='Limits'] > h2 {
+  margin-top: 0;
+}
+
+/* The chain diagram (src/chain-diagram.tsx): scales with its column, ink on card. */
+.chain-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: var(--space-6) 0;
+  color: var(--color-text);
+}
+
+.chain-diagram-box {
+  fill: var(--card);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.chain-diagram-head {
+  fill: var(--ink);
+}
+
+.chain-diagram-head + .chain-diagram-label {
+  fill: var(--paper);
+}
+
+.chain-diagram-line {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.chain-diagram-ink {
+  fill: var(--ink);
+}
+
+.chain-diagram-seal {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.chain-diagram-label {
+  fill: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.chain-diagram-small {
+  fill: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* At phone width the drawing scales to about half size: keep the main labels
+   legible and let the <desc> carry the detail the small ones add. */
+@media (max-width: 640px) {
+  .chain-diagram-small {
+    display: none;
+  }
+
+  .chain-diagram-label {
+    font-size: 24px;
+  }
+}
+
+/*
+ * Restrained motion, only when the visitor has not asked for less. Reveal
+ * (src/reveal.tsx) sets data-reveal-ready on <html> once it runs, so nothing is
+ * hidden without JavaScript; cards lift on hover and buttons press.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-reveal-ready] [data-reveal] {
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+
+  html[data-reveal-ready] [data-reveal]:not([data-revealed]) {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  section[aria-label='Plans'] > article,
+  section[aria-label='Proof points'] > ul > li {
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+  }
+
+  section[aria-label='Plans'] > article:hover,
+  section[aria-label='Proof points'] > ul > li:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1.25rem rgb(20 26 34 / 0.1);
+  }
+
+  button:active:not(:disabled),
+  input[type='submit']:active,
+  section[aria-label='Plans'] > article > p[data-cta] > a:active {
+    transform: translateY(1px);
+  }
+}
+
 /* Sign in: the signup form and the confirm page share one layout. */
 
 section[aria-label='Sign in'] p[role='status'] {

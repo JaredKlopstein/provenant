@@ -3,8 +3,10 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import RootLayout from '../app/layout.js';
 import PricingPage from '../app/pricing/page.js';
+import HowItWorksPage from '../app/how-it-works/page.js';
 import { NAV_LIST_ID, navKeyAction } from '../src/nav-menu.js';
 import { SIGNUP_PATH } from '../src/auth/email.js';
+import { isDue } from '../src/reveal.js';
 import { BRAND } from '../src/brand.js';
 import { GETTING_STARTED_URL } from '../src/plans.js';
 
@@ -185,6 +187,58 @@ describe('global stylesheet', () => {
     expect(html).toContain('<section aria-label="Plans"><article data-tier="core">');
     expect(html).toContain('<article data-tier="cloud">');
     expect(html).toContain('<nav aria-label="Billing period">');
+  });
+
+  it('hides [data-reveal] content only under html[data-reveal-ready] inside prefers-reduced-motion: no-preference', () => {
+    const motion = media('(prefers-reduced-motion: no-preference)');
+    // Every rule that mentions [data-reveal], anywhere, must be inside that query and scoped to reveal-ready.
+    const outside = rules.replace(`@media (prefers-reduced-motion: no-preference) {${motion}}`, '');
+    expect(outside).not.toContain('[data-reveal]');
+    const revealRules = [...motion.matchAll(/([^{}]*\[data-reveal\][^{}]*)\{([^}]*)\}/g)];
+    expect(revealRules.length).toBeGreaterThan(0);
+    for (const [, selector] of revealRules) expect(selector!.trim()).toMatch(/^html\[data-reveal-ready\] /);
+    expect(block('html[data-reveal-ready] [data-reveal]:not([data-revealed])', motion)).toContain('opacity: 0');
+    // Hover lift and press only animate there too.
+    expect(outside).not.toMatch(/:hover \{[^}]*translateY|:active[^{]*\{[^}]*translateY/);
+  });
+
+  it('marks the how-it-works steps for reveal and mounts the Reveal client component', async () => {
+    const html = renderToStaticMarkup(HowItWorksPage());
+    expect(html.match(/<li data-reveal="true">/g)).toHaveLength(5);
+    expect(html).not.toContain('data-revealed');
+    expect(read('../src/reveal.tsx')).toMatch(/^'use client';\n/);
+    expect(read('../src/reveal.tsx')).toContain("root.setAttribute('data-reveal-ready', '')");
+  });
+
+  it('reveals anything at or above the reveal line, so a jump past a step never leaves it hidden', () => {
+    expect(isDue(-500, 800)).toBe(true); // scrolled past entirely
+    expect(isDue(100, 800)).toBe(true);
+    expect(isDue(719, 800)).toBe(true);
+    expect(isDue(720, 800)).toBe(false); // the bottom tenth is not yet due
+    expect(isDue(2000, 800)).toBe(false);
+  });
+
+  it('draws the how-it-works chain diagram server-side, named and described, scaling with its column', () => {
+    const html = renderToStaticMarkup(HowItWorksPage());
+    const svg = /<svg class="chain-diagram"[^>]*>[\s\S]*?<\/svg>/.exec(html)?.[0] ?? '';
+    expect(svg).toMatch(/role="img"/);
+    expect(svg).toMatch(/aria-labelledby="chain-diagram-title chain-diagram-desc"/);
+    expect(svg).toContain('<title id="chain-diagram-title">A hash chain anchored by a timestamp</title>');
+    expect(svg).toMatch(/<desc id="chain-diagram-desc">[^<]*prev_hash[^<]*RFC 3161/);
+    expect(svg).toMatch(/viewBox="0 0 \d+ \d+"/);
+    expect(svg).not.toMatch(/<image|href="http|url\((?!#)/);
+    expect(block('.chain-diagram')).toContain('width: 100%');
+    // Its own narrow-screen block (the first 640px block is the nav's).
+    expect(rules).toContain(
+      '@media (max-width: 640px) { .chain-diagram-small { display: none; } .chain-diagram-label { font-size: 24px; } }',
+    );
+  });
+
+  it('edges the limits callout in seal red and gives each step a mono snippet', () => {
+    expect(block("section[aria-label='Limits']")).toContain('border-left: 4px solid var(--seal-red)');
+    const html = renderToStaticMarkup(HowItWorksPage());
+    expect(html.match(/<p data-snippet="true"><code>/g)).toHaveLength(5);
+    expect(html).toContain('prev_hash = SHA-256(JCS(previous receipt))');
   });
 
   it('leaves dark mode for later', () => {

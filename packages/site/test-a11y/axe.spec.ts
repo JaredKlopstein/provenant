@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 // Runs axe against the built marketing pages (see playwright.config.ts) and
 // fails on any serious or critical WCAG 2 A/AA violation, colour contrast
 // included. Minor and moderate findings are reported but do not fail the run.
-const pages = ['/', '/pricing', '/signup', '/enterprise', '/verify', '/security'] as const;
+const pages = ['/', '/pricing', '/signup', '/enterprise', '/verify', '/security', '/how-it-works'] as const;
 
 const wcagTags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
