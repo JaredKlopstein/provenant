@@ -139,6 +139,12 @@ describe('Exhibit A component', () => {
     expect(css.replace(motion, '').match(/animation:/g)).toBeNull();
   });
 
+  it('keeps a changed hash readable while it flashes: ink text on a light tint', () => {
+    // #696861 (muted) on the flash tint is 3.94:1; ink on it is well over 4.5:1.
+    expect(css).toMatch(/\n\.flash \{\s*color: var\(--color-text\);\s*\}/);
+    expect(css).toContain('background: rgb(163 32 27 / 0.12);');
+  });
+
   it('hides the controls without JavaScript, leaving the intact chain readable', () => {
     expect(css).toMatch(/@media \(scripting: none\) \{\s*\.controls \{\s*display: none;/);
   });
