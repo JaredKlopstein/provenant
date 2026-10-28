@@ -7,7 +7,14 @@ import { SIGNUP_PATH } from '../../src/auth/email';
 import { AccountBar } from '../../src/account-bar';
 import { PRIVACY_PATH, TERMS_PATH } from '../../src/legal';
 import { CHECKOUT_API_PATH, CHECKOUT_OUTCOMES, signedInFromCookie, type CheckoutOutcome } from '../../src/checkout';
-import { EARLY_ACCESS_LABEL, WAITLIST_HREF, annualOverageDisclosure, priceCards } from '../../src/plans';
+import {
+  BUNDLE_FULFILMENT,
+  BUNDLE_TODAY_ID,
+  EARLY_ACCESS_LABEL,
+  WAITLIST_HREF,
+  annualOverageDisclosure,
+  priceCards,
+} from '../../src/plans';
 
 export const metadata: Metadata = {
   title: 'Checkout',
@@ -94,6 +101,13 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
             ) : (
               <>
                 {option.id === 'cloud-annual' && <p role="note">{annualOverageDisclosure()}</p>}
+                {/* Say how the bundle is delivered before anyone pays for it. */}
+                {option.id === 'bundle' && (
+                  <p data-fulfilment>
+                    <strong>How it is delivered:</strong> {BUNDLE_FULFILMENT}{' '}
+                    <Link href={`/pricing#${BUNDLE_TODAY_ID}`}>More on how a bundle is made</Link>.
+                  </p>
+                )}
                 <form method="post" action={CHECKOUT_API_PATH}>
                   {Object.entries(option.fields).map(([name, value]) => (
                     <input key={name} type="hidden" name={name} value={value} />

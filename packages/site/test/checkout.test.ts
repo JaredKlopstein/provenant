@@ -9,7 +9,7 @@ import type { StripeLike, SubscriptionLister, SubscriptionSummary } from '@lacre
 import { POST } from '../app/api/checkout/route.js';
 import CheckoutPage from '../app/checkout/page.js';
 import WelcomePage from '../app/welcome/page.js';
-import { BUNDLE_DELIVERY_BUSINESS_DAYS, BUNDLE_FORMAT } from '../src/plans.js';
+import { BUNDLE_DELIVERY_BUSINESS_DAYS, BUNDLE_FORMAT, BUNDLE_FULFILMENT, BUNDLE_TODAY_ID } from '../src/plans.js';
 import { BRAND } from '../src/brand.js';
 import { accountIdFor, sessionCookie } from '../src/auth/session.js';
 import type { BillingDb } from '../src/billing-db.js';
@@ -458,6 +458,16 @@ describe('checkout page', () => {
     expect(html).toContain('name="kind" value="payg_bundle"');
     expect(html).not.toContain('client_reference_id');
     expect(html).toContain('href="/enterprise"');
+  });
+
+  it('says how the bundle is delivered before payment, from the same text as /pricing (D5)', async () => {
+    pageCookie.value = await signedInCookie();
+    const html = renderToStaticMarkup(await CheckoutPage({ searchParams: Promise.resolve({}) })).replace(/&#x27;/g, "'");
+    const bundle = /<article data-option="bundle">([\s\S]*?)<\/article>/.exec(html)?.[1] ?? '';
+    expect(bundle).toContain(`<strong>How it is delivered:</strong> ${BUNDLE_FULFILMENT}`);
+    expect(bundle).toContain(`href="/pricing#${BUNDLE_TODAY_ID}"`);
+    // Before the payment button, not after it.
+    expect(bundle.indexOf('data-fulfilment')).toBeLessThan(bundle.indexOf('<form'));
   });
 
   it('shows the annual overage disclosure from cloud, word for word, when Cloud is on sale', async () => {
