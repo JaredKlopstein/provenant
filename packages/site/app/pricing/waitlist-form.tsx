@@ -85,7 +85,6 @@ export function WaitlistForm() {
 
   return (
     <form aria-label="Cloud early access waitlist" onSubmit={submit}>
-      <h3>Join the early access list</h3>
       {result && (
         <p role={result === 'sent' ? 'status' : 'alert'} data-result={result}>
           {RESULT_MESSAGES[result]}

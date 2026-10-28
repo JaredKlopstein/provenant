@@ -14,6 +14,7 @@ import {
   type Billing,
 } from '../../src/plans';
 import { WaitlistForm } from './waitlist-form';
+import { WAITLIST_ID, WaitlistOpen } from './waitlist-open';
 
 export const metadata: Metadata = {
   title: 'Pricing',
@@ -62,6 +63,8 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
       <section aria-label="Plans">
         {priceCards(billing).map((card) => (
           <article key={card.id} data-tier={card.id}>
+            {/* Off-sale plans say so in a badge; no card is ever marked "recommended". */}
+            {card.offSale && <p data-badge>{EARLY_ACCESS_LABEL}</p>}
             <h2>{card.title}</h2>
             <p>{card.price}</p>
             {card.priceNote && <p data-price-note>{card.priceNote}</p>}
@@ -80,12 +83,16 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
               ))}
             </ul>
             {card.id === 'cloud' && billing === 'annual' && <p role="note">{pricingAnnualOverageDisclosure()}</p>}
-            <p>
+            <p data-cta={card.id === 'bundle' ? 'primary' : 'secondary'}>
               <Link href={card.cta.href}>{card.cta.label}</Link>
             </p>
             {card.id === 'cloud' && (
-              <div id="waitlist">
-                <WaitlistForm />
+              <div id={WAITLIST_ID}>
+                {/* Collapsed so the card stays the size of the others; the form is in the HTML either way. */}
+                <details>
+                  <summary>Join the early access list</summary>
+                  <WaitlistForm />
+                </details>
               </div>
             )}
           </article>
@@ -97,15 +104,14 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
       </section>
       <section aria-labelledby="faq">
         <h2 id="faq">Questions</h2>
-        <dl>
-          {pricingFaq().map((entry) => (
-            <div key={entry.question}>
-              <dt>{entry.question}</dt>
-              <dd>{entry.answer}</dd>
-            </div>
-          ))}
-        </dl>
+        {pricingFaq().map((entry) => (
+          <details key={entry.question}>
+            <summary>{entry.question}</summary>
+            <p>{entry.answer}</p>
+          </details>
+        ))}
       </section>
+      <WaitlistOpen />
     </>
   );
 }

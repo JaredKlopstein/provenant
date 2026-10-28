@@ -59,6 +59,7 @@ describe('site app folder', () => {
       'page.tsx',
       'pricing/page.tsx',
       'pricing/waitlist-form.tsx',
+      'pricing/waitlist-open.tsx',
       'privacy/page.tsx',
       'security/page.tsx',
       'signin/page.tsx',

@@ -560,7 +560,7 @@ nav[aria-label='Billing period'] ul {
   margin: 0 0 var(--space-4);
   padding: var(--space-1);
   list-style: none;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--field-border);
   border-radius: 999px;
   background: var(--color-surface);
 }
@@ -571,7 +571,9 @@ nav[aria-label='Billing period'] li {
 
 nav[aria-label='Billing period'] a {
   display: inline-block;
-  padding: var(--space-1) var(--space-4);
+  min-width: 6rem;
+  padding: var(--space-2) var(--space-4);
+  text-align: center;
   border-radius: 999px;
   color: var(--color-text);
   text-decoration: none;
@@ -626,27 +628,93 @@ section[aria-label='Plans'] > article > p[role='note'] {
   color: var(--color-muted);
 }
 
-/* The recommended plan: Cloud runs the collector and the anchoring for you. */
+/* Cloud keeps its 2px ink border. While off sale it says so in a markup badge (EARLY_ACCESS_LABEL). */
 section[aria-label='Plans'] > article[data-tier='cloud'] {
   border: 2px solid var(--color-accent);
-  background: var(--color-accent-soft);
-  box-shadow: 0 0.5rem 1.5rem rgb(20 26 34 / 0.12);
 }
 
-section[aria-label='Plans'] > article[data-tier='cloud']::before {
-  content: 'Recommended';
+/* Out of the flow, so every card's title and price sit on the same lines. */
+section[aria-label='Plans'] > article > p[data-badge] {
   position: absolute;
   top: 0;
   left: var(--space-6);
+  margin: 0;
   transform: translateY(-50%);
   padding: 0.1rem var(--space-3);
   border-radius: 999px;
   background: var(--color-accent);
   color: var(--color-on-accent);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* Each card's one call to action is a button at the foot of the card: ink fill for the
+   bundle, the plan on sale today, and an outline for the rest. */
+section[aria-label='Plans'] > article > p[data-cta] {
+  margin-top: auto;
+  margin-bottom: 0;
+  padding-top: var(--space-4);
+}
+
+section[aria-label='Plans'] > article > p[data-cta] > a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+section[aria-label='Plans'] > article > p[data-cta] > a:hover {
+  background: var(--color-bg);
+}
+
+section[aria-label='Plans'] > article > p[data-cta='primary'] > a {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+section[aria-label='Plans'] > article > p[data-cta='primary'] > a:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+#waitlist {
+  margin-top: var(--space-3);
+}
+
+/* Disclosure accordion, shared by the pricing FAQ and the waitlist. */
+details {
+  margin: 0 0 var(--space-2);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+summary {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+details > :not(summary) {
+  margin-left: var(--space-4);
+  margin-right: var(--space-4);
+}
+
+details[open] > summary {
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-3);
 }
 
 /* Sign in: the signup form and the confirm page share one layout. */

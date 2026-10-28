@@ -10,6 +10,7 @@ import { ACCOUNT_PATH, CHECKOUT_PAGE_PATH } from '../src/checkout.js';
 import {
   BUNDLE_DEFINITION,
   BUNDLE_FORMAT,
+  EARLY_ACCESS_LABEL,
   OFF_SALE_PLANS,
   WAITLIST_HREF,
   annualOverageDisclosure,
@@ -24,6 +25,7 @@ import {
 } from '../src/plans.js';
 import { OVERAGE_BUNDLE_PRICE_USD, PAYG_BUNDLE_PRICE_USD, PLANS } from '../../cloud/src/pricing.js';
 import { createCheckoutSession, type StripeLike } from '../../cloud/src/billing/stripe.js';
+import { WAITLIST_ID, targetsWaitlist } from '../app/pricing/waitlist-open.js';
 
 /**
  * The pricing page renders its cards from cloud's PLANS. Expected values here are
@@ -258,7 +260,8 @@ describe('calls to action (#94)', () => {
     for (const billing of [undefined, 'annual']) {
       const html = await render(billing);
       expect(html.match(/\bid="waitlist"/g)).toHaveLength(1);
-      expect(html).toMatch(/<div id="waitlist"><form aria-label="Cloud early access waitlist"/);
+      // Inside a collapsed <details> since 8/9; still in the HTML, inside the Cloud card.
+      expect(html).toMatch(/<div id="waitlist"><details><summary>[^<]+<\/summary><form aria-label="Cloud early access waitlist"/);
     }
   });
 
@@ -398,7 +401,9 @@ describe('pricing content (#100)', () => {
       'What does the receipts/month fair-use cap mean?',
       'Do I need a subscription to buy an evidence bundle?',
     ]);
-    for (const { question, answer } of faq) expect(html).toContain(`<dt>${question}</dt><dd>${answer}</dd>`);
+    for (const { question, answer } of faq) {
+      expect(html).toContain(`<details><summary>${question}</summary><p>${answer}</p></details>`);
+    }
     expect(faq[1]!.answer).toContain(BUNDLE_DEFINITION);
     expect(faq[2]!.answer).toContain(`${cloud.fairUseReceiptsPerMonth! / 1_000_000}M receipts/month`);
     expect(faq[2]!.answer).toMatch(/not billed/);
@@ -422,6 +427,44 @@ describe('pricing content (#100)', () => {
       const html = await render(billing);
       expect(html).not.toMatch(/most popular|recommended|data-featured/i);
     }
+  });
+
+  it('badges the off-sale Cloud card Early access in markup, and nothing else (8/9)', async () => {
+    for (const billing of [undefined, 'annual']) {
+      const html = await render(billing);
+      expect(card(html, 'cloud').html.startsWith(`<p data-badge="true">${EARLY_ACCESS_LABEL}</p><h2>`)).toBe(true);
+      expect(html.match(/data-badge/g)).toHaveLength(1);
+    }
+    const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+    expect(css).not.toMatch(/recommended|most popular/i);
+    expect(css).not.toMatch(/content:\s*'[^']+'/);
+  });
+
+  it('renders each card button as a button at the foot of the card, Bundle as the primary one (8/9)', async () => {
+    const html = await render();
+    for (const c of cards(html)) {
+      const cta = new RegExp(`<p data-cta="(primary|secondary)"><a href="[^"]+">${c.id === 'core' ? 'Start free' : '[^<]+'}</a></p>`).exec(c.html);
+      expect(cta?.[1], c.id).toBe(c.id === 'bundle' ? 'primary' : 'secondary');
+    }
+  });
+
+  it('keeps the waitlist form in the Cloud card, collapsed in a <details> (8/9)', async () => {
+    const cloudCard = card(await render(), 'cloud').html;
+    expect(cloudCard).toMatch(
+      /<div id="waitlist"><details><summary>Join the early access list<\/summary><form aria-label="Cloud early access waitlist"/,
+    );
+    expect(cloudCard).not.toMatch(/<details[^>]* open/);
+  });
+
+  it('opens the waitlist for #waitlist links and hashes, and nothing else (8/9)', () => {
+    expect(WAITLIST_HREF.endsWith(`#${WAITLIST_ID}`)).toBe(true);
+    for (const yes of ['#waitlist', '/pricing#waitlist', WAITLIST_HREF]) expect(targetsWaitlist(yes), yes).toBe(true);
+    for (const no of ['', '#faq', '/pricing', null, undefined, '#waitlist-old']) expect(targetsWaitlist(no), String(no)).toBe(false);
+    const src = readFileSync(new URL('../app/pricing/waitlist-open.tsx', import.meta.url), 'utf8');
+    expect(src).toMatch(/^'use client';\n/);
+    expect(src).toContain("addEventListener('hashchange'");
+    expect(src).toContain('.focus()');
+    expect(src).toContain('details.open = true');
   });
 });
 
