@@ -122,12 +122,14 @@ describe('code blocks', () => {
   /** Opening tags of every <pre> in the rendered markup. */
   const preTags = (html: string) => html.match(/<pre\b[^>]*>/g) ?? [];
 
+  // Home has no code block since Exhibit A replaced the static example (revamp 4/9); any it gains
+  // later must follow the same rule. Verify always has some.
   it.each([
-    ['home', () => renderToStaticMarkup(HomePage())],
-    ['verify', () => renderToStaticMarkup(VerifyPage())],
-  ])('on %s, each scrolling code block is keyboard-focusable and named', (_, render) => {
+    ['home', () => renderToStaticMarkup(HomePage()), 0],
+    ['verify', () => renderToStaticMarkup(VerifyPage()), 1],
+  ])('on %s, each scrolling code block is keyboard-focusable and named', (_, render, atLeast) => {
     const tags = preTags(render());
-    expect(tags.length).toBeGreaterThan(0);
+    expect(tags.length).toBeGreaterThanOrEqual(atLeast);
     for (const tag of tags) {
       expect(attr(tag, 'tabindex'), tag).toBe('0');
       expect(attr(tag, 'role'), tag).toBe('region');

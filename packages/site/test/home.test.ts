@@ -62,8 +62,8 @@ describe('home page', () => {
     expect(html.indexOf('aria-label="Built on open standards"')).toBeGreaterThan(html.indexOf('data-slot="exhibit"'));
   });
 
-  it('lays the hero out as copy plus an Exhibit slot that holds the example for now', () => {
-    expect(html).toMatch(/<div data-slot="exhibit"[^>]*><section aria-label="Example receipt">/);
+  it('lays the hero out as copy plus the Exhibit A slot', () => {
+    expect(html).toMatch(/<div data-slot="exhibit"[^>]*><section aria-labelledby="exhibit-title"/);
   });
 
   it('keeps the standards out of the hero and in the proof points below it', () => {
@@ -79,23 +79,20 @@ describe('home page', () => {
     expect(text).not.toMatch(/autonomous/i);
   });
 
-  it('shows exactly one static example receipt, labelled as an example', () => {
-    const section = /<section aria-label="Example receipt">[\s\S]*?<\/section>/.exec(html)?.[0] ?? '';
-    expect(section).toContain('<h2>Example receipt</h2>');
-    expect(section).toMatch(/illustrative example, not a real receipt/);
-    expect(section).toContain('Example only.');
-    // Two different landmark names (axe landmark-unique, Live QA m6).
-    expect(section).toContain('aria-label="Example receipt JSON"');
-    expect(html.match(/aria-label="Example receipt"/g)).toHaveLength(1);
-    expect(html.match(/<pre[ >]/g)).toHaveLength(1);
-    const code = unescape(/<code>([\s\S]*?)<\/code>/.exec(section)?.[1] ?? '');
-    expect(code).toContain('"action_type": "tool_call"');
-    expect(code).toContain('"signature_alg": "ed25519"');
-    // Placeholders, not real hashes or signatures: nothing in it could verify.
-    expect(code).not.toMatch(/[0-9a-f]{64}/);
+  it('shows Exhibit A in the hero slot: three real receipts, the anchor, and the intact verdict server-rendered', () => {
+    const slot = /<div data-slot="exhibit"[^>]*>([\s\S]*)<\/div><\/section>/.exec(html)?.[1] ?? '';
+    expect(slot).toMatch(/^<section aria-labelledby="exhibit-title"/);
+    expect(slot).toContain('<h2 id="exhibit-title">Exhibit A: live chain</h2>');
+    expect(slot.match(/>SEQ \d</g)).toHaveLength(3);
+    expect(slot).toContain('>ANCHOR<');
+    expect(slot).toContain('<strong>Intact</strong>');
+    expect(html.match(/id="exhibit-title"/g)).toHaveLength(1);
+    // The static example is gone, and with it the page's only <pre> (7/9 adds one back).
+    expect(html).not.toContain('aria-label="Example receipt"');
+    expect(html).not.toMatch(/<pre[ >]/);
   });
 
-  it('hard-codes the example: nothing generates, signs or fetches it', () => {
+  it('fetches and signs nothing on the server: Exhibit A hashes its static data in the browser', () => {
     const src = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
     expect(src).not.toMatch(/\bfetch\(|\bawait\b|@lacre\/|packages\/core|\bsign\(/);
   });
