@@ -5,6 +5,8 @@ import {
   BILLING_PARAM,
   BILLINGS,
   BUNDLE_DEFINITION,
+  BUNDLE_FULFILMENT,
+  BUNDLE_TODAY_ID,
   EARLY_ACCESS_LABEL,
   priceCards,
   pricingAnnualOverageDisclosure,
@@ -12,6 +14,7 @@ import {
   type Billing,
 } from '../../src/plans';
 import { WaitlistForm } from './waitlist-form';
+import { WAITLIST_ID, WaitlistOpen } from './waitlist-open';
 
 export const metadata: Metadata = {
   title: 'Pricing',
@@ -41,8 +44,8 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
         {cancelled && <p role="status">Checkout cancelled, nothing was charged.</p>}
         <p>
           Writing receipts and verifying them stays free on every plan. You pay for evidence a third
-          party can check: anchored bundles today, and later Cloud to run the collector and anchoring for
-          you.
+          party can check: anchored bundles today (<a href={`#${BUNDLE_TODAY_ID}`}>how a bundle is made today</a>),
+          and later Cloud to run the collector and anchoring for you.
         </p>
         <p data-definition="evidence-bundle">{BUNDLE_DEFINITION}</p>
         <nav aria-label="Billing period">
@@ -60,6 +63,8 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
       <section aria-label="Plans">
         {priceCards(billing).map((card) => (
           <article key={card.id} data-tier={card.id}>
+            {/* Off-sale plans say so in a badge; no card is ever marked "recommended". */}
+            {card.offSale && <p data-badge>{EARLY_ACCESS_LABEL}</p>}
             <h2>{card.title}</h2>
             <p>{card.price}</p>
             {card.priceNote && <p data-price-note>{card.priceNote}</p>}
@@ -78,28 +83,35 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
               ))}
             </ul>
             {card.id === 'cloud' && billing === 'annual' && <p role="note">{pricingAnnualOverageDisclosure()}</p>}
-            <p>
+            <p data-cta={card.id === 'bundle' ? 'primary' : 'secondary'}>
               <Link href={card.cta.href}>{card.cta.label}</Link>
             </p>
             {card.id === 'cloud' && (
-              <div id="waitlist">
-                <WaitlistForm />
+              <div id={WAITLIST_ID}>
+                {/* Collapsed so the card stays the size of the others; the form is in the HTML either way. */}
+                <details>
+                  <summary>Join the early access list</summary>
+                  <WaitlistForm />
+                </details>
               </div>
             )}
           </article>
         ))}
       </section>
+      <section aria-labelledby={BUNDLE_TODAY_ID}>
+        <h2 id={BUNDLE_TODAY_ID}>How a bundle is made today</h2>
+        <p>{BUNDLE_FULFILMENT}</p>
+      </section>
       <section aria-labelledby="faq">
         <h2 id="faq">Questions</h2>
-        <dl>
-          {pricingFaq().map((entry) => (
-            <div key={entry.question}>
-              <dt>{entry.question}</dt>
-              <dd>{entry.answer}</dd>
-            </div>
-          ))}
-        </dl>
+        {pricingFaq().map((entry) => (
+          <details key={entry.question}>
+            <summary>{entry.question}</summary>
+            <p>{entry.answer}</p>
+          </details>
+        ))}
       </section>
+      <WaitlistOpen />
     </>
   );
 }

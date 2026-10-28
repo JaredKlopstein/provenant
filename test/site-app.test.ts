@@ -59,6 +59,7 @@ describe('site app folder', () => {
       'page.tsx',
       'pricing/page.tsx',
       'pricing/waitlist-form.tsx',
+      'pricing/waitlist-open.tsx',
       'privacy/page.tsx',
       'security/page.tsx',
       'signin/page.tsx',
@@ -137,17 +138,13 @@ describe('how-it-works page', () => {
 
   it('walks record, hash chain, anchor, evidence bundle and offline verify in order', () => {
     const headings = [...howItWorks.matchAll(/<h2>([^<]+)<\/h2>/g)].map((m) => m[1]);
-    expect(headings.slice(0, 5)).toEqual([
-      '1. Record',
-      '2. Hash chain',
-      '3. Anchor',
-      '4. Evidence bundle',
-      '5. Verify offline',
-    ]);
+    // The <ol> numbers the steps, so the titles carry no "1. " of their own.
+    expect(headings.slice(0, 5)).toEqual(['Record', 'Hash chain', 'Anchor', 'Evidence bundle', 'Verify offline']);
+    expect(howItWorks).toMatch(/<section aria-label="Steps"><ol><li><h2>Record<\/h2>/);
   });
 
-  it('states the anchoring cadence the Cloud scheduler enforces', () => {
-    expect(body).toContain('anchored at most every 15 minutes');
+  it('states the anchoring cadence the Cloud scheduler will enforce, as planned', () => {
+    expect(body).toContain('is planned to anchor automatically, at most every 15 minutes');
     expect(body).toContain('RFC 3161');
   });
 

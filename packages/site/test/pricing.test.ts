@@ -9,6 +9,8 @@ import { SIGNUP_PATH } from '../src/auth/email.js';
 import { ACCOUNT_PATH, CHECKOUT_PAGE_PATH } from '../src/checkout.js';
 import {
   BUNDLE_DEFINITION,
+  BUNDLE_FORMAT,
+  EARLY_ACCESS_LABEL,
   OFF_SALE_PLANS,
   WAITLIST_HREF,
   annualOverageDisclosure,
@@ -23,6 +25,7 @@ import {
 } from '../src/plans.js';
 import { OVERAGE_BUNDLE_PRICE_USD, PAYG_BUNDLE_PRICE_USD, PLANS } from '../../cloud/src/pricing.js';
 import { createCheckoutSession, type StripeLike } from '../../cloud/src/billing/stripe.js';
+import { WAITLIST_ID, targetsWaitlist } from '../app/pricing/waitlist-open.js';
 
 /**
  * The pricing page renders its cards from cloud's PLANS. Expected values here are
@@ -257,7 +260,8 @@ describe('calls to action (#94)', () => {
     for (const billing of [undefined, 'annual']) {
       const html = await render(billing);
       expect(html.match(/\bid="waitlist"/g)).toHaveLength(1);
-      expect(html).toMatch(/<div id="waitlist"><form aria-label="Cloud early access waitlist"/);
+      // Inside a collapsed <details> since 8/9; still in the HTML, inside the Cloud card.
+      expect(html).toMatch(/<div id="waitlist"><details><summary>[^<]+<\/summary><form aria-label="Cloud early access waitlist"/);
     }
   });
 
@@ -324,10 +328,15 @@ describe('billing toggle', () => {
     expect(card(await render('weekly'), 'cloud').price).toBe(`$${cloud.monthlyUsd}/mo`);
   });
 
-  it('shows the pricing-page overage disclosure under Annual, billed to your card (#100)', async () => {
+  it('shows the pricing-page overage disclosure under Annual, in the future tense while Cloud is off sale (#100, 13)', async () => {
     const annualCloud = unescape(card(await render('annual'), 'cloud').html);
     expect(annualCloud).toContain(`<p role="note">${pricingAnnualOverageDisclosure()}</p>`);
     expect(pricingAnnualOverageDisclosure()).toBe(
+      `When Cloud is available, evidence bundles over the ${cloud.includedBundlesPerMonth} included each month ` +
+        `will be charged monthly at $${OVERAGE_BUNDLE_PRICE_USD} per bundle.`,
+    );
+    // Once Cloud is on sale the disclosure is the present-tense card sentence again.
+    expect(pricingAnnualOverageDisclosure({ ...cloud, id: 'enterprise' })).toBe(
       `Evidence bundles over the ${cloud.includedBundlesPerMonth} included each month are charged monthly, ` +
         `at $${OVERAGE_BUNDLE_PRICE_USD} per bundle, billed to your card.`,
     );
@@ -377,7 +386,8 @@ describe('pricing content (#100)', () => {
 
   it('describes the bundle card plainly', async () => {
     const bundle = card(await render(), 'bundle');
-    expect(bundle.terms).toContain('A human-readable report alongside the JSON');
+    expect(bundle.terms).toContain(BUNDLE_FORMAT);
+    expect(BUNDLE_FORMAT).toBe('JSON, with a human-readable PDF and HTML report');
     expect(bundle.terms).toContain('The timestamp proves the chain existed when it was anchored, not earlier');
     expect(bundle.html).not.toMatch(/will not read JSON|whole point/);
   });
@@ -391,7 +401,9 @@ describe('pricing content (#100)', () => {
       'What does the receipts/month fair-use cap mean?',
       'Do I need a subscription to buy an evidence bundle?',
     ]);
-    for (const { question, answer } of faq) expect(html).toContain(`<dt>${question}</dt><dd>${answer}</dd>`);
+    for (const { question, answer } of faq) {
+      expect(html).toContain(`<details><summary>${question}</summary><p>${answer}</p></details>`);
+    }
     expect(faq[1]!.answer).toContain(BUNDLE_DEFINITION);
     expect(faq[2]!.answer).toContain(`${cloud.fairUseReceiptsPerMonth! / 1_000_000}M receipts/month`);
     expect(faq[2]!.answer).toMatch(/not billed/);
@@ -415,6 +427,44 @@ describe('pricing content (#100)', () => {
       const html = await render(billing);
       expect(html).not.toMatch(/most popular|recommended|data-featured/i);
     }
+  });
+
+  it('badges the off-sale Cloud card Early access in markup, and nothing else (8/9)', async () => {
+    for (const billing of [undefined, 'annual']) {
+      const html = await render(billing);
+      expect(card(html, 'cloud').html.startsWith(`<p data-badge="true">${EARLY_ACCESS_LABEL}</p><h2>`)).toBe(true);
+      expect(html.match(/data-badge/g)).toHaveLength(1);
+    }
+    const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+    expect(css).not.toMatch(/recommended|most popular/i);
+    expect(css).not.toMatch(/content:\s*'[^']+'/);
+  });
+
+  it('renders each card button as a button at the foot of the card, Bundle as the primary one (8/9)', async () => {
+    const html = await render();
+    for (const c of cards(html)) {
+      const cta = new RegExp(`<p data-cta="(primary|secondary)"><a href="[^"]+">${c.id === 'core' ? 'Start free' : '[^<]+'}</a></p>`).exec(c.html);
+      expect(cta?.[1], c.id).toBe(c.id === 'bundle' ? 'primary' : 'secondary');
+    }
+  });
+
+  it('keeps the waitlist form in the Cloud card, collapsed in a <details> (8/9)', async () => {
+    const cloudCard = card(await render(), 'cloud').html;
+    expect(cloudCard).toMatch(
+      /<div id="waitlist"><details><summary>Join the early access list<\/summary><form aria-label="Cloud early access waitlist"/,
+    );
+    expect(cloudCard).not.toMatch(/<details[^>]* open/);
+  });
+
+  it('opens the waitlist for #waitlist links and hashes, and nothing else (8/9)', () => {
+    expect(WAITLIST_HREF.endsWith(`#${WAITLIST_ID}`)).toBe(true);
+    for (const yes of ['#waitlist', '/pricing#waitlist', WAITLIST_HREF]) expect(targetsWaitlist(yes), yes).toBe(true);
+    for (const no of ['', '#faq', '/pricing', null, undefined, '#waitlist-old']) expect(targetsWaitlist(no), String(no)).toBe(false);
+    const src = readFileSync(new URL('../app/pricing/waitlist-open.tsx', import.meta.url), 'utf8');
+    expect(src).toMatch(/^'use client';\n/);
+    expect(src).toContain("addEventListener('hashchange'");
+    expect(src).toContain('.focus()');
+    expect(src).toContain('details.open = true');
   });
 });
 
