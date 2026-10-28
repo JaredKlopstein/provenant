@@ -14,6 +14,7 @@ import { NAV_LIST_ID } from '../src/nav-menu.js';
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const css = read('../app/globals.css');
 const layoutSrc = read('../app/layout.tsx');
+const fontsSrc = read('../src/fonts.ts');
 // Comments out, whitespace collapsed, so rules can be matched as written.
 const rules = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
 
@@ -56,10 +57,26 @@ describe('global stylesheet', () => {
   });
 
   it('defines sans-serif and monospace font tokens and uses them', () => {
-    expect(block(':root')).toMatch(/--font-sans: [^;]*sans-serif;/);
-    expect(block(':root')).toMatch(/--font-mono: [^;]*monospace;/);
+    expect(block(':root')).toMatch(/--font-sans: var\(--font-plex-sans\),[^;]*sans-serif;/);
+    expect(block(':root')).toMatch(/--font-mono: var\(--font-plex-mono\),[^;]*monospace;/);
     expect(block('body')).toContain('font-family: var(--font-sans)');
     expect(block('code, pre')).toContain('font-family: var(--font-mono)');
+  });
+
+  it('sets headings in Plex Serif, with a serif fallback', () => {
+    expect(block(':root')).toMatch(/--font-serif: var\(--font-plex-serif\),[^;]*serif;/);
+    expect(block('h1, h2, h3')).toContain('font-family: var(--font-serif)');
+  });
+
+  it('loads Plex through Next\'s font loader in src/fonts.ts and applies it to <html>', () => {
+    expect(fontsSrc).toMatch(/from 'next\/font\/google'/);
+    for (const name of ['--font-plex-serif', '--font-plex-sans', '--font-plex-mono']) {
+      expect(fontsSrc).toContain(`variable: '${name}'`);
+    }
+    expect(layoutSrc).toContain("import { FONT_VARIABLES } from '../src/fonts';");
+    // Mono never swaps in late: a late swap re-wraps eyebrows and shifts the layout.
+    expect(fontsSrc).toMatch(/IBM_Plex_Mono\(\{[^}]*display: 'optional'/);
+    expect(layoutSrc).toContain('<html lang="en" className={FONT_VARIABLES}>');
   });
 
   it('holds body text to a 68ch column', () => {
@@ -67,8 +84,11 @@ describe('global stylesheet', () => {
     expect(block('main > *')).toContain('max-width: var(--measure)');
   });
 
-  it('scrolls command blocks inside their own box', () => {
+  it('wraps command blocks inside their own box, scrolling as the fallback', () => {
     const pre = block('pre');
+    expect(pre).toContain('white-space: pre-wrap');
+    expect(pre).toContain('overflow-wrap: anywhere');
+    expect(block('pre code')).not.toContain('overflow-wrap: normal');
     expect(pre).toContain('overflow-x: auto');
     expect(pre).toContain('max-width: 100%');
     expect(pre).toMatch(/padding: /);
@@ -80,6 +100,34 @@ describe('global stylesheet', () => {
     expect(
       block("input:not([type='hidden']):not([type='submit']):not([type='checkbox']):not([type='radio']), select, textarea"),
     ).toContain('width: 100%');
+  });
+
+  it('gives form fields and the menu button a 3:1 boundary, never --rule', () => {
+    expect(block(':root')).toContain('--field-border: #7a7a72');
+    const fields = block(
+      "input:not([type='hidden']):not([type='submit']):not([type='checkbox']):not([type='radio']), select, textarea",
+    );
+    expect(fields).toContain('border: 1px solid var(--field-border)');
+    expect(block('.nav-toggle')).toContain('border-color: var(--field-border)');
+    expect(block('.nav-toggle:hover')).toContain('border-color: var(--field-border)');
+    for (const control of [fields, block('.nav-toggle'), block("button, input[type='submit']")]) {
+      expect(control).not.toMatch(/var\(--(rule|color-border)\)/);
+    }
+  });
+
+  it('defines the paper and ink palette, the band utilities and the wide grid', () => {
+    const root = block(':root');
+    for (const token of [
+      '--ink: #141a22', '--ink-2: #2c3542', '--paper: #e8e8e4', '--card: #f6f6f3', '--rule: #ccccc4',
+      '--seal-red: #a3201b', '--seal-green: #2c6449', '--plate: #171d26', '--plate-ink: #d8dbe0',
+      '--wide-grid: 76rem',
+    ]) {
+      expect(root).toContain(token);
+    }
+    expect(block('.eyebrow')).toContain('letter-spacing: 0.12em');
+    expect(block('.eyebrow')).toContain('font-family: var(--font-mono)');
+    for (const band of ['.band', '.band--card', '.band--plate']) block(band);
+    expect(media('(min-width: 960px)')).toContain('grid-template-columns: repeat(12, minmax(0, 1fr))');
   });
 
   it('has a clearly visible focus-visible style', () => {

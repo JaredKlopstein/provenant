@@ -9,11 +9,13 @@ export const alt = `${BRAND.name}: ${BRAND.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-// The same colours as app/globals.css (--color-accent, --color-text, --color-muted, --color-bg).
-const ACCENT = '#0b57d0';
-const TEXT = '#1b1f24';
-const MUTED = '#57606a';
-const BG = '#ffffff';
+// The same colours as app/globals.css (--color-accent, --color-text, --color-muted, --color-bg),
+// plus --seal-red for the top rule: paper, ink and a wax seal.
+const ACCENT = '#141a22';
+const TEXT = '#141a22';
+const MUTED = '#696861';
+const BG = '#e8e8e4';
+const SEAL_RED = '#a3201b';
 
 const PROOF = 'Signed · hash-chained · RFC 3161 anchored · verifiable offline';
 
@@ -30,7 +32,7 @@ export default function OpengraphImage() {
           padding: '72px 80px',
           background: BG,
           color: TEXT,
-          borderTop: `16px solid ${ACCENT}`,
+          borderTop: `16px solid ${SEAL_RED}`,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', fontSize: 44 }}>
