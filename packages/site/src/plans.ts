@@ -32,6 +32,33 @@ export const EARLY_ACCESS_LABEL = 'Early access';
 /** The getting-started guide, on GitHub until the site has its own docs. */
 export const GETTING_STARTED_URL = `${BRAND.repository}/blob/main/docs/getting-started.md`;
 
+/** What an evidence bundle contains, in one phrase used everywhere the format is named. */
+export const BUNDLE_FORMAT = 'JSON, with a human-readable PDF and HTML report';
+
+/** Business days from receiving a buyer's chain file to sending the anchored bundle back. */
+export const BUNDLE_DELIVERY_BUSINESS_DAYS = 2;
+
+/** The id of the pricing section that says how a bundle is made today. */
+export const BUNDLE_TODAY_ID = 'bundle-today';
+
+/**
+ * How a bundle is made today, while there is no self-serve path: the buyer sends
+ * their chain file, which holds receipts and public keys but never a signing key,
+ * and gets the anchored bundle back by email.
+ */
+export const BUNDLE_FULFILMENT =
+  'After checkout we email you to ask for your chain file. It holds your receipts and your agents’ public keys; ' +
+  'your signing key stays with you and we never ask for it. We timestamp the head of that chain with a public ' +
+  `RFC 3161 authority and email the bundle back within ${BUNDLE_DELIVERY_BUSINESS_DAYS} business days of receiving the file: ` +
+  `${BUNDLE_FORMAT}. The timestamp proves the chain existed when we anchored it, not earlier.`;
+
+/** Cloud's planned anchoring interval, from PLANS, for copy that describes it. */
+export const CLOUD_MAX_ANCHOR_MINUTES: number = (() => {
+  const minutes = PLANS.cloud.maxAnchorIntervalMinutes;
+  if (minutes === null) throw new Error('PLANS.cloud.maxAnchorIntervalMinutes is null; the Cloud copy needs it.');
+  return minutes;
+})();
+
 /** Where an off-sale card's button goes: the waitlist form on the pricing page. */
 export const WAITLIST_HREF = '/pricing#waitlist';
 
@@ -122,6 +149,13 @@ export function annualOverageDisclosure(plan: Plan = PLANS.cloud): string {
  * There is no checkout on that page, so it names the card, not "this checkout".
  */
 export function pricingAnnualOverageDisclosure(plan: Plan = PLANS.cloud): string {
+  // Future tense while Cloud is off sale: nobody can be billed for it yet.
+  if (OFF_SALE_PLANS.has(plan.id)) {
+    return (
+      `When Cloud is available, evidence bundles over the ${plan.includedBundlesPerMonth} included each month ` +
+      `will be charged monthly at ${usd(OVERAGE_BUNDLE_PRICE_USD)} per bundle.`
+    );
+  }
   return (
     `Evidence bundles over the ${plan.includedBundlesPerMonth} included each month are charged ` +
     `monthly, at ${usd(OVERAGE_BUNDLE_PRICE_USD)} per bundle, billed to your card.`
@@ -211,7 +245,7 @@ export function priceCards(billing: Billing): PriceCard[] {
         'Pay as you go, no subscription',
         'Your chain head timestamped by a public RFC 3161 authority',
         'A self-contained archive an auditor verifies offline',
-        'A human-readable report alongside the JSON',
+        BUNDLE_FORMAT,
         'The timestamp proves the chain existed when it was anchored, not earlier',
       ],
     },

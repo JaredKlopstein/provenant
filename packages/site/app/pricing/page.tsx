@@ -5,6 +5,8 @@ import {
   BILLING_PARAM,
   BILLINGS,
   BUNDLE_DEFINITION,
+  BUNDLE_FULFILMENT,
+  BUNDLE_TODAY_ID,
   EARLY_ACCESS_LABEL,
   priceCards,
   pricingAnnualOverageDisclosure,
@@ -41,8 +43,8 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
         {cancelled && <p role="status">Checkout cancelled, nothing was charged.</p>}
         <p>
           Writing receipts and verifying them stays free on every plan. You pay for evidence a third
-          party can check: anchored bundles today, and later Cloud to run the collector and anchoring for
-          you.
+          party can check: anchored bundles today (<a href={`#${BUNDLE_TODAY_ID}`}>how a bundle is made today</a>),
+          and later Cloud to run the collector and anchoring for you.
         </p>
         <p data-definition="evidence-bundle">{BUNDLE_DEFINITION}</p>
         <nav aria-label="Billing period">
@@ -88,6 +90,10 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
             )}
           </article>
         ))}
+      </section>
+      <section aria-labelledby={BUNDLE_TODAY_ID}>
+        <h2 id={BUNDLE_TODAY_ID}>How a bundle is made today</h2>
+        <p>{BUNDLE_FULFILMENT}</p>
       </section>
       <section aria-labelledby="faq">
         <h2 id="faq">Questions</h2>
